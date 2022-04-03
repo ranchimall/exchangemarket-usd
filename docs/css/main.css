@@ -345,10 +345,11 @@ ul {
   fill: rgba(var(--text-color), 0.8);
 }
 
-.button__icon--left {
+.margin-right-0-5 {
   margin-right: 0.5rem;
 }
-.button__icon--right {
+
+.margin-left-0-5 {
   margin-left: 0.5rem;
 }
 
@@ -492,6 +493,16 @@ sm-checkbox {
   padding: 1rem;
   border-radius: 0.5rem;
   line-height: 1.5;
+}
+
+.tip {
+  border-radius: 2rem;
+  background-color: rgba(var(--text-color), 0.06);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+.tip .icon {
+  fill: var(--accent-color);
 }
 
 .page-layout {
@@ -642,14 +653,14 @@ sm-checkbox {
   width: 1.5rem;
 }
 
-#flo_rate {
-  font-weight: 700;
-}
-
 .quantity-selector .button {
   flex: 1;
   padding: 0.5rem 0.6rem;
   margin-left: 0.5rem;
+}
+
+#quantity_selector_tip::first-letter {
+  text-transform: uppercase;
 }
 
 #quantity_type,
