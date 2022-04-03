@@ -588,8 +588,8 @@ sm-checkbox {
   width: 100%;
   justify-content: center;
   overflow-y: auto;
-  padding: 0 1.5rem;
   & > * {
+    padding: 0 1.5rem;
     width: min(42rem, 100%);
   }
 }
@@ -633,7 +633,9 @@ sm-checkbox {
   font-weight: 500;
   min-width: 8ch;
 }
-
+#exchange {
+  padding: 0;
+}
 #exchange_wrapper {
   display: flex;
   flex-direction: column;
@@ -641,11 +643,11 @@ sm-checkbox {
 }
 #asset_page {
   height: 100%;
-  nav {
-    padding: 1rem 0;
-    .icon-only {
-      margin-left: -0.7rem;
-    }
+}
+#asset_page__nav {
+  padding: 1rem 0;
+  .icon-only {
+    margin-left: -0.7rem;
   }
 }
 #trade_form {
@@ -960,6 +962,14 @@ sm-checkbox {
   .hide-on-mobile {
     display: none !important;
   }
+  #asset_page__nav {
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+  }
+  #trade_form,
+  #asset_list_wrapper,
+  #chart_header {
+    padding: 0 1.5rem;
+  }
   #asset_page {
     display: flex;
     flex-direction: column;
@@ -968,7 +978,7 @@ sm-checkbox {
     border-radius: 0;
     border-bottom: solid thin rgba(var(--text-color), 0.1);
   }
-  #price_chart_wrapper {
+  #price_chart_container {
     flex: 1;
   }
 }
@@ -1043,6 +1053,7 @@ sm-checkbox {
     #exchange {
       display: flex;
       width: 100%;
+      padding: 0 1.5rem;
     }
     #exchange_wrapper {
       display: grid;
@@ -1096,9 +1107,9 @@ sm-checkbox {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(0, 1fr) 20rem;
-    nav {
-      grid-column: 1/-1;
-    }
+  }
+  #asset_page__nav {
+    grid-column: 1/-1;
   }
 }
 @media screen and (min-width: 72rem) {

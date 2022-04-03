@@ -99,7 +99,7 @@
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
-                        <nav class="flex align-center space-between hide-on-desktop">
+                        <nav id="asset_page__nav" class="flex align-center space-between hide-on-desktop">
                             <a href="#/exchange" class="button icon-only">
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                     width="24px" fill="#000000">
@@ -112,8 +112,8 @@
                                 <strip-option value="chart">Chart</strip-option>
                             </strip-select>
                         </nav>
-                        <div id="price_chart_wrapper" class="flex direction-column gap-0-5 hide-on-mobile">
-                            <div class="flex align-center space-between">
+                        <div id="price_chart_container" class="flex direction-column gap-0-5 hide-on-mobile">
+                            <div id="chart_header" class="flex align-center space-between">
                                 <div id="chart_asset"></div>
                                 <strip-select id="price_duration_selector">
                                     <strip-option value="hour" title="1 Hour price interval" selected>Hour
@@ -121,7 +121,7 @@
                                     <strip-option value="day" title="1 Day price interval">Day</strip-option>
                                 </strip-select>
                             </div>
-                            <div class="flex" style="position: relative; flex: 1">
+                            <div id="price_chart_wrapper" class="flex" style="position: relative; flex: 1">
                                 <div id="price_history_chart"></div>
                             </div>
                         </div>
@@ -947,6 +947,7 @@
                                 });
                                 lineSeries = chart.addLineSeries();
                                 setChartTheme()
+                                chartObserver.observe(getRef('price_chart_wrapper'))
                             }
                             render.chart(params.asset)
                         } else {
@@ -1129,6 +1130,11 @@
         function formatAmount(amount) {
             return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: 5 })
         }
+
+        const chartDimensions = {
+            height: 0,
+            width: 0
+        }
         const render = {
             listedAsset(name, rate) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild.firstElementChild
@@ -1215,19 +1221,17 @@
                         }
                     })
                     lineSeries.setData(data);
-                    let width
-                    let height
                     new ResizeObserver(entries => {
-                        height = entries[0].contentRect.height;
-                        width = entries[0].contentRect.width;
-                        chart.applyOptions({ width, height });
-                    }).observe(getRef('price_history_chart').parentNode);
+                        chartDimensions.height = entries[0].contentRect.height;
+                        chartDimensions.width = entries[0].contentRect.width;
+                        chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
+                    }).observe(getRef('price_chart_wrapper'));
                     function setLastBarText() {
                         getRef('chart_asset').innerHTML = `<h4> ${asset}/INR</h4><p>${formatAmount(data[data.length - 1].value)}</p>`;
                     }
                     setLastBarText();
                     chart.subscribeCrosshairMove(function (param) {
-                        if (param === undefined || param.time === undefined || param.point.x < 0 || param.point.x > width || param.point.y < 0 || param.point.y > height) {
+                        if (param === undefined || param.time === undefined || param.point.x < 0 || param.point.x > chartDimensions.width || param.point.y < 0 || param.point.y > chartDimensions.height) {
                             setLastBarText();
                         } else {
                             const price = param.seriesPrices.get(lineSeries);
@@ -1343,6 +1347,15 @@
             getRef(id).querySelector('sm-spinner')?.remove()
         }
 
+        const chartObserver = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && chart) {
+                const { width, height } = entries[0].target.getBoundingClientRect()
+                chartDimensions.height = height;
+                chartDimensions.width = width;
+                chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
+            }
+        })
+
         let chart
         let lineSeries
         function getChartTheme() {
@@ -1386,11 +1399,11 @@
 
         getRef('trading_view_switcher').addEventListener('change', e => {
             if (e.target.value === 'trade') {
-                getRef('price_chart_wrapper').classList.add('hide-on-mobile')
+                getRef('price_chart_container').classList.add('hide-on-mobile')
                 getRef('trade_form').classList.remove('hide-on-mobile')
             } else {
                 getRef('trade_form').classList.add('hide-on-mobile')
-                getRef('price_chart_wrapper').classList.remove('hide-on-mobile')
+                getRef('price_chart_container').classList.remove('hide-on-mobile')
             }
         })
 
