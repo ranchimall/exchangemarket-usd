@@ -1223,7 +1223,7 @@
                     })
                     lineSeries.setData(data);
                     new ResizeObserver(entries => {
-                        chartDimensions.height = entries[0].contentRect.height;
+                        chartDimensions.height = entries[0].contentRect.height - 10;
                         chartDimensions.width = entries[0].contentRect.width;
                         chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
                     }).observe(getRef('price_chart_wrapper'));
@@ -1351,7 +1351,7 @@
         const chartObserver = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && chart) {
                 const { width, height } = entries[0].target.getBoundingClientRect()
-                chartDimensions.height = height;
+                chartDimensions.height = height - 10;
                 chartDimensions.width = width;
                 chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
             }

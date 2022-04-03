@@ -588,8 +588,8 @@ sm-checkbox {
   width: 100%;
   justify-content: center;
   overflow-y: auto;
+  padding: 0 1.5rem;
   & > * {
-    padding: 0 1.5rem;
     width: min(42rem, 100%);
   }
 }
@@ -634,15 +634,13 @@ sm-checkbox {
   font-weight: 500;
   min-width: 8ch;
 }
-#exchange {
-  padding: 0;
-}
 #exchange_wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 #asset_page {
+  display: grid;
   height: 100%;
 }
 #asset_page__nav {
@@ -963,18 +961,9 @@ sm-checkbox {
   .hide-on-mobile {
     display: none !important;
   }
-  #asset_page__nav {
-    padding: 1rem 1.5rem 1.5rem 1.5rem;
-  }
-  #login_form,
-  #trade_form,
-  #asset_list_wrapper,
-  #chart_header {
-    padding: 0 1.5rem;
-  }
   #asset_page {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .listed-asset {
     border-radius: 0;
@@ -1055,7 +1044,6 @@ sm-checkbox {
     #exchange {
       display: flex;
       width: 100%;
-      padding: 0 1.5rem;
     }
     #exchange_wrapper {
       display: grid;
