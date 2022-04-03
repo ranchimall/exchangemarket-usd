@@ -758,6 +758,7 @@
 
         function getFormattedTime(timeString, relative) {
             try {
+                console.log(timeString)
                 const [date, time] = timeString.split('T')
                 const [year, month, day] = date.split('-').map(v => parseInt(v))
                 let [hours, minutes] = time.split(':').map(v => parseInt(v))
@@ -766,7 +767,7 @@
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
                 ];
-                const monthName = monthNames[month]
+                const monthName = monthNames[month - 1]
 
                 minutes = minutes < 10 ? `0${minutes}` : minutes
                 let finalHours = ``;
@@ -1459,7 +1460,6 @@
             }
         }
         getRef('quantity_selector').addEventListener('click', e => {
-            // Get latest balance and exchange rate
             if (e.target.closest('button')) {
                 const target = e.target.closest('button')
                 const unitValue = parseFloat(getRef('get_price').value)
@@ -1472,11 +1472,13 @@
                 } else {
                     getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(4))
                     getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(4))
+
                 }
             }
         })
         getRef('get_price').addEventListener('keyup', e => {
             const unitValue = parseFloat(getRef('get_price').value) || floGlobals.exchangeRates[pagesData.params.asset]
+
             const quantity = parseFloat(getRef('get_quantity').value) || 0
             getRef('get_total').value = parseFloat((quantity * unitValue).toFixed(4)) || 0
         })
@@ -1501,6 +1503,7 @@
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
                 getRef('get_user_amount').setAttribute('step', asset === 'rupee' ? '0.01' : '0.00001')
                 getRef('get_user_amount').setAttribute('min', asset === 'rupee' ? '0.01' : '0.00001')
+
                 if (type === 'withdraw') {
                     getRef('get_private_key').classList.add('hide')
                     getRef('wallet_quantity_selector').classList.remove('hide')
@@ -1918,6 +1921,7 @@
                 })
             }
         }
+
         function updateRate(init = false) {
             floExchangeAPI.getRates().then(rates => {
                 console.debug(rates);
@@ -1956,6 +1960,7 @@
                 }
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
                     getRef('get_price').value = parseFloat(parseFloat(rates[pagesData.params.asset]).toFixed(4))
+
             }).catch(error => console.error(error))
         }
 
