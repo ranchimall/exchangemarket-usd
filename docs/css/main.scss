@@ -649,13 +649,20 @@ sm-checkbox {
   height: 100%;
 }
 #asset_page {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 #asset_page__nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 1rem 0;
   .icon-only {
     margin-left: -0.7rem;
+  }
+  strip-select {
+    align-self: center;
   }
 }
 #trade_form {
@@ -969,10 +976,6 @@ sm-checkbox {
   }
   .hide-on-mobile {
     display: none !important;
-  }
-  #asset_page {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
   }
   .listed-asset {
     border-radius: 0;

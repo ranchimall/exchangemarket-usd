@@ -99,7 +99,7 @@
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
-                        <nav id="asset_page__nav" class="flex align-center space-between hide-on-desktop">
+                        <nav id="asset_page__nav" class="hide-on-desktop">
                             <a href="#/exchange" class="button icon-only">
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                     width="24px" fill="#000000">
@@ -133,7 +133,7 @@
                                     <strip-option value="sell">Sell</strip-option>
                                 </strip-select>
                             </div>
-                            <sm-input id="get_price" placeholder="Max price (₹)" type="number" step="0.01" required
+                            <sm-input id="get_price" placeholder="Max price (₹)" type="number" step="0.0001" required
                                 animate>
                             </sm-input>
                             <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.0001" required
@@ -1014,7 +1014,7 @@
                     },
                 ],
                     {
-                        duration: 150,
+                        duration: 300,
                         easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                     }).onfinish = () => {
                         getRef('pages_container').style.overflowY = "";
@@ -1497,10 +1497,10 @@
                 const selectedAsset = pagesData.params.asset
                 if (tradeType === 'buy') {
                     console.log(parseFloat((fraction * allTokens['rupee'].net).toFixed(4)), parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(4)))
-                    getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(4))
+                    getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(2))
                     getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(4))
                 } else {
-                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(4))
+                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(2))
                     getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(4))
 
                 }
@@ -1510,11 +1510,11 @@
             const unitValue = parseFloat(getRef('get_price').value) || floGlobals.exchangeRates[pagesData.params.asset]
 
             const quantity = parseFloat(getRef('get_quantity').value) || 0
-            getRef('get_total').value = parseFloat((quantity * unitValue).toFixed(4)) || 0
+            getRef('get_total').value = parseFloat((quantity * unitValue).toFixed(2)) || 0
         })
         getRef('get_quantity').addEventListener('keyup', e => {
             const unitValue = parseFloat(getRef('get_price').value)
-            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(4)) || 0
+            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(2)) || 0
         })
         getRef('get_total').addEventListener('keyup', e => {
             const unitValue = parseFloat(getRef('get_price').value)
