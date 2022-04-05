@@ -171,9 +171,7 @@
                             <div id="trade_button_wrapper"
                                 class="stateful-button-wrapper flex align-center justify-center">
                                 <sm-button id="trade_button" class="uppercase w-100" variant="primary"
-                                    onclick="tradeFlo()">
-                                    BUY
-                                    FLO
+                                    onclick="showPopup('confirm_trade_popup')">BUY FLO
                                 </sm-button>
                             </div>
                         </sm-form>
@@ -203,7 +201,7 @@
                         </button>
                         <div class="options">
                             <button class="button" title="Cancel selected orders" onclick="cancelAll()">
-                                Cancel orders
+                                Cancel all
                             </button>
                         </div>
                     </div>
@@ -327,6 +325,45 @@
             </a>
         </nav>
     </article>
+
+    <sm-popup id="confirm_trade_popup">
+        <header slot="header" class="popup__header">
+            <button class="popup__header__close" onclick="hidePopup()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="none" d="M0 0h24v24H0z" />
+                    <path
+                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                </svg>
+            </button>
+            <h3 id="confirm_trade__title" class="uppercase">BUY</h3>
+        </header>
+        <section class="grid gap-1-5">
+            <div class="grid gap-0-5">
+                <h5 id="confirm_trade__price_type"></h5>
+                <h4 id="confirm_trade__price"></h4>
+            </div>
+            <div class="grid gap-0-5">
+                <h5>Quantity</h5>
+                <h4 id="confirm_trade__quantity"></h4>
+            </div>
+            <div class="grid gap-0-5">
+                <h5>Total</h5>
+                <h4 id="confirm_trade__total"></h4>
+            </div>
+            <div class="flex align-center tip">
+                <svg class="icon margin-right-0-5" style="height: 1em; width: 1em;" xmlns="http://www.w3.org/2000/svg"
+                    enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <rect fill="none" height="24" width="24" y="0" />
+                    <path
+                        d="M7,20h4c0,1.1-0.9,2-2,2S7,21.1,7,20z M5,19h8v-2H5V19z M16.5,9.5c0,3.82-2.66,5.86-3.77,6.5H5.27 C4.16,15.36,1.5,13.32,1.5,9.5C1.5,5.36,4.86,2,9,2S16.5,5.36,16.5,9.5z M14.5,9.5C14.5,6.47,12.03,4,9,4S3.5,6.47,3.5,9.5 c0,2.47,1.49,3.89,2.35,4.5h6.3C13.01,13.39,14.5,11.97,14.5,9.5z M21.37,7.37L20,8l1.37,0.63L22,10l0.63-1.37L24,8l-1.37-0.63L22,6 L21.37,7.37z M19,6l0.94-2.06L22,3l-2.06-0.94L19,0l-0.94,2.06L16,3l2.06,0.94L19,6z" />
+                </svg>
+                <p id="confirm_trade__tip" style="font-size: inherit;">
+                    Buy FLO worth of above percentage rupee
+                </p>
+            </div>
+            <sm-button variant="primary" onclick="tradeAsset()" autofocus>Confirm</sm-button>
+        </section>
+    </sm-popup>
     <sm-popup id="user_popup">
         <header slot="header" class="popup__header">
             <button class="popup__header__close" onclick="hidePopup()">
@@ -1457,7 +1494,8 @@
         getRef('price_duration_selector').addEventListener('change', e => {
             render.chart(pagesData.params.asset, e.detail.value === 'hour' ? '48 weeks' : 'all-time')
         })
-        async function tradeFlo() {
+        async function tradeAsset() {
+            hidePopup()
             const asset = pagesData.params.asset;
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = parseFloat(getRef('get_price').value)
@@ -1847,6 +1885,24 @@
                     const { floID, privKey } = floCrypto.generateNewID()
                     getRef('generated_flo_id').value = floID
                     getRef('generated_private_key').value = privKey
+                    break;
+                case 'confirm_trade_popup':
+                    const asset = pagesData.params.asset;
+                    const tradeType = getRef('trade_type_selector').value
+                    const quantity = parseFloat(getRef('get_quantity').value)
+                    const price = parseFloat(getRef('get_price').value)
+                    const total = parseFloat(getRef('get_total').value)
+                    getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`
+                    getRef('confirm_trade__price_type').textContent = tradeType === 'buy' ? 'Max price' : 'Min price'
+                    getRef('confirm_trade__price').textContent = formatAmount(price)
+                    getRef('confirm_trade__quantity').textContent = quantity
+                    getRef('confirm_trade__total').textContent = formatAmount(total)
+                    if (price !== floGlobals.exchangeRates[asset]) {
+                        getRef('confirm_trade__tip').textContent = `Trade will only happen at current price of ${asset}. So ${tradeType}ing at ${price > floGlobals.exchangeRates[asset] ? 'higher' : 'lower'} price won't execute until price matches that.`
+                        getRef('confirm_trade__tip').parentNode.classList.remove('hide')
+                    } else {
+                        getRef('confirm_trade__tip').parentNode.classList.add('hide')
+                    }
                     break;
             }
         })

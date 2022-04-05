@@ -403,7 +403,7 @@ ul {
   display: grid;
   gap: 0.5rem;
   width: 100%;
-  padding: 0 1.5rem 0 0.5rem;
+  padding: 0 1.5rem 0 0.8rem;
   align-items: center;
   grid-template-columns: auto 1fr auto;
 }
@@ -496,13 +496,14 @@ sm-checkbox {
 }
 
 .tip {
-  border-radius: 2rem;
+  border-radius: 1.5rem;
   background-color: rgba(var(--text-color), 0.06);
   padding: 0.3rem 0.8rem;
   font-size: 0.85rem;
 }
 .tip .icon {
   fill: var(--accent-color);
+  flex-shrink: 0;
 }
 
 .page-layout {
@@ -689,15 +690,12 @@ sm-checkbox {
 
 #asset_page__nav {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   padding: 1rem 0;
 }
 #asset_page__nav .icon-only {
   margin-left: -0.7rem;
-}
-#asset_page__nav strip-select {
-  align-self: center;
 }
 
 #trade_form {
@@ -1084,7 +1082,7 @@ sm-checkbox {
   }
 
   .popup__header {
-    padding: 1rem 1.5rem 0 0.5rem;
+    padding: 1rem 1.5rem 0 0.8rem;
   }
 
   #confirmation_popup {
@@ -1154,8 +1152,6 @@ sm-checkbox {
   }
 
   #price_history_chart {
-    overflow: hidden;
-    border-radius: 0.5rem;
     height: 20rem;
   }
 
