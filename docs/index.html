@@ -2121,7 +2121,14 @@
                 render.userOrders();
                 proxy.secret.then(_ => null).catch(_ => null);
                 showPage(window.location.hash);
-            }).catch(error => notify(error.data, 'error'))
+            }).catch(error => {
+                if (error.data === 'Invalid request signature! Re-login if this error occurs frequently') {
+                    proxy.clear()
+                    location.reload()
+                }
+                else
+                    notify(error.data, 'error')
+            })
                 .finally(() => {
                     hideProcess('login_button_wrapper')
                 })
