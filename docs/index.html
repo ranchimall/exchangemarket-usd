@@ -255,6 +255,9 @@
                         <button class="button" value="withdraw">
                             Withdraw
                         </button>
+                        <button class="button" value="transfer">
+                            Transfer
+                        </button>
                     </div>
                 </div>
                 <div class="grid gap-0-5">
@@ -457,6 +460,8 @@
         </header>
         <sm-form id="wallet_form">
             <input type="text" id="sink_id" style="display: none;" hidden />
+            <sm-input id="get_receiver_id" placeholder="Receiver FLO ID" error-text="Invalid FLO ID" data-flo-id
+                required animate></sm-input>
             <sm-input id="get_user_amount" placeholder="Quantity" type="number" min="0.01" step="0.00001" required
                 animate>
             </sm-input>
@@ -1562,27 +1567,36 @@
         getRef('wallet_actions').addEventListener('click', e => {
             if (e.target.closest('.button')) {
                 const target = e.target.closest('.button')
-                showPopup('wallet_popup')
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
-                getRef('wallet_quantity_type').textContent = asset
+
+                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[asset].net.toFixed(4))} ${asset}`
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
                 getRef('get_user_amount').setAttribute('step', asset === 'rupee' ? '0.01' : '0.00001')
                 getRef('get_user_amount').setAttribute('min', asset === 'rupee' ? '0.01' : '0.00001')
-
-                if (type === 'withdraw') {
-                    getRef('get_private_key').classList.add('hide')
-                    getRef('wallet_quantity_selector').classList.remove('hide')
-                    getRef('get_private_key').removeAttribute('required')
-
-                } else {
-                    getRef('get_private_key').setAttribute('required', '')
-                    getRef('wallet_quantity_selector').classList.add('hide')
-                    getRef('get_private_key').classList.remove('hide')
+                // default form element state
+                getRef('get_receiver_id').removeAttribute('required')
+                getRef('get_receiver_id').classList.add('hide')
+                getRef('get_private_key').removeAttribute('required')
+                getRef('get_private_key').classList.add('hide')
+                getRef('wallet_quantity_selector').classList.remove('hide')
+                switch (type) {
+                    case 'withdraw':
+                        break;
+                    case 'deposit':
+                        getRef('get_private_key').setAttribute('required', '')
+                        getRef('get_private_key').classList.remove('hide')
+                        getRef('wallet_quantity_selector').classList.add('hide')
+                        break;
+                    case 'transfer':
+                        getRef('get_receiver_id').setAttribute('required', '')
+                        getRef('get_receiver_id').classList.remove('hide')
+                        break;
                 }
                 getRef('wallet_form').elementsChanged()
+                showPopup('wallet_popup')
             }
         })
         function showWalletResult(status, title, description) {
@@ -1644,21 +1658,32 @@
             try {
                 showProcess('wallet_popup__cta_wrapper')
                 const proxySecret = await proxy.secret;
-                if (type === 'deposit') {
-                    const privKey = getRef('get_private_key').value;
-                    if (asset === 'FLO') {
-                        await floExchangeAPI.depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
-                    } else {
-                        await floExchangeAPI.depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
-                    }
-                    showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
-                } else {
-                    if (asset === 'FLO') {
-                        await floExchangeAPI.withdrawFLO(quantity, proxy.userID, proxySecret)
-                    } else {
-                        await floExchangeAPI.withdrawToken(asset, quantity, proxy.userID, proxySecret)
-                    }
-                    showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
+                switch (type) {
+                    case 'deposit':
+                        const privKey = getRef('get_private_key').value;
+                        if (asset === 'FLO') {
+                            await floExchangeAPI.depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        } else {
+                            await floExchangeAPI.depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        }
+                        showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your wallet.')
+                        break;
+                    case 'withdraw':
+                        if (asset === 'FLO') {
+                            await floExchangeAPI.withdrawFLO(quantity, proxy.userID, proxySecret)
+                        } else {
+                            await floExchangeAPI.withdrawToken(asset, quantity, proxy.userID, proxySecret)
+                        }
+                        showWalletResult('success', `Sent ${asset} withdraw request`, 'This may take upto 30 mins to reflect in your wallet.')
+                        break;
+                    case 'transfer':
+                        const receiverID = getRef('get_receiver_id').value.trim();
+                        const receiver = {
+                            [receiverID]: quantity
+                        }
+                        await floExchangeAPI.transferToken(receiver, asset, proxy.userID, proxySecret)
+                        showWalletResult('success', `Sent ${quantity} ${asset} to ${receiverID}`, `This may take upto 30 mins to reflect in receiver's wallet.`)
+                        break;
                 }
             }
             catch (err) {

@@ -845,11 +845,11 @@ sm-checkbox {
   border-radius: 0.5rem;
 }
 .balance-card.is-locked {
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 1rem;
 }
 .balance-card:not(.is-locked) {
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
 }
 .balance-card__icon {
   display: flex;

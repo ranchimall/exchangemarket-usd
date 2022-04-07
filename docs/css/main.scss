@@ -807,11 +807,11 @@ sm-checkbox {
   gap: 0.3rem 0.5rem;
   border-radius: 0.5rem;
   &.is-locked {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr auto;
     gap: 1rem;
   }
   &:not(.is-locked) {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto 1fr auto auto;
   }
   &__icon {
     display: flex;
