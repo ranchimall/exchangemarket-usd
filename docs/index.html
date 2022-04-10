@@ -962,6 +962,7 @@
             if (!firstLoad)
                 switch (pageId) {
                     case 'exchange':
+                        if (!document.body.classList.contains('is-signed-in')) break;
                         if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
                             params.asset = 'FLO'
                         }
