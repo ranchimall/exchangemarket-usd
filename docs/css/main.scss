@@ -315,22 +315,6 @@ ul {
   );
   pointer-events: none;
 }
-.empty-state {
-  display: grid;
-  justify-content: center;
-  text-align: center;
-  width: 100%;
-  max-width: none;
-  padding: 1.5rem;
-}
-
-.observe-empty-state:empty {
-  display: none !important;
-}
-
-.observe-empty-state:not(:empty) + .empty-state {
-  display: none !important;
-}
 
 .icon {
   width: 1.2rem;
@@ -358,6 +342,30 @@ ul {
   .icon {
     fill: var(--accent-color);
   }
+}
+.empty-state {
+  display: grid;
+  text-align: center;
+  justify-items: center;
+  width: 100%;
+  max-width: none;
+  padding: 1.5rem;
+  &__icon {
+    height: 3rem;
+    width: 3rem;
+    padding: 0.6rem;
+    border-radius: 1rem;
+    background-color: rgba(var(--text-color), 0.06);
+    margin-bottom: 1rem;
+  }
+}
+
+.observe-empty-state:empty {
+  display: none !important;
+}
+
+.observe-empty-state:not(:empty) + .empty-state {
+  display: none !important;
 }
 #confirmation_popup,
 #prompt_popup {
@@ -682,10 +690,6 @@ sm-checkbox {
 #market {
   width: min(42rem, 100%);
   grid-template-rows: auto 1fr;
-  .icon {
-    height: 1.2rem;
-    width: 1.2rem;
-  }
 }
 .orders_section__header {
   min-height: 2.8rem;
@@ -888,7 +892,11 @@ sm-checkbox {
     opacity: 1;
   }
 }
-
+#wallet_result__cta {
+  padding: 1.5rem 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(var(--text-color), 0.06);
+}
 .stateful-button-wrapper {
   display: flex;
   position: relative;
@@ -978,6 +986,9 @@ sm-checkbox {
 @media screen and (max-width: 40rem) {
   sm-button {
     --padding: 0.9rem 1.6rem;
+  }
+  .empty-state {
+    align-self: center;
   }
   .main_navbar__item--active {
     .item__title {
