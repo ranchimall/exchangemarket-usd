@@ -2952,3 +2952,73 @@ customElements.define('sm-checkbox', class extends HTMLElement {
         this.removeEventListener('change', this.handleClick)
     }
 })
+
+const lineLoader = document.createElement('template');
+lineLoader.innerHTML = `
+<style>     
+*{
+    padding: 0;
+    margin: 0;
+    -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+}
+.loader {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 0.2rem;
+    width: 8rem;
+    margin: 0 auto;
+    background-color: rgba(var(--text-color), 0.06);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .loader::after {
+    content: "";
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: var(--accent-color);
+    left: 0;
+    border-radius: inherit;
+    -webkit-animation: line-loader 1.5s infinite;
+            animation: line-loader 1.5s infinite;
+    transform-origin: left;
+  }
+  
+  @-webkit-keyframes line-loader {
+    0% {
+      transform: translateX(0) scaleX(0);
+    }
+    60% {
+      transform: translateX(0) scaleX(1);
+    }
+    100% {
+      transform: translateX(100%) scaleX(1);
+    }
+  }
+  
+  @keyframes line-loader {
+    0% {
+      transform: translateX(0) scaleX(0);
+    }
+    60% {
+      transform: translateX(0) scaleX(1);
+    }
+    100% {
+      transform: translateX(100%) scaleX(1);
+    }
+  }
+</style>
+<div class="loader"></div>
+`;
+class LineLoader extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({
+            mode: 'open'
+        }).append(lineLoader.content.cloneNode(true));
+    }
+}
+window.customElements.define('line-loader', LineLoader);

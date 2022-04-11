@@ -628,7 +628,7 @@ sm-checkbox {
   padding: 0 1.5rem;
 }
 #pages_container > * {
-  width: min(42rem, 100%);
+  min-width: min(26rem, 100%);
 }
 
 .listed-asset {

@@ -46,11 +46,12 @@
     </sm-popup>
     <div id="loading" class="page flex align-center justify-center">
         <div class="grid gap-2 text-center">
-            <sm-spinner></sm-spinner>
+            <line-loader></line-loader>
             <div class="grid gap-0-5">
                 <h4>RanchiMall Exchange</h4>
                 <p>Getting everything ready</p>
             </div>
+            <sm-button onclick="floExchangeAPI.clearAllLocalData()">Reset</sm-button>
         </div>
     </div>
     <article id="home" class="page hide">
@@ -1492,7 +1493,11 @@
             }
             catch (err) {
                 getRef('trade_button_wrapper').append(getRef('failure_template').content.cloneNode(true))
-                notify(err.data, 'error')
+                if (err.data === 'Insufficient rupee') {
+                    notify(`Insufficient balance to ${tradeType} ${asset}. Please deposit rupee to wallet first.`, 'error', { pinned: true })
+                } else {
+                    notify(err.data, 'error')
+                }
             }
             finally {
                 updateRate()
