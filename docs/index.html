@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RanchiMall market</title>
+    <title>RanchiMall exchange</title>
+    <meta name="description" content="Trade FLO and FLO based RanchiMall tokens.">
 
     <script src="css/components.js" defer></script>
     <link rel="stylesheet" href="css/main.min.css">
@@ -43,7 +44,16 @@
             </div>
         </sm-form>
     </sm-popup>
-    <article id="home" class="page">
+    <div id="loading" class="page flex align-center justify-center">
+        <div class="grid gap-2 text-center">
+            <sm-spinner></sm-spinner>
+            <div class="grid gap-0-5">
+                <h4>RanchiMall Exchange</h4>
+                <p>Getting everything ready</p>
+            </div>
+        </div>
+    </div>
+    <article id="home" class="page hide">
         <header id="main_header">
             <div class="logo">
                 <svg class="main-logo" viewBox="0 0 27.25 32">
@@ -73,7 +83,7 @@
                         <p>Please login for exchange.</p>
                     </div>
                     <sm-input type="password" id="login_form__priv_key" placeholder="Private key"
-                        error-text="Invalid private key" data-private-key animate required>
+                        error-text="Invalid private key" data-private-key autofocus animate required>
                     </sm-input>
                     <sm-checkbox id="remember_me" checked>
                         <span class="margin-left-0-5">
@@ -235,7 +245,7 @@
                 </p>
             </section>
             <section id="wallet" class="grid mobile-page hide">
-                <h4 class="flex align-center user_section__header">
+                <h4 id="wallet__header" class="flex align-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon margin-right-0-5" height="24px"
                         viewBox="0 0 24 24" width="24px">
                         <path d="M0 0h24v24H0V0z" fill="none" />
@@ -263,16 +273,11 @@
                 <div class="grid gap-0-5">
                     <div class="flex align-center space-between">
                         <h4>Balance</h4>
-                        <button onclick="refresh();" title="Refresh" style="margin-left: 1rem;">
-                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
-                                width="24px" fill="#000000">
-                                <path d="M0 0h24v24H0V0z" fill="none" />
-                                <path
-                                    d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-                            </svg>
+                        <button class="button" onclick="refresh();" title="Refresh">
+                            Refresh
                         </button>
                     </div>
-                    <ul id="my_assets" class="grid gap-1"></ul>
+                    <ul id="my_assets" class="grid"></ul>
                 </div>
             </section>
         </section>
@@ -396,26 +401,6 @@
             <sm-button class="danger" onclick="UI_evt.logout();">Log out</sm-button>
         </section>
     </sm-popup>
-    <sm-popup id="registration_popup">
-        <header slot="header" class="popup__header">
-            <button class="popup__header__close" onclick="hidePopup()">
-                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="none" d="M0 0h24v24H0z" />
-                    <path
-                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
-                </svg>
-            </button>
-            <h4>Register</h4>
-        </header>
-        <div class="grid gap-1-5">
-            <sm-form id="register_section">
-                <p>Enter the private key of FLO ID you want to register.</p>
-                <sm-input id="get_registration_key" placeholder="Private key" type="password" required>
-                </sm-input>
-                <sm-button variant="primary" onclick="UI_evt.signup()" disabled>Register</sm-button>
-            </sm-form>
-        </div>
-    </sm-popup>
     <sm-popup id="sign_up_popup">
         <header slot="header" class="popup__header">
             <button class="popup__header__close" onclick="hidePopup()">
@@ -438,9 +423,6 @@
                     <sm-copy id="generated_private_key"></sm-copy>
                 </div>
             </div>
-            <sm-button id="sign_up_button" variant="primary" onclick="registerID()" style="display: none;" disabled>
-                Register these credentials
-            </sm-button>
             <strong class="warning">
                 Keep your private key secure and don't share with anyone.
                 Once lost there is no way to recover private key.
@@ -2078,7 +2060,14 @@
                         getRef('sign_in_code').value = response.code;
                         getRef('sign_in_hash').value = response.hash;
                         proxy.clear();
+                        setTimeout(() => {
+                            getRef('login_form__priv_key').focusIn()
+                        }, 0);
                     }).catch(error => console.error(error))
+                        .finally(() => {
+                            getRef('loading').classList.add('hide')
+                            getRef('home').classList.remove('hide')
+                        })
                 }
             } else
                 console.info("refresh");
@@ -2149,26 +2138,12 @@
             })
                 .finally(() => {
                     hideProcess('login_button_wrapper')
+                    getRef('loading').classList.add('hide')
+                    getRef('home').classList.remove('hide')
                 })
         };
 
         const UI_evt = {
-            signup(privKey) {
-                let code = getRef('sign_in_code').value,
-                    hash = getRef('sign_in_hash').value;
-                if (!privKey)
-                    privKey = getRef('get_registration_key').value.trim()
-                if (privKey !== '') {
-                    floExchangeAPI.signUp(privKey, code, hash).then(result => {
-                        console.info(result);
-                        notify("Account registered!", 'success')
-                        hidePopup()
-                    }).catch(error => {
-                        notify(error, 'error');
-                    });
-                }
-            },
-
             logout() {
                 getConfirmation('Log out?', { cancelText: 'Stay', confirmText: 'Log out' }).then(async res => {
                     if (res) {
@@ -2202,12 +2177,6 @@
             }
 
         };
-
-        function registerID() {
-            UI_evt.signup(getRef('generated_private_key').value)
-            hidePopup()
-        }
-
         window.addEventListener('load', e => {
             floExchangeAPI.init().then(nodes => {
                 console.log(nodes);

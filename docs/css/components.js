@@ -687,6 +687,7 @@ customElements.define('sm-input',
             this.clearBtn.removeEventListener('click', this.clear);
         }
     })
+
 const smNotifications = document.createElement('template')
 smNotifications.innerHTML = `
     <style>
@@ -711,13 +712,14 @@ smNotifications.innerHTML = `
             gap: 0.5rem;
             position: fixed;
             left: 0;
-            bottom: 0;
+            top: 0;
             z-index: 100;
             max-height: 100%;
             padding: 1rem;
             overflow: hidden auto;
             -ms-scroll-chaining: none;
                 overscroll-behavior: contain;
+            touch-action: none;
         }
         .notification-panel:empty{
             display:none;
@@ -728,7 +730,7 @@ smNotifications.innerHTML = `
             display: flex;
             position: relative;
             border-radius: 0.3rem;
-            background: rgba(var(--background-color, (255,255,255)), 1);
+            background: rgba(var(--foreground-color, (255,255,255)), 1);
             overflow: hidden;
             overflow-wrap: break-word;
             word-wrap: break-word;
@@ -741,6 +743,7 @@ smNotifications.innerHTML = `
             max-width: 100%;
             padding: 1rem;
             align-items: center;
+            touch-action: none;
         }
         .icon-container:not(:empty){
             margin-right: 0.5rem;
@@ -804,6 +807,8 @@ smNotifications.innerHTML = `
             .notification-panel{
                 max-width: 28rem;
                 width: max-content;
+                top: auto;
+                bottom: 0;
             }
             .notification{
                 width: auto;
@@ -829,8 +834,6 @@ smNotifications.innerHTML = `
     </style>
     <div class="notification-panel"></div>
     `;
-
-
 customElements.define('sm-notifications', class extends HTMLElement {
     constructor() {
         super();
@@ -849,7 +852,23 @@ customElements.define('sm-notifications', class extends HTMLElement {
         this.createNotification = this.createNotification.bind(this)
         this.removeNotification = this.removeNotification.bind(this)
         this.clearAll = this.clearAll.bind(this)
+        this.handlePointerMove = this.handlePointerMove.bind(this)
 
+
+        this.startX = 0;
+        this.currentX = 0;
+        this.endX = 0;
+        this.swipeDistance = 0;
+        this.swipeDirection = '';
+        this.swipeThreshold = 0;
+        this.startTime = 0;
+        this.swipeTime = 0;
+        this.swipeTimeThreshold = 200;
+        this.currentTarget = null;
+
+        this.mediaQuery = window.matchMedia('(min-width: 640px)')
+        this.handleOrientationChange = this.handleOrientationChange.bind(this)
+        this.isLandscape = false
     }
 
     randString(length) {
@@ -884,28 +903,45 @@ customElements.define('sm-notifications', class extends HTMLElement {
 
     push(message, options = {}) {
         const notification = this.createNotification(message, options);
-        this.notificationPanel.append(notification);
+        if (this.isLandscape)
+            this.notificationPanel.append(notification);
+        else
+            this.notificationPanel.prepend(notification);
+        this.notificationPanel.animate(
+            [
+                {
+                    transform: `translateY(${this.isLandscape ? '' : '-'}${notification.clientHeight}px)`,
+                },
+                {
+                    transform: `none`,
+                },
+            ], this.animationOptions
+        )
         notification.animate([
             {
-                transform: `translateY(1rem)`,
+                transform: `translateY(-1rem)`,
                 opacity: '0'
             },
             {
                 transform: `none`,
                 opacity: '1'
             },
-        ], this.animationOptions);
+        ], this.animationOptions).onfinish = (e) => {
+            e.target.commitStyles()
+            e.target.cancel()
+        }
         return notification.id;
     }
 
-    removeNotification(notification) {
+    removeNotification(notification, direction = 'left') {
+        const sign = direction === 'left' ? '-' : '+';
         notification.animate([
             {
-                transform: `none`,
+                transform: this.currentX ? `translateX(${this.currentX}px)` : `none`,
                 opacity: '1'
             },
             {
-                transform: `translateY(0.5rem)`,
+                transform: `translateX(calc(${sign}${this.currentX}px ${sign} 1rem))`,
                 opacity: '0'
             }
         ], this.animationOptions).onfinish = () => {
@@ -919,7 +955,70 @@ customElements.define('sm-notifications', class extends HTMLElement {
         });
     }
 
+    handlePointerMove(e) {
+        this.currentX = e.clientX - this.startX;
+        this.currentTarget.style.transform = `translateX(${this.currentX}px)`;
+    }
+
+    handleOrientationChange(e) {
+        this.isLandscape = e.matches
+        if (e.matches) {
+            // landscape
+
+        } else {
+            // portrait
+        }
+    }
     connectedCallback() {
+
+        this.handleOrientationChange(this.mediaQuery);
+
+        this.mediaQuery.addEventListener('change', this.handleOrientationChange);
+        this.notificationPanel.addEventListener('pointerdown', e => {
+            if (e.target.closest('.notification')) {
+                this.swipeThreshold = this.clientWidth / 2;
+                this.currentTarget = e.target.closest('.notification');
+                this.currentTarget.setPointerCapture(e.pointerId);
+                this.startTime = Date.now();
+                this.startX = e.clientX;
+                this.startY = e.clientY;
+                this.notificationPanel.addEventListener('pointermove', this.handlePointerMove);
+            }
+        });
+        this.notificationPanel.addEventListener('pointerup', e => {
+            this.endX = e.clientX;
+            this.endY = e.clientY;
+            this.swipeDistance = Math.abs(this.endX - this.startX);
+            this.swipeTime = Date.now() - this.startTime;
+            if (this.endX > this.startX) {
+                this.swipeDirection = 'right';
+            } else {
+                this.swipeDirection = 'left';
+            }
+            if (this.swipeTime < this.swipeTimeThreshold) {
+                if (this.swipeDistance > 50)
+                    this.removeNotification(this.currentTarget, this.swipeDirection);
+            } else {
+                if (this.swipeDistance > this.swipeThreshold) {
+                    this.removeNotification(this.currentTarget, this.swipeDirection);
+                } else {
+                    this.currentTarget.animate([
+                        {
+                            transform: `translateX(${this.currentX}px)`,
+                        },
+                        {
+                            transform: `none`,
+                        },
+                    ], this.animationOptions).onfinish = (e) => {
+                        e.target.commitStyles()
+                        e.target.cancel()
+                    }
+                }
+            }
+            this.notificationPanel.removeEventListener('pointermove', this.handlePointerMove)
+            this.notificationPanel.releasePointerCapture(e.pointerId);
+            this.currentX = 0;
+        });
         this.notificationPanel.addEventListener('click', e => {
             if (e.target.closest('.close')) {
                 this.removeNotification(e.target.closest('.notification'));
@@ -941,7 +1040,11 @@ customElements.define('sm-notifications', class extends HTMLElement {
             childList: true,
         });
     }
+    disconnectedCallback() {
+        mediaQueryList.removeEventListener('change', handleOrientationChange);
+    }
 });
+
 class Stack {
     constructor() {
         this.items = [];
