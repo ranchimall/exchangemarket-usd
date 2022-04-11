@@ -724,6 +724,10 @@ sm-checkbox {
   width: 1.2rem;
 }
 
+.orders_section__header {
+  min-height: 2.8rem;
+}
+
 .list__item {
   padding: 0.5rem 0;
   display: grid;
@@ -741,6 +745,7 @@ sm-checkbox {
   padding: 0.5rem 1.5rem 0.5rem 0.5rem;
   grid-template-columns: -webkit-min-content repeat(3, 1fr) -webkit-min-content;
   grid-template-columns: min-content repeat(3, 1fr) min-content;
+  border-radius: 0.5rem;
 }
 .order-card__type {
   font-size: 0.9rem;
@@ -854,6 +859,7 @@ sm-checkbox {
   padding: 0.5rem;
 }
 .balance-card.is-locked {
+  padding: 1rem 0.5rem;
   grid-template-columns: auto 1fr auto;
   gap: 0.5rem;
 }

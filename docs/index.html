@@ -1199,7 +1199,7 @@
                 card.querySelector('.order-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
                 card.querySelector('.order-card__price').textContent = formatAmount(price)
-                card.querySelector('.order-card__time').textContent = relativeTime.from(time)
+                card.querySelector('.order-card__time').textContent = relativeTime.from(new Date(time).getTime())
                 return card
             },
             transactionCard(transactionDetails = {}) {
@@ -1435,9 +1435,11 @@
             }
         }
         function setChartTheme(e) {
-            const themeToApply = getChartTheme()
-            chart.applyOptions(themeToApply.chart);
-            lineSeries.applyOptions(themeToApply.series);
+            if (chart) {
+                const themeToApply = getChartTheme()
+                chart.applyOptions(themeToApply.chart);
+                lineSeries.applyOptions(themeToApply.series);
+            }
         }
 
         document.addEventListener('themechange', setChartTheme)
