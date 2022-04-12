@@ -10,7 +10,7 @@ function addTag(floID, tag) {
                 if (error.code === "ER_DUP_ENTRY")
                     reject(INVALID(`${floID} already in ${tag}`));
                 else if (error.code === "ER_NO_REFERENCED_ROW")
-                    reject(INVALID(`Invalid user-floID and/or Tag`));
+                    reject(INVALID(`Invalid Tag`));
                 else
                     reject(error);
             });
@@ -22,6 +22,37 @@ function removeTag(floID, tag) {
         DB.query("DELETE FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
             .then(result => resolve(`Removed ${floID} from ${tag}`))
             .catch(error => reject(error));
+    })
+}
+
+function addDistributor(floID, asset) {
+    return new Promise((resolve, reject) => {
+        DB.query("INSERT INTO Distributors (floID, asset) VALUE (?,?)", [floID, asset])
+            .then(result => resolve(`Added ${asset} distributor: ${floID}`))
+            .catch(error => {
+                if (error.code === "ER_DUP_ENTRY")
+                    reject(INVALID(`${floID} is already ${asset} disributor`));
+                else if (error.code === "ER_NO_REFERENCED_ROW")
+                    reject(INVALID(`Invalid Asset`));
+                else
+                    reject(error);
+            });
+    });
+}
+
+function removeDistributor(floID, asset) {
+    return new Promise((resolve, reject) => {
+        DB.query("DELETE FROM Distributors WHERE floID=? AND tag=?", [floID, asset])
+            .then(result => resolve(`Removed ${asset} distributor: ${floID}`))
+            .catch(error => reject(error));
+    })
+}
+
+function checkDistributor(floID, asset) {
+    new Promise((resolve, reject) => {
+        DB.query("SELECT id FROM Distributors WHERE floID=? AND asset=?", [floID, asset])
+            .then(result => resolve(result.length ? true : false))
+            .catch(error => reject(error))
     })
 }
 
@@ -378,6 +409,9 @@ function verifyBuyOrder(buyOrder, cur_price) {
 module.exports = {
     addTag,
     removeTag,
+    addDistributor,
+    removeDistributor,
+    checkDistributor,
     getBestPairs,
     set DB(db) {
         DB = db;

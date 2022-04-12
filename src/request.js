@@ -281,6 +281,34 @@ function RemoveUserTag(req, res) {
     );
 }
 
+function AddDistributor(req, res) {
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
+        res.status(INVALID.e_code).send("Access Denied");
+    else processRequest(res, "Add distributor", {
+            type: "add_distributor",
+            distributor: data.distributor,
+            asset: data.asset,
+            timestamp: data.timestamp
+        }, data.sign, data.floID, data.pubKey,
+        () => market.group.addDistributor(data.distributor, data.asset)
+    );
+}
+
+function RemoveDistributor(req, res) {
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
+        res.status(INVALID.e_code).send("Access Denied");
+    else processRequest(res, "Remove distributor", {
+            type: "remove_distributor",
+            distributor: data.distributor,
+            asset: data.asset,
+            timestamp: data.timestamp
+        }, data.sign, data.floID, data.pubKey,
+        () => market.group.removeDistributor(data.distributor, data.asset)
+    );
+}
+
 /* Public Requests */
 
 function GetLoginCode(req, res) {
@@ -415,6 +443,8 @@ module.exports = {
     periodicProcess: market.periodicProcess,
     AddUserTag,
     RemoveUserTag,
+    AddDistributor,
+    RemoveDistributor,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },

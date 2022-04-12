@@ -91,6 +91,8 @@ module.exports = function App(secret, DB) {
     //Manage user tags (Access to trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
     app.post('/remove-tag', Request.RemoveUserTag);
+    app.post('/add-distributor', Request.AddDistributor);
+    app.post('/remove-distributor', Request.RemoveDistributor);
 
     Request.DB = DB;
     Request.secret = secret;

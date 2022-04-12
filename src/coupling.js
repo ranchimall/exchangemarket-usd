@@ -178,10 +178,7 @@ function auditBalance(sellerID, buyerID, asset) {
 
 module.exports = {
     initiate: startCouplingForAsset,
-    group: {
-        addTag: group.addTag,
-        removeTag: group.removeTag
-    },
+    group: group,
     price,
     set DB(db) {
         DB = db;

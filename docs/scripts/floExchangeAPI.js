@@ -885,7 +885,7 @@
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= floGlobals.fee)
                 return reject(`Invalid quantity (${quantity})`);
-            floBlockchainAPI.sendTx(floID, sinkID, quantity, privKey, 'Deposit FLO in market').then(txid => {
+            floBlockchainAPI.sendTx(floID, sinkID, quantity, privKey, '(deposit in market)').then(txid => {
                 let request = {
                     floID: floID,
                     txid: txid,
@@ -947,7 +947,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject("Invalid Private Key");
-            floTokenAPI.sendToken(privKey, quantity, sinkID, 'Deposit Rupee in market', token).then(txid => {
+            floTokenAPI.sendToken(privKey, quantity, sinkID, '(deposit in market)', token).then(txid => {
                 let request = {
                     floID: floID,
                     txid: txid,
@@ -1057,6 +1057,68 @@
             console.debug(request);
 
             fetch_api('/remove-tag', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error)))
+                .catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.addDistributor = function(distributor, asset, floID, proxySecret) {
+        return new Promise((resolve, reject) => {
+            let request = {
+                floID: floID,
+                distributor: distributor,
+                asset: asset,
+                timestamp: Date.now()
+            };
+            if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(proxySecret);
+            request.sign = signRequest({
+                type: "add_distributor",
+                distributor: distributor,
+                asset: asset,
+                timestamp: request.timestamp
+            }, proxySecret);
+            console.debug(request);
+
+            fetch_api('/add-distributor', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error)))
+                .catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.removeDistributor = function(distributor, asset, floID, proxySecret) {
+        return new Promise((resolve, reject) => {
+            let request = {
+                floID: floID,
+                distributor: distributor,
+                asset: asset,
+                timestamp: Date.now()
+            };
+            if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(proxySecret);
+            request.sign = signRequest({
+                type: "remove_distributor",
+                distributor: distributor,
+                asset: asset,
+                timestamp: request.timestamp
+            }, proxySecret);
+            console.debug(request);
+
+            fetch_api('/remove-distributor', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'

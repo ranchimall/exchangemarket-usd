@@ -63,37 +63,27 @@ function getBalance(floID, token) {
 }
 
 getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
-    (token === floGlobals.currency ?
-        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]) :
-        DB.query("SELECT IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, token])
-    ).then(result => resolve({
+    DB.query("SELECT quantity AS balance FROM UserBalance WHERE floID=? AND token=?", [floID, token]).then(result => resolve({
         floID,
         token,
-        balance: result[0].balance.toFixed(8)
+        balance: result.length ? result[0].balance.toFixed(8) : 0
     })).catch(error => reject(error))
 });
 
 getBalance.floID = (floID) => new Promise((resolve, reject) => {
-    Promise.all([
-        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]),
-        DB.query("SELECT asset, IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? GROUP BY asset", [floID])
-    ]).then(result => {
+    DB.query("SELECT token, quantity AS balance FROM UserBalance WHERE floID=?", [floID]).then(result => {
         let response = {
             floID,
             balance: {}
         };
-        response.balance[floGlobals.currency] = result[0][0].balance.toFixed(8);
-        for (let row of result[1])
-            response.balance[row.asset] = row.balance.toFixed(8);
+        for (let row of result)
+            response.balance[row.token] = row.balance.toFixed(8);
         resolve(response);
     }).catch(error => reject(error))
 });
 
 getBalance.token = (token) => new Promise((resolve, reject) => {
-    (token === floGlobals.currency ?
-        DB.query("SELECT floID, balance FROM Cash") :
-        DB.query("SELECT floID, IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE asset = ? GROUP BY floID", [token])
-    ).then(result => {
+    DB.query("SELECT floID, quantity AS balance FROM UserBalance WHERE token=?", [token]).then(result => {
         let response = {
             token: token,
             balance: {}
@@ -105,13 +95,12 @@ getBalance.token = (token) => new Promise((resolve, reject) => {
 });
 
 const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
-    let promises = (asset === floGlobals.currency) ? [
-        DB.query("SELECT IFNULL(SUM(balance), 0) AS balance FROM Cash WHERE floID=?", [floID]),
-        DB.query("SELECT IFNULL(SUM(quantity*maxPrice), 0) AS locked FROM BuyOrder WHERE floID=?", [floID])
-    ] : [
-        DB.query("SELECT IFNULL(SUM(quantity), 0) AS balance FROM Vault WHERE floID=? AND asset=?", [floID, asset]),
+    let promises = [];
+    promises.push(DB.query("SELECT IFNULL(SUM(quantity), 0) AS balance FROM UserBalance WHERE floID=? AND token=?", [floID, asset]));
+    promises.push(asset === floGlobals.currency ?
+        DB.query("SELECT IFNULL(SUM(quantity*maxPrice), 0) AS locked FROM BuyOrder WHERE floID=?", [floID]) :
         DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
-    ];
+    );
     Promise.all(promises).then(result => resolve({
         total: result[0][0].balance,
         locked: result[1][0].locked,
@@ -130,29 +119,9 @@ getAssetBalance.check = (floID, asset, amount) => new Promise((resolve, reject) 
     }).catch(error => reject(error))
 });
 
-const consumeAsset = (floID, asset, amount, txQueries = []) => new Promise((resolve, reject) => {
-    //If asset/token is currency update Cash else consume from Vault
-    if (asset === floGlobals.currency) {
-        txQueries.push(["UPDATE Cash SET balance=balance-? WHERE floID=?", [amount, floID]]);
-        return resolve(txQueries);
-    } else
-        DB.query("SELECT id, quantity FROM Vault WHERE floID=? AND asset=? ORDER BY locktime", [floID, asset]).then(coins => {
-            let rem = amount;
-            for (let i = 0; i < coins.length && rem > 0; i++) {
-                if (rem < coins[i].quantity) {
-                    txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, coins[i].id]]);
-                    rem = 0;
-                } else {
-                    txQueries.push(["DELETE FROM Vault WHERE id=?", [coins[i].id]]);
-                    rem -= coins[i].quantity;
-                }
-            }
-            if (rem > 0) //should not happen AS the total and net is checked already
-                reject(INVALID("Insufficient Asset"));
-            else
-                resolve(txQueries);
-        }).catch(error => reject(error));
-});
+const updateBalance = {};
+updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
+updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [floID, token, amount, amount]];
 
 function addSellOrder(floID, asset, quantity, min_price) {
     return new Promise((resolve, reject) => {
@@ -233,8 +202,7 @@ function cancelOrder(type, id, floID) {
 function getAccountDetails(floID) {
     return new Promise((resolve, reject) => {
         let select = [];
-        select.push(["balance", "Cash"]);
-        select.push(["asset, AVG(base) AS avg_base, IFNULL(SUM(quantity), 0) AS quantity", "Vault", "GROUP BY asset"]);
+        select.push(["token, quantity", "UserBalance"]);
         select.push(["id, asset, quantity, minPrice, time_placed", "SellOrder"]);
         select.push(["id, asset, quantity, maxPrice, time_placed", "BuyOrder"]);
         let promises = select.map(a => DB.query(`SELECT ${a[0]} FROM ${a[1]} WHERE floID=? ${a[2] || ""}`, [floID]));
@@ -249,15 +217,12 @@ function getAccountDetails(floID) {
                 else
                     switch (i) {
                         case 0:
-                            response.cash = a.value.length ? a.value[0].balance : 0;
+                            response.tokenBalance = a.value;
                             break;
                         case 1:
-                            response.vault = a.value;
-                            break;
-                        case 2:
                             response.sellOrders = a.value;
                             break;
-                        case 3:
+                        case 2:
                             response.buyOrders = a.value;
                             break;
                     }
@@ -311,13 +276,14 @@ function transferToken(sender, receivers, token) {
             if (invalidIDs.length)
                 reject(INVALID(`Invalid receiver (${invalidIDs})`));
             else getAssetBalance.check(sender, token, totalAmount).then(_ => {
-                consumeAsset(sender, token, totalAmount).then(txQueries => {
-                    if (token === floGlobals.currency)
+                let txQueries = [];
+                txQueries.push(updateBalance.consume(sender, token, totalAmount));
+                for (let floID in receivers)
+                    txQueries.push(updateBalance.add(floID, token, receivers[floID]));
+                coupling.group.checkDistributor(sender, token).then(result => {
+                    if (result)
                         for (let floID in receivers)
-                            txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [floID, receivers[floID], receivers[floID]]]);
-                    else
-                        for (let floID in receivers)
-                            txQueries.push(["INSERT INTO Vault(floID, quantity, asset) VALUES (?, ?, ?)", [floID, receivers[floID], token]]);
+                            txQueries.push(["INSERT INTO Vault (floID, asset, quantity) VALUES (?, ?, ?)", [floID, token, receivers[floID]]]);
                     let time = Date.now();
                     let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
                         sender: sender,
@@ -364,7 +330,7 @@ function confirmDepositFLO() {
         results.forEach(req => {
             confirmDepositFLO.checkTx(req.floID, req.txid).then(amount => {
                 let txQueries = [];
-                txQueries.push(["INSERT INTO Vault(floID, quantity, asset) VALUES (?, ?, ?)", [req.floID, amount, "FLO"]]);
+                txQueries.push(updateBalance.add(req.floID, "FLO", amount));
                 txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
                 DB.transaction(txQueries)
                     .then(result => console.debug("FLO deposited:", req.floID, amount))
@@ -410,23 +376,23 @@ function withdrawFLO(floID, amount) {
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(`Invalid amount (${amount})`));
         getAssetBalance.check(floID, "FLO", amount).then(_ => {
-            consumeAsset(floID, "FLO", amount).then(txQueries => {
-                DB.transaction(txQueries).then(result => {
-                    //Send FLO to user via blockchain API
-                    floBlockchainAPI.sendTx(global.sinkID, floID, amount, global.sinkPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
-                        if (!txid)
-                            throw Error("Transaction not successful");
-                        //Transaction was successful, Add in DB
-                        DB.query("INSERT INTO OutputFLO (floID, amount, txid, status) VALUES (?, ?, ?, ?)", [floID, amount, txid, "WAITING_CONFIRMATION"])
-                            .then(_ => null).catch(error => console.error(error))
-                            .finally(_ => resolve("Withdrawal was successful"));
-                    }).catch(error => {
-                        console.error(error);
-                        DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
-                            .then(_ => null).catch(error => console.error(error))
-                            .finally(_ => resolve("Withdrawal request is in process"));
-                    });
-                }).catch(error => reject(error));
+            let txQueries = [];
+            txQueries.push(updateBalance.consume(floID, "FLO", amount));
+            DB.transaction(txQueries).then(result => {
+                //Send FLO to user via blockchain API
+                floBlockchainAPI.sendTx(global.sinkID, floID, amount, global.sinkPrivKey, '(withdrawal from market)').then(txid => {
+                    if (!txid)
+                        throw Error("Transaction not successful");
+                    //Transaction was successful, Add in DB
+                    DB.query("INSERT INTO OutputFLO (floID, amount, txid, status) VALUES (?, ?, ?, ?)", [floID, amount, txid, "WAITING_CONFIRMATION"])
+                        .then(_ => null).catch(error => console.error(error))
+                        .finally(_ => resolve("Withdrawal was successful"));
+                }).catch(error => {
+                    console.error(error);
+                    DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
+                        .then(_ => null).catch(error => console.error(error))
+                        .finally(_ => resolve("Withdrawal request is in process"));
+                });
             }).catch(error => reject(error));
         }).catch(error => reject(error));
     });
@@ -491,14 +457,11 @@ function confirmDepositToken() {
                     //Add the FLO balance if necessary
                     if (!result.length) {
                         let amount_flo = amounts[2];
-                        txQueries.push(["INSERT INTO Vault(floID, asset, quantity) VALUES (?, ?, ?)", [req.floID, "FLO", amount_flo]]);
+                        txQueries.push(updateBalance.add(req.floID, "FLO", amount_flo));
                         txQueries.push(["INSERT INTO InputFLO(txid, floID, amount, status) VALUES (?, ?, ?, ?)", [req.txid, req.floID, amount_flo, "SUCCESS"]]);
                     }
                     txQueries.push(["UPDATE InputToken SET status=?, token=?, amount=? WHERE id=?", ["SUCCESS", token_name, amount_token, req.id]]);
-                    if (token_name === floGlobals.currency)
-                        txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [req.floID, amount_token, amount_token]]);
-                    else
-                        txQueries.push(["INSERT INTO Vault(floID, asset, quantity) VALUES (?, ?, ?)", [req.floID, token_name, amount_token]]);
+                    txQueries.push(updateBalance.add(req.floID, token_name, amount_token));
                     DB.transaction(txQueries)
                         .then(result => console.debug("Token deposited:", req.floID, token_name, amount_token))
                         .catch(error => console.error(error));
@@ -551,24 +514,23 @@ function withdrawToken(floID, token, amount) {
         let required_flo = floGlobals.sendAmt + floGlobals.fee;
         getAssetBalance.check(floID, "FLO", required_flo).then(_ => {
             getAssetBalance.check(floID, token, amount).then(_ => {
-                consumeAsset(floID, "FLO", required_flo).then(txQueries => {
-                    consumeAsset(floID, token, amount, txQueries).then(txQueries => {
-                        DB.transaction(txQueries).then(result => {
-                            //Send FLO to user via blockchain API
-                            floTokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
-                                if (!txid) throw Error("Transaction not successful");
-                                //Transaction was successful, Add in DB
-                                DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
-                                    .then(_ => null).catch(error => console.error(error))
-                                    .finally(_ => resolve("Withdrawal was successful"));
-                            }).catch(error => {
-                                console.error(error);
-                                DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
-                                    .then(_ => null).catch(error => console.error(error))
-                                    .finally(_ => resolve("Withdrawal request is in process"));
-                            });
-                        }).catch(error => reject(error));
-                    }).catch(error => reject(error));
+                let txQueries = [];
+                txQueries.push(updateBalance.consume(floID, "FLO", required_flo));
+                txQueries.push(updateBalance.consume(floID, token, amount));
+                DB.transaction(txQueries).then(result => {
+                    //Send FLO to user via blockchain API
+                    floTokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
+                        if (!txid) throw Error("Transaction not successful");
+                        //Transaction was successful, Add in DB
+                        DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
+                            .then(_ => null).catch(error => console.error(error))
+                            .finally(_ => resolve("Withdrawal was successful"));
+                    }).catch(error => {
+                        console.error(error);
+                        DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
+                            .then(_ => null).catch(error => console.error(error))
+                            .finally(_ => resolve("Withdrawal request is in process"));
+                    });
                 }).catch(error => reject(error));
             }).catch(error => reject(error));
         }).catch(error => reject(error));

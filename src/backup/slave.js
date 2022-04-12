@@ -186,7 +186,7 @@ function processBackupData(response) {
                         console.log("Backup Sync completed successfully");
                         self.close();
                     } else
-                        console.log("Waiting for come re-sync data");
+                        console.log("Waiting for re-sync data");
                 }).catch(_ => {
                     console.warn("Backup Sync was not successful");
                     self.close();
