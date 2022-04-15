@@ -1694,7 +1694,7 @@
                 }
             }
             catch (err) {
-                if ((err.data || err) === 'Insufficiant token balance') {
+                if ((err.data || err) === 'Insufficiant token balance' && asset === 'rupee') {
                     showWalletResult('error', `Failed`, err.data || err, 'open-upi')
                 } else {
                     showWalletResult('error', `Failed`, err.data || err)
