@@ -75,7 +75,7 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM TagList WHERE tag=?", [t]));
                         if (content.Tag.add)
                             for (let t in content.Tag.add)
-                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority, api) VALUE (?,?,?,?) ON DUPLICATE KEY UPDATE tag=tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority, content.Tag.add[t].api]));
+                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE tag=tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority, content.Tag.add[t].api]));
                         if (content.Tag.update)
                             for (let t in content.Tag.update)
                                 for (let a in content.Tag.update[t])

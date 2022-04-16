@@ -3,12 +3,16 @@
 const coupling = require('./coupling');
 
 const {
-    MINIMUM_BUY_REQUIREMENT,
+    MAXIMUM_LAUNCH_SELL_CHIPS,
     TRADE_HASH_PREFIX,
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
 
+const LAUNCH_SELLER_TAG = "launch-seller";
+
 const MINI_PERIOD_INTERVAL = require('./_constants')['app']['PERIOD_INTERVAL'] / 10;
+
+const updateBalance = coupling.updateBalance;
 
 var DB, assetList; //container for database and allowed assets
 
@@ -119,10 +123,6 @@ getAssetBalance.check = (floID, asset, amount) => new Promise((resolve, reject) 
     }).catch(error => reject(error))
 });
 
-const updateBalance = {};
-updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
-updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [floID, token, amount, amount]];
-
 function addSellOrder(floID, asset, quantity, min_price) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
@@ -143,17 +143,17 @@ function addSellOrder(floID, asset, quantity, min_price) {
     });
 }
 
-const checkSellRequirement = (floID, asset) => new Promise((resolve, reject) => {
-    DB.query("SELECT * FROM UserTag WHERE floID=? AND tag=?", [floID, "MINER"]).then(result => {
-        if (result.length)
-            return resolve(true);
-        //TODO: Should seller need to buy same type of asset before selling?
-        DB.query("SELECT IFNULL(SUM(quantity), 0) AS brought FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, asset]).then(result => {
-            if (result[0].brought >= MINIMUM_BUY_REQUIREMENT)
-                resolve(true);
-            else
-                reject(INVALID(`Sellers required to buy atleast ${MINIMUM_BUY_REQUIREMENT} ${asset} before placing a sell order unless they are a Miner`));
-        }).catch(error => reject(error))
+const checkSellRequirement = (floID, asset, quantity) => new Promise((resolve, reject) => {
+    Promise.all([
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=?", [floID, asset]),
+        DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
+    ]).then(result => {
+        let total = result[0].total_chips,
+            locked = result[1].locked;
+        if (total > locked + quantity)
+            resolve(true);
+        else
+            reject(INVALID(`Insufficient sell-chips for ${asset}`));
     }).catch(error => reject(error))
 });
 
@@ -280,7 +280,7 @@ function transferToken(sender, receivers, token) {
                 txQueries.push(updateBalance.consume(sender, token, totalAmount));
                 for (let floID in receivers)
                     txQueries.push(updateBalance.add(floID, token, receivers[floID]));
-                coupling.group.checkDistributor(sender, token).then(result => {
+                checkDistributor(sender, token).then(result => {
                     if (result)
                         for (let floID in receivers)
                             txQueries.push(["INSERT INTO Vault (floID, asset, quantity) VALUES (?, ?, ?)", [floID, token, receivers[floID]]]);
@@ -332,6 +332,7 @@ function confirmDepositFLO() {
                 let txQueries = [];
                 txQueries.push(updateBalance.add(req.floID, "FLO", amount));
                 txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
+
                 DB.transaction(txQueries)
                     .then(result => console.debug("FLO deposited:", req.floID, amount))
                     .catch(error => console.error(error))
@@ -366,6 +367,31 @@ confirmDepositFLO.checkTx = function(sender, txid) {
             else
                 resolve(amount);
         }).catch(error => reject([false, error]))
+    })
+}
+
+confirmDepositFLO.addSellChipsIfLaunchSeller = function(floID, quantity) {
+    return new Promise((resolve, reject) => {
+        checkTag(req.floID, LAUNCH_SELLER_TAG).then(result => {
+            if (result) //floID is launch-seller
+                Promise.all([
+                    DB.query("SELECT SUM(quantity) FROM TradeTransactions WHERE seller=? AND asset=?", [floID, 'FLO']),
+                    DB.query("SELECT SUM(quantity) FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, 'FLO']),
+                    DB.query("SELECT SUM(quantity) FROM SellChips WHERE floID=? AND asset=?", [floID, 'FLO']),
+                ]).then(result => {
+                    let sold = result[0],
+                        brought = result[1],
+                        chips = result[2];
+                    let remLaunchChips = MAXIMUM_LAUNCH_SELL_CHIPS - (sold + chips) + brought;
+                    quantity = Math.min(quantity, remLaunchChips);
+                    if (quantity > 0)
+                        resolve(["INSERT INTO SellChips(floID, asset, quantity) VALUES (?, ?, ?)", [floID, 'FLO', quantity]]);
+                    else
+                        resolve([]);
+                }).catch(error => reject(error))
+            else //floID is not launch-seller
+                resolve([]);
+        }).catch(error => reject(error))
     })
 }
 
@@ -563,6 +589,68 @@ function confirmWithdrawalToken() {
     }).catch(error => console.error(error));
 }
 
+function addTag(floID, tag) {
+    return new Promise((resolve, reject) => {
+        DB.query("INSERT INTO UserTag (floID, tag) VALUE (?,?)", [floID, tag])
+            .then(result => resolve(`Added ${floID} to ${tag}`))
+            .catch(error => {
+                if (error.code === "ER_DUP_ENTRY")
+                    reject(INVALID(`${floID} already in ${tag}`));
+                else if (error.code === "ER_NO_REFERENCED_ROW")
+                    reject(INVALID(`Invalid Tag`));
+                else
+                    reject(error);
+            });
+    });
+}
+
+function removeTag(floID, tag) {
+    return new Promise((resolve, reject) => {
+        DB.query("DELETE FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
+            .then(result => resolve(`Removed ${floID} from ${tag}`))
+            .catch(error => reject(error));
+    })
+}
+
+function checkTag(floID, tag) {
+    new Promise((resolve, reject) => {
+        DB.query("SELECT id FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
+            .then(result => resolve(result.length ? true : false))
+            .catch(error => reject(error))
+    })
+}
+
+function addDistributor(floID, asset) {
+    return new Promise((resolve, reject) => {
+        DB.query("INSERT INTO Distributors (floID, asset) VALUE (?,?)", [floID, asset])
+            .then(result => resolve(`Added ${asset} distributor: ${floID}`))
+            .catch(error => {
+                if (error.code === "ER_DUP_ENTRY")
+                    reject(INVALID(`${floID} is already ${asset} disributor`));
+                else if (error.code === "ER_NO_REFERENCED_ROW")
+                    reject(INVALID(`Invalid Asset`));
+                else
+                    reject(error);
+            });
+    });
+}
+
+function removeDistributor(floID, asset) {
+    return new Promise((resolve, reject) => {
+        DB.query("DELETE FROM Distributors WHERE floID=? AND tag=?", [floID, asset])
+            .then(result => resolve(`Removed ${asset} distributor: ${floID}`))
+            .catch(error => reject(error));
+    })
+}
+
+function checkDistributor(floID, asset) {
+    new Promise((resolve, reject) => {
+        DB.query("SELECT id FROM Distributors WHERE floID=? AND asset=?", [floID, asset])
+            .then(result => resolve(result.length ? true : false))
+            .catch(error => reject(error))
+    })
+}
+
 function periodicProcess() {
     blockchainReCheck();
     assetList.forEach(asset => coupling.initiate(asset));
@@ -603,8 +691,11 @@ module.exports = {
     withdrawFLO,
     depositToken,
     withdrawToken,
+    addTag,
+    removeTag,
+    addDistributor,
+    removeDistributor,
     periodicProcess,
-    group: coupling.group,
     set DB(db) {
         DB = db;
         coupling.DB = db;

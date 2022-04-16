@@ -1,6 +1,5 @@
 'use strict';
 
-const group = require("./group");
 const price = require("./price");
 
 const {
@@ -9,42 +8,84 @@ const {
 
 var DB; //container for database
 
+const updateBalance = {};
+updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
+updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [floID, token, amount, amount]];
+
 function startCouplingForAsset(asset) {
     price.getRates(asset).then(cur_rate => {
         cur_rate = cur_rate.toFixed(8);
-        group.getBestPairs(asset, cur_rate)
-            .then(bestPairQueue => processCoupling(bestPairQueue))
-            .catch(error => console.error("initiateCoupling", error))
+        processCoupling(asset, cur_rate);
     }).catch(error => console.error(error));
 }
 
-function processCoupling(bestPairQueue) {
-    bestPairQueue.get().then(pair_result => {
-        let buyer_best = pair_result.buyOrder,
-            seller_best = pair_result.sellOrder;
-        //console.debug("Sell:", seller_best);
-        //console.debug("Buy:", buyer_best);
-        spendAsset(bestPairQueue.asset, buyer_best, seller_best, pair_result.null_base).then(spent => {
-            if (!spent.quantity) {
-                //Happens when there are only Null-base assets
-                bestPairQueue.next(spent.quantity, spent.incomplete);
-                processCoupling(bestPairQueue);
-                return;
-            }
-            let txQueries = spent.txQueries;
-            processOrders(seller_best, buyer_best, txQueries, spent.quantity, spent.incomplete && pair_result.null_base);
-            updateBalance(seller_best, buyer_best, txQueries, bestPairQueue.asset, bestPairQueue.cur_rate, spent.quantity);
-            //begin audit
-            beginAudit(seller_best.floID, buyer_best.floID, bestPairQueue.asset, bestPairQueue.cur_rate, spent.quantity).then(audit => {
-                //process txn query in SQL
-                DB.transaction(txQueries).then(_ => {
-                    bestPairQueue.next(spent.quantity, spent.incomplete);
-                    console.log(`Transaction was successful! BuyOrder:${buyer_best.id}| SellOrder:${seller_best.id}`);
-                    audit.end();
-                    price.updateLastTime();
-                    //Since a tx was successful, match again
-                    processCoupling(bestPairQueue);
-                }).catch(error => console.error(error));
+function getBestPair(asset, cur_rate) {
+    return new Promise((resolve, reject) => {
+        Promise.allSettled([getBestBuyer(asset, cur_rate), getBestSeller(asset, cur_rate)]).then(results => {
+            if (results[0].status === "fulfilled" && results[1].status === "fulfilled")
+                resolve({
+                    buy: results[0].value,
+                    sell: results[1].value,
+                })
+            else
+                reject({
+                    buy: results[0].reason,
+                    sell: results[1].reason
+                })
+        }).catch(error => reject(error))
+    })
+}
+
+const getBestSeller = (asset, cur_rate) => new Promise((resolve, reject) => {
+    DB.query("SELECT SellOrder.id, SellOrder.floID, SellOrder.quantity, SellChips.id AS chip_id, SellChips.quantity AS chip_quantity FROM SellOrder" +
+        " INNER JOIN UserBalance ON UserBalance.floID = SellOrder.floID AND UserBalance.token = SellOrder.asset" +
+        " INNER JOIN SellChips ON SellChips.floID = SellOrder.floID AND SellChips.asset = SellOrder.asset AND SellChips.base <= ?" +
+        " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+        " LEFT JOIN TagList ON TagList.tag = UserTag.tag" +
+        " WHERE UserBalance.quantity >= SellOrder.quantity AND SellOrder.asset = ? AND SellOrder.minPrice <= ?" +
+        " ORDER BY TagList.sellPriority DESC, SellChips.locktime ASC, SellOrder.time_placed ASC" +
+        " LIMIT 1", [cur_rate, asset, cur_rate]
+    ).then(result => {
+        if (result.length)
+            resolve(result[0]);
+        else
+            reject(null);
+    }).catch(error => reject(error))
+});
+
+const getBestBuyer = (asset, cur_rate) => new Promise((resolve, reject) => {
+    DB.query("SELECT BuyOrder.id, BuyOrder.floID, BuyOrder.quantity FROM BuyOrder" +
+        " INNER JOIN UserBalance ON UserBalance.floID = BuyOrder.floID AND UserBalance.token = ?" +
+        " LEFT JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+        " LEFT JOIN TagList ON TagList.tag = UserTag.tag" +
+        " WHERE UserBalance.quantity >= BuyOrder.maxPrice * BuyOrder.quantity AND BuyOrder.asset = ? AND BuyOrder.maxPrice >= ?" +
+        " ORDER BY TagList.buyPriority DESC, BuyOrder.time_placed ASC" +
+        " LIMIT 1", [floGlobals.currency, asset, cur_rate]
+    ).then(result => {
+        if (result.length)
+            resolve(result[0]);
+        else
+            reject(null);
+    }).catch(error => reject(error))
+});
+
+function processCoupling(asset, cur_rate) {
+    getBestPair(asset, cur_rate).then(best => {
+        //console.debug("Sell:", best.sell);
+        //console.debug("Buy:", best.buy);
+        let quantity = Math.min(best.buy.quantity, best.sell.quantity, best.sell.chip_quantity);
+        let txQueries = [];
+        processOrders(best.sell, best.buy, txQueries, quantity);
+        updateBalance(best.sell, best.buy, txQueries, asset, cur_rate, quantity);
+        //begin audit
+        beginAudit(best.sell.floID, best.buy.floID, asset, cur_rate, quantity).then(audit => {
+            //process txn query in SQL
+            DB.transaction(txQueries).then(_ => {
+                console.log(`Transaction was successful! BuyOrder:${best.buy.id}| SellOrder:${best.sell.id}`);
+                audit.end();
+                price.updateLastTime();
+                //Since a tx was successful, match again
+                processCoupling(asset, cur_rate);
             }).catch(error => console.error(error));
         }).catch(error => console.error(error));
     }).catch(error => {
@@ -55,7 +96,7 @@ function processCoupling(bestPairQueue) {
             console.error(error.buy);
             noBuy = null;
         } else {
-            console.log("No valid buyOrders for Asset:", bestPairQueue.asset);
+            console.log("No valid buyOrders for Asset:", asset);
             noBuy = true;
         }
         if (error.sell === undefined)
@@ -64,37 +105,14 @@ function processCoupling(bestPairQueue) {
             console.error(error.sell);
             noSell = null;
         } else {
-            console.log("No valid sellOrders for Asset:", bestPairQueue.asset);
+            console.log("No valid sellOrders for Asset:", asset);
             noSell = true;
         }
-        price.noOrder(bestPairQueue.asset, noBuy, noSell);
+        price.noOrder(asset, noBuy, noSell);
     });
 }
 
-function spendAsset(asset, buyOrder, sellOrder, null_base) {
-    return new Promise((resolve, reject) => {
-        DB.query('SELECT id, quantity FROM Vault WHERE floID=? AND asset=? AND base IS ' +
-            (null_base ? "NULL ORDER BY locktime" : "NOT NULL ORDER BY base"), [sellOrder.floID, asset]).then(result => {
-            let rem = Math.min(buyOrder.quantity, sellOrder.quantity),
-                txQueries = [];
-            for (let i = 0; i < result.length && rem > 0; i++)
-                if (rem < result[i].quantity) {
-                    txQueries.push(["UPDATE Vault SET quantity=quantity-? WHERE id=?", [rem, result[i].id]]);
-                    rem = 0;
-                } else {
-                    txQueries.push(["DELETE FROM Vault WHERE id=?", [result[i].id]]);
-                    rem -= result[i].quantity;
-                }
-            resolve({
-                quantity: Math.min(buyOrder.quantity, sellOrder.quantity) - rem,
-                txQueries,
-                incomplete: rem > 0
-            });
-        }).catch(error => reject(error));
-    })
-}
-
-function processOrders(seller_best, buyer_best, txQueries, quantity, clear_sell) {
+function processOrders(seller_best, buyer_best, txQueries, quantity) {
     if (quantity > buyer_best.quantity || quantity > seller_best.quantity)
         throw Error("Tx quantity cannot be more than order quantity");
     //Process Buy Order
@@ -103,19 +121,26 @@ function processOrders(seller_best, buyer_best, txQueries, quantity, clear_sell)
     else
         txQueries.push(["UPDATE BuyOrder SET quantity=quantity-? WHERE id=?", [quantity, buyer_best.id]]);
     //Process Sell Order
-    if (quantity == seller_best.quantity || clear_sell) //clear_sell must be true iff an order is placed without enough Asset
+    if (quantity == seller_best.quantity)
         txQueries.push(["DELETE FROM SellOrder WHERE id=?", [seller_best.id]]);
     else
         txQueries.push(["UPDATE SellOrder SET quantity=quantity-? WHERE id=?", [quantity, seller_best.id]]);
+    //Process Sell Chip
+    if (quantity == seller_best.chip_quantity)
+        txQueries.push(["DELETE FROM SellChips WHERE id=?", [seller_best.chip_id]]);
+    else
+        txQueries.push(["UPDATE SellChips SET quantity=quantity-? WHERE id=?", [quantity, seller_best.chip_id]]);
 }
 
 function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, quantity) {
-    //Update cash balance for seller and buyer
+    //Update cash/asset balance for seller and buyer
     let totalAmount = cur_price * quantity;
-    txQueries.push(["INSERT INTO Cash (floID, balance) VALUE (?, ?) ON DUPLICATE KEY UPDATE balance=balance+?", [seller_best.floID, totalAmount, totalAmount]]);
-    txQueries.push(["UPDATE Cash SET balance=balance-? WHERE floID=?", [totalAmount, buyer_best.floID]]);
-    //Add coins to Buyer
-    txQueries.push(["INSERT INTO Vault(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
+    txQueries.push(updateBalance.add(seller_best.floID, floGlobals.currency, totalAmount));
+    txQueries.push(updateBalance.consume(buyer_best.floID, floGlobals.currency, totalAmount));
+    txQueries.push(updateBalance.add(seller_best.floID, asset, totalAmount));
+    txQueries.push(updateBalance.consume(buyer_best.floID, asset, totalAmount));
+    //Add SellChips to Buyer
+    txQueries.push(["INSERT INTO SellChips(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
     //Record transaction
     let time = Date.now();
     let hash = TRADE_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
@@ -156,33 +181,33 @@ function endAudit(sellerID, buyerID, asset, old_bal, unit_price, quantity) {
 function auditBalance(sellerID, buyerID, asset) {
     return new Promise((resolve, reject) => {
         let balance = {
-            [sellerID]: {},
-            [buyerID]: {}
+            [sellerID]: {
+                cash: 0,
+                asset: 0
+            },
+            [buyerID]: {
+                cash: 0,
+                asset: 0
+            }
         };
-        DB.query("SELECT floID, balance FROM Cash WHERE floID IN (?, ?)", [sellerID, buyerID]).then(result => {
-            for (let i in result)
-                balance[result[i].floID].cash = result[i].balance;
-            DB.query("SELECT floID, SUM(quantity) as asset_balance FROM Vault WHERE asset=? AND floID IN (?, ?) GROUP BY floID", [asset, sellerID, buyerID]).then(result => {
-                for (let i in result)
-                    balance[result[i].floID].asset = result[i].asset_balance;
-                //Set them as 0 if undefined or null
-                balance[sellerID].cash = balance[sellerID].cash || 0;
-                balance[sellerID].asset = balance[sellerID].asset || 0;
-                balance[buyerID].cash = balance[buyerID].cash || 0;
-                balance[buyerID].asset = balance[buyerID].asset || 0;
-                resolve(balance);
-            }).catch(error => reject(error))
+        DB.query("SELECT floID, quantity, token FROM UserBalance WHERE floID IN (?, ?) AND token IN (?, ?)", [sellerID, buyerID, floGlobals.currency, asset]).then(result => {
+            for (let i in result) {
+                if (result[i].token === floGlobals.currency)
+                    balance[result[i].floID].cash = result[i].quantity;
+                else if (result[i].token === asset)
+                    balance[result[i].floID].asset = result[i].quantity;
+            }
+            resolve(balance);
         }).catch(error => reject(error))
     })
 }
 
 module.exports = {
     initiate: startCouplingForAsset,
-    group: group,
+    updateBalance,
     price,
     set DB(db) {
         DB = db;
-        group.DB = db;
         price.DB = db;
     }
 }

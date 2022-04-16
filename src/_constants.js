@@ -9,7 +9,7 @@ module.exports = {
         INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
     },
     market: {
-        MINIMUM_BUY_REQUIREMENT: 0,
+        MAXIMUM_LAUNCH_SELL_CHIPS: 1000000,
         TRADE_HASH_PREFIX: "z1",
         TRANSFER_HASH_PREFIX: "z0"
     },

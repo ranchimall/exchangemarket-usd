@@ -263,7 +263,7 @@ function AddUserTag(req, res) {
             tag: data.tag,
             timestamp: data.timestamp
         }, data.sign, data.floID, data.pubKey,
-        () => market.group.addTag(data.user, data.tag)
+        () => market.addTag(data.user, data.tag)
     );
 }
 
@@ -277,7 +277,7 @@ function RemoveUserTag(req, res) {
             tag: data.tag,
             timestamp: data.timestamp
         }, data.sign, data.floID, data.pubKey,
-        () => market.group.removeTag(data.user, data.tag)
+        () => market.removeTag(data.user, data.tag)
     );
 }
 
@@ -291,7 +291,7 @@ function AddDistributor(req, res) {
             asset: data.asset,
             timestamp: data.timestamp
         }, data.sign, data.floID, data.pubKey,
-        () => market.group.addDistributor(data.distributor, data.asset)
+        () => market.addDistributor(data.distributor, data.asset)
     );
 }
 
@@ -305,7 +305,7 @@ function RemoveDistributor(req, res) {
             asset: data.asset,
             timestamp: data.timestamp
         }, data.sign, data.floID, data.pubKey,
-        () => market.group.removeDistributor(data.distributor, data.asset)
+        () => market.removeDistributor(data.distributor, data.asset)
     );
 }
 

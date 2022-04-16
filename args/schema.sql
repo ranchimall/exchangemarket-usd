@@ -16,13 +16,12 @@ CREATE TABLE TagList (
     tag VARCHAR(50) NOT NULL,
     sellPriority INT,
     buyPriority INT,
-    api TINYTEXT,
     PRIMARY KEY(tag)
 );
 
 CREATE TABLE AssetList (
     asset VARCHAR(64) NOT NULL,
-    initialPrice FLOAT,
+    initialPrice DECIMAL(10, 2),
     PRIMARY KEY(asset)
 );
 
@@ -42,21 +41,22 @@ CREATE TABLE UserSession (
     PRIMARY KEY(floID)
 );
 
-CREATE TABLE Cash (
+CREATE TABLE UserBalance (
     id INT NOT NULL AUTO_INCREMENT,
-    floID CHAR(34) NOT NULL UNIQUE,
-    balance DECIMAL(12, 2) DEFAULT 0.00,
-    KEY(id),
-    PRIMARY KEY(floID)
-);
+    floID CHAR(34) NOT NULL,
+    token VARCHAR(64) NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    PRIMARY KEY(floID, token),
+    KEY(id)
+)
 
-CREATE TABLE Vault (
+CREATE TABLE SellChips (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     locktime DATETIME DEFAULT CURRENT_TIMESTAMP,
     asset VARCHAR(64) NOT NULL,
-    base DECIMAL(10, 2),
-    quantity FLOAT NOT NULL,
+    base DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    quantity DECIMAL(10, 2) NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -69,6 +69,15 @@ CREATE TABLE UserTag (
     KEY (id),
     FOREIGN KEY (tag) REFERENCES TagList(tag)
 );
+
+CREATE TABLE Distributors(
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    asset VARCHAR(64) NOT NULL,
+    KEY(id),
+    PRIMARY KEY(floID, asset),
+    FOREIGN KEY (asset) REFERENCES AssetList(asset)
+)
 
 /* User Requests */
 
@@ -87,7 +96,7 @@ CREATE TABLE SellOrder (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity FLOAT NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
     minPrice DECIMAL(10, 2) NOT NULL,
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
@@ -98,7 +107,7 @@ CREATE TABLE BuyOrder (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity FLOAT NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
     maxPrice DECIMAL(10, 2) NOT NULL,
     time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
@@ -109,7 +118,7 @@ CREATE TABLE InputFLO (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
-    amount FLOAT,
+    amount DECIMAL(10, 2),
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -118,7 +127,7 @@ CREATE TABLE OutputFLO (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
-    amount FLOAT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -128,7 +137,7 @@ CREATE TABLE InputToken (
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
     token VARCHAR(64),
-    amount FLOAT,
+    amount DECIMAL(10, 2),
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -138,7 +147,7 @@ CREATE TABLE OutputToken (
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
     token VARCHAR(64),
-    amount FLOAT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -148,7 +157,7 @@ CREATE TABLE OutputToken (
 CREATE TABLE PriceHistory (
     id INT NOT NULL AUTO_INCREMENT,
     asset VARCHAR(64) NOT NULL,
-    rate FLOAT NOT NULL,
+    rate DECIMAL(10, 2) NOT NULL,
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
@@ -159,7 +168,7 @@ CREATE TABLE TransferTransactions (
     sender CHAR(34) NOT NULL,
     receiver TEXT NOT NULL,
     token VARCHAR(64) NOT NULL,
-    totalAmount FLOAT NOT NULL,
+    totalAmount DECIMAL(10, 2) NOT NULL,
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
     KEY(id),
@@ -171,7 +180,7 @@ CREATE TABLE TradeTransactions (
     seller CHAR(34) NOT NULL,
     buyer CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity FLOAT NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
     unitValue DECIMAL(10, 2) NOT NULL,
     tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
@@ -183,20 +192,20 @@ CREATE TABLE TradeTransactions (
 CREATE TABLE AuditTrade(
     id INT NOT NULL AUTO_INCREMENT,
     rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    unit_price FLOAT NOT NULL,
-    quantity FLOAT NOT NULL,
-    total_cost FLOAT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL,
+    total_cost DECIMAL(10, 2) NOT NULL,
     asset VARCHAR(64) NOT NULL,
     sellerID CHAR(34) NOT NULL,
-    seller_old_asset FLOAT NOT NULL,
-    seller_new_asset FLOAT NOT NULL,
-    seller_old_cash FLOAT NOT NULL,
-    seller_new_cash FLOAT NOT NULL,
+    seller_old_asset DECIMAL(10, 2) NOT NULL,
+    seller_new_asset DECIMAL(10, 2) NOT NULL,
+    seller_old_cash DECIMAL(10, 2) NOT NULL,
+    seller_new_cash DECIMAL(10, 2) NOT NULL,
     buyerID CHAR(34) NOT NULL,
-    buyer_old_asset FLOAT NOT NULL,
-    buyer_new_asset FLOAT NOT NULL,
-    buyer_old_cash FLOAT NOT NULL,
-    buyer_new_cash FLOAT NOT NULL,
+    buyer_old_asset DECIMAL(10, 2) NOT NULL,
+    buyer_new_asset DECIMAL(10, 2) NOT NULL,
+    buyer_old_cash DECIMAL(10, 2) NOT NULL,
+    buyer_new_cash DECIMAL(10, 2) NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -204,7 +213,7 @@ CREATE TABLE AuditTrade(
 /* Backup Feature (Tables & Triggers) */
 
 CREATE TABLE _backup (
-    t_name VARCHAR(20),
+    t_name TINYTEXT,
     id INT,
     mode BOOLEAN DEFAULT TRUE,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -240,19 +249,19 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON 
 CREATE TRIGGER UserSession_D AFTER DELETE ON UserSession
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER Cash_I AFTER INSERT ON Cash
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Cash', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Cash_U AFTER UPDATE ON Cash
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Cash', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Cash_D AFTER DELETE ON Cash
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Cash', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER UserBalance_I AFTER INSERT ON UserBalance
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserBalance_U AFTER UPDATE ON UserBalance
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER UserBalance_D AFTER DELETE ON UserBalance
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER Vault_I AFTER INSERT ON Vault
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Vault', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Vault_U AFTER UPDATE ON Vault
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Vault', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER Vault_D AFTER DELETE ON Vault
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Vault', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER SellChips_I AFTER INSERT ON SellChips
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER SellChips_U AFTER UPDATE ON SellChips
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER SellChips_D AFTER DELETE ON SellChips
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER SellOrder_I AFTER INSERT ON SellOrder
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
@@ -302,6 +311,13 @@ CREATE TRIGGER UserTag_U AFTER UPDATE ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER UserTag_D AFTER DELETE ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER Distributors_I AFTER INSERT ON Distributors
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Distributors_U AFTER UPDATE ON Distributors
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER Distributors_D AFTER DELETE ON Distributors
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER PriceHistory_I AFTER INSERT ON PriceHistory
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
