@@ -152,7 +152,7 @@ function storeSinkShare(sinkID, keyShare) {
 }
 
 function sendSinkShare(pubKey) {
-    DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
+    DB.query("SELECT floID, share FROM sinkShares ORDER BY time_stored DESC LIMIT 1").then(result => {
         if (!result.length)
             return console.warn("No key-shares in DB!");
         let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
@@ -323,7 +323,7 @@ function updateTableData(table, data) {
     })
 }
 
-const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? val.substring(0, val.length - 1) : val;
+const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? global.convertDateToString(val) : val;
 
 function verifyChecksum(checksum_ref) {
     return new Promise((resolve, reject) => {

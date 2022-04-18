@@ -21,7 +21,7 @@ CREATE TABLE TagList (
 
 CREATE TABLE AssetList (
     asset VARCHAR(64) NOT NULL,
-    initialPrice DECIMAL(10, 2),
+    initialPrice DECIMAL(16, 8),
     PRIMARY KEY(asset)
 );
 
@@ -36,7 +36,7 @@ CREATE TABLE UserSession (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     proxyKey CHAR(66) NOT NULL,
-    session_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    session_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY (id),
     PRIMARY KEY(floID)
 );
@@ -45,7 +45,7 @@ CREATE TABLE UserBalance (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     token VARCHAR(64) NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    quantity DECIMAL(16, 8) NOT NULL DEFAULT 0,
     PRIMARY KEY(floID, token),
     KEY(id)
 )
@@ -53,10 +53,10 @@ CREATE TABLE UserBalance (
 CREATE TABLE SellChips (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
-    locktime DATETIME DEFAULT CURRENT_TIMESTAMP,
+    locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     asset VARCHAR(64) NOT NULL,
-    base DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    quantity DECIMAL(10, 2) NOT NULL,
+    base DECIMAL(16, 8) NOT NULL DEFAULT 0,
+    quantity DECIMAL(16, 8) NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -87,7 +87,7 @@ CREATE TABLE RequestLog(
     request TEXT NOT NULL,
     sign VARCHAR(160) NOT NULL,
     proxy BOOLEAN NOT NULL,
-    request_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     UNIQUE (sign)
 );
@@ -96,9 +96,9 @@ CREATE TABLE SellOrder (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
-    minPrice DECIMAL(10, 2) NOT NULL,
-    time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
+    quantity DECIMAL(16, 8) NOT NULL,
+    minPrice DECIMAL(16, 8) NOT NULL,
+    time_placed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -107,9 +107,9 @@ CREATE TABLE BuyOrder (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
-    maxPrice DECIMAL(10, 2) NOT NULL,
-    time_placed DATETIME DEFAULT CURRENT_TIMESTAMP,
+    quantity DECIMAL(16, 8) NOT NULL,
+    maxPrice DECIMAL(16, 8) NOT NULL,
+    time_placed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -118,7 +118,7 @@ CREATE TABLE InputFLO (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
-    amount DECIMAL(10, 2),
+    amount DECIMAL(16, 8),
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -127,7 +127,7 @@ CREATE TABLE OutputFLO (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
+    amount DECIMAL(16, 8) NOT NULL,
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -137,7 +137,7 @@ CREATE TABLE InputToken (
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
     token VARCHAR(64),
-    amount DECIMAL(10, 2),
+    amount DECIMAL(16, 8),
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -147,7 +147,7 @@ CREATE TABLE OutputToken (
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
     token VARCHAR(64),
-    amount DECIMAL(10, 2) NOT NULL,
+    amount DECIMAL(16, 8) NOT NULL,
     status VARCHAR(50) NOT NULL,
     PRIMARY KEY(id)
 );
@@ -157,8 +157,8 @@ CREATE TABLE OutputToken (
 CREATE TABLE PriceHistory (
     id INT NOT NULL AUTO_INCREMENT,
     asset VARCHAR(64) NOT NULL,
-    rate DECIMAL(10, 2) NOT NULL,
-    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    rate DECIMAL(16, 8) NOT NULL,
+    rec_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -168,8 +168,8 @@ CREATE TABLE TransferTransactions (
     sender CHAR(34) NOT NULL,
     receiver TEXT NOT NULL,
     token VARCHAR(64) NOT NULL,
-    totalAmount DECIMAL(10, 2) NOT NULL,
-    tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    totalAmount DECIMAL(16, 8) NOT NULL,
+    tx_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
     KEY(id),
     PRIMARY KEY(txid)
@@ -180,9 +180,9 @@ CREATE TABLE TradeTransactions (
     seller CHAR(34) NOT NULL,
     buyer CHAR(34) NOT NULL,
     asset VARCHAR(64) NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
-    unitValue DECIMAL(10, 2) NOT NULL,
-    tx_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    quantity DECIMAL(16, 8) NOT NULL,
+    unitValue DECIMAL(16, 8) NOT NULL,
+    tx_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     txid VARCHAR(66) NOT NULL,
     KEY(id),
     PRIMARY KEY(txid),
@@ -191,21 +191,21 @@ CREATE TABLE TradeTransactions (
 
 CREATE TABLE AuditTrade(
     id INT NOT NULL AUTO_INCREMENT,
-    rec_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    unit_price DECIMAL(10, 2) NOT NULL,
-    quantity DECIMAL(10, 2) NOT NULL,
-    total_cost DECIMAL(10, 2) NOT NULL,
+    rec_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    unit_price DECIMAL(16, 8) NOT NULL,
+    quantity DECIMAL(16, 8) NOT NULL,
+    total_cost DECIMAL(16, 8) NOT NULL,
     asset VARCHAR(64) NOT NULL,
     sellerID CHAR(34) NOT NULL,
-    seller_old_asset DECIMAL(10, 2) NOT NULL,
-    seller_new_asset DECIMAL(10, 2) NOT NULL,
-    seller_old_cash DECIMAL(10, 2) NOT NULL,
-    seller_new_cash DECIMAL(10, 2) NOT NULL,
+    seller_old_asset DECIMAL(16, 8) NOT NULL,
+    seller_new_asset DECIMAL(16, 8) NOT NULL,
+    seller_old_cash DECIMAL(16, 8) NOT NULL,
+    seller_new_cash DECIMAL(16, 8) NOT NULL,
     buyerID CHAR(34) NOT NULL,
-    buyer_old_asset DECIMAL(10, 2) NOT NULL,
-    buyer_new_asset DECIMAL(10, 2) NOT NULL,
-    buyer_old_cash DECIMAL(10, 2) NOT NULL,
-    buyer_new_cash DECIMAL(10, 2) NOT NULL,
+    buyer_old_asset DECIMAL(16, 8) NOT NULL,
+    buyer_new_asset DECIMAL(16, 8) NOT NULL,
+    buyer_old_cash DECIMAL(16, 8) NOT NULL,
+    buyer_new_cash DECIMAL(16, 8) NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
@@ -216,7 +216,7 @@ CREATE TABLE _backup (
     t_name TINYTEXT,
     id INT,
     mode BOOLEAN DEFAULT TRUE,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(t_name, id)
 );
 
@@ -231,7 +231,7 @@ CREATE table _backupCache(
 CREATE TABLE sinkShares(
     floID CHAR(34) NOT NULL,
     share TEXT,
-    time_ DATETIME DEFAULT CURRENT_TIMESTAMP,
+    time_stored TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(floID)
 );
 

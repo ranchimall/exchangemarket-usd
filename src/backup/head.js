@@ -200,7 +200,7 @@ function informLiveNodes(init) {
         if (init && flag)
             syncRequest();
         //Check if sinkKey or share available in DB
-        DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
+        DB.query("SELECT floID, share FROM sinkShares ORDER BY time_stored DESC LIMIT 1").then(result => {
             if (result.length) {
                 let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
                 if (share.startsWith(SINK_KEY_INDICATOR)) {
