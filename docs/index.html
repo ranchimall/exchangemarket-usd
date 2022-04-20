@@ -20,7 +20,6 @@
     <script src="scripts/floTokenAPI.js"></script>
     <script src="scripts/floExchangeAPI.js"></script>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-    <script>console.debug(floExchangeAPI);</script>
 </head>
 
 <body class="hide">
@@ -1370,7 +1369,7 @@
                         })
                     }
                     catch (err) {
-                        notify(err.data, 'error')
+                        notify(err.message, 'error')
                     }
                 } else {
                     try {
@@ -1391,7 +1390,7 @@
                         getRef('market_orders_list').append(marketTransactionList)
                     }
                     catch (err) {
-                        notify(err.data, 'error')
+                        notify(err.message, 'error')
                     }
                 }
                 getRef('market_orders_list').append(frag)
@@ -1512,10 +1511,10 @@
             }
             catch (err) {
                 getRef('trade_button_wrapper').append(getRef('failure_template').content.cloneNode(true))
-                if (err.data === 'Insufficient rupee') {
+                if (err.message === 'Insufficient rupee') {
                     notify(`Insufficient balance to ${tradeType} ${asset}. Please deposit rupee to wallet first.`, 'error', { pinned: true })
                 } else {
-                    notify(err.data, 'error')
+                    notify(err.message, 'error')
                 }
             }
             finally {
@@ -1694,10 +1693,10 @@
                 }
             }
             catch (err) {
-                if ((err.data || err) === 'Insufficient rupe balance') {
-                    showWalletResult('error', `Failed`, err.data || err, 'open-upi')
+                if ((err.message || err) === 'Insufficient rupe balance') {
+                    showWalletResult('error', `Failed`, err.message || err, 'open-upi')
                 } else {
-                    showWalletResult('error', `Failed`, err.data || err)
+                    showWalletResult('error', `Failed`, err.message || err)
                 }
             }
             finally {
@@ -1875,7 +1874,7 @@
                                         }, 200);
                                     }
                             })
-                            .catch(err => notify(err.data, 'error'))
+                            .catch(err => notify(err.message, 'error'))
                     }
                 })
             } else if (e.target.closest('.more-info')) {
@@ -1893,7 +1892,7 @@
                         hideMyOrdersOptions()
                     }
                     catch (err) {
-                        notify(err.data, 'error')
+                        notify(err.message, 'error')
                     }
                     finally {
                         refresh()
@@ -2083,7 +2082,7 @@
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
                     getRef('get_price').value = parseFloat(parseFloat(rates[pagesData.params.asset]).toFixed(4))
 
-            }).catch(error => console.error(error))
+            }).catch(error => console.error(error.message))
         }
 
         function refresh(init = false) {
@@ -2165,12 +2164,13 @@
                 proxy.secret.then(_ => null).catch(_ => null);
                 showPage(window.location.hash);
             }).catch(error => {
-                if (error.data === 'Invalid request signature! Re-login if this error occurs frequently') {
+                console.debug(error)
+                if (error.message === 'Invalid request signature! Re-login if this error occurs frequently') {
                     proxy.clear()
                     location.reload()
                 }
                 else
-                    notify(error.data, 'error')
+                    notify(error.message, 'error')
             })
                 .finally(() => {
                     hideProcess('login_button_wrapper')
@@ -2207,7 +2207,7 @@
                     getRef('sign_in_hash').value = null;
                     account();
                 }).catch(error => {
-                    notify(error.data, 'error')
+                    notify(error.message, 'error')
                     hideProcess('login_button_wrapper')
                 })
             }
