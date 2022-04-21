@@ -326,18 +326,18 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON
 CREATE TRIGGER PriceHistory_D AFTER DELETE ON PriceHistory
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER AuditTransaction_I AFTER INSERT ON AuditTrade
+CREATE TRIGGER AuditTrade_I AFTER INSERT ON AuditTrade
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER AuditTransaction_U AFTER UPDATE ON AuditTrade
+CREATE TRIGGER AuditTrade_U AFTER UPDATE ON AuditTrade
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER AuditTransaction_D AFTER DELETE ON AuditTrade
+CREATE TRIGGER AuditTrade_D AFTER DELETE ON AuditTrade
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER TransactionHistory_I AFTER INSERT ON TradeTransactions
+CREATE TRIGGER TradeTransactions_I AFTER INSERT ON TradeTransactions
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TransactionHistory_U AFTER UPDATE ON TradeTransactions
+CREATE TRIGGER TradeTransactions_U AFTER UPDATE ON TradeTransactions
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER TransactionHistory_D AFTER DELETE ON TradeTransactions
+CREATE TRIGGER TradeTransactions_D AFTER DELETE ON TradeTransactions
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER TransferTransactions_I AFTER INSERT ON TransferTransactions
