@@ -2,8 +2,8 @@
 global.floGlobals = require('../docs/scripts/floGlobals');
 require('./set_globals');
 require('../docs/scripts/lib');
-require('../docs/scripts/floCrypto');
-require('../docs/scripts/floBlockchainAPI');
+global.floCrypto = require('../docs/scripts/floCrypto');
+global.floBlockchainAPI = require('../docs/scripts/floBlockchainAPI');
 require('../docs/scripts/floTokenAPI');
 
 const Database = require("./database");
