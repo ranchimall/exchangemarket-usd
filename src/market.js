@@ -134,7 +134,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
-            checkSellRequirement(floID, asset).then(_ => {
+            checkSellRequirement(floID, asset, quantity).then(_ => {
                 DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price])
                     .then(result => resolve('Sell Order placed successfully'))
                     .catch(error => reject(error));
@@ -148,9 +148,9 @@ const checkSellRequirement = (floID, asset, quantity) => new Promise((resolve, r
         DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=?", [floID, asset]),
         DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
     ]).then(result => {
-        let total = result[0].total_chips,
-            locked = result[1].locked;
-        if (total > locked + quantity)
+        let total = result[0][0].total_chips,
+            locked = result[1][0].locked;
+        if (total >= locked + quantity)
             resolve(true);
         else
             reject(INVALID(`Insufficient sell-chips for ${asset}`));
@@ -283,7 +283,7 @@ function transferToken(sender, receivers, token) {
                 checkDistributor(sender, token).then(result => {
                     if (result)
                         for (let floID in receivers)
-                            txQueries.push(["INSERT INTO Vault (floID, asset, quantity) VALUES (?, ?, ?)", [floID, token, receivers[floID]]]);
+                            txQueries.push(["INSERT INTO SellChips (floID, asset, quantity) VALUES (?, ?, ?)", [floID, token, receivers[floID]]]);
                     let time = Date.now();
                     let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
                         sender: sender,
@@ -329,13 +329,14 @@ function confirmDepositFLO() {
     DB.query("SELECT id, floID, txid FROM InputFLO WHERE status=?", ["PENDING"]).then(results => {
         results.forEach(req => {
             confirmDepositFLO.checkTx(req.floID, req.txid).then(amount => {
-                let txQueries = [];
-                txQueries.push(updateBalance.add(req.floID, "FLO", amount));
-                txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
-
-                DB.transaction(txQueries)
-                    .then(result => console.debug("FLO deposited:", req.floID, amount))
-                    .catch(error => console.error(error))
+                confirmDepositFLO.addSellChipsIfLaunchSeller(req.floID, amount).then(txQueries => {
+                    txQueries.push(updateBalance.add(req.floID, "FLO", amount));
+                    txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
+                    console.debug(txQueries)
+                    DB.transaction(txQueries)
+                        .then(result => console.debug("FLO deposited:", req.floID, amount))
+                        .catch(error => console.error(error))
+                }).catch(error => console.error(error))
             }).catch(error => {
                 console.error(error);
                 if (error[0])
@@ -372,20 +373,22 @@ confirmDepositFLO.checkTx = function(sender, txid) {
 
 confirmDepositFLO.addSellChipsIfLaunchSeller = function(floID, quantity) {
     return new Promise((resolve, reject) => {
-        checkTag(req.floID, LAUNCH_SELLER_TAG).then(result => {
+        checkTag(floID, LAUNCH_SELLER_TAG).then(result => {
             if (result) //floID is launch-seller
                 Promise.all([
-                    DB.query("SELECT SUM(quantity) FROM TradeTransactions WHERE seller=? AND asset=?", [floID, 'FLO']),
-                    DB.query("SELECT SUM(quantity) FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, 'FLO']),
-                    DB.query("SELECT SUM(quantity) FROM SellChips WHERE floID=? AND asset=?", [floID, 'FLO']),
+                    DB.query("SELECT IFNULL(SUM(quantity), 0) AS sold FROM TradeTransactions WHERE seller=? AND asset=?", [floID, 'FLO']),
+                    DB.query("SELECT IFNULL(SUM(quantity), 0) AS brought FROM TradeTransactions WHERE buyer=? AND asset=?", [floID, 'FLO']),
+                    DB.query("SELECT IFNULL(SUM(quantity), 0) AS chips FROM SellChips WHERE floID=? AND asset=?", [floID, 'FLO']),
                 ]).then(result => {
-                    let sold = result[0],
-                        brought = result[1],
-                        chips = result[2];
+                    let sold = result[0][0].sold,
+                        brought = result[1][0].brought,
+                        chips = result[2][0].chips;
                     let remLaunchChips = MAXIMUM_LAUNCH_SELL_CHIPS - (sold + chips) + brought;
                     quantity = Math.min(quantity, remLaunchChips);
                     if (quantity > 0)
-                        resolve(["INSERT INTO SellChips(floID, asset, quantity) VALUES (?, ?, ?)", [floID, 'FLO', quantity]]);
+                        resolve([
+                            ["INSERT INTO SellChips(floID, asset, quantity) VALUES (?, ?, ?)", [floID, 'FLO', quantity]]
+                        ]);
                     else
                         resolve([]);
                 }).catch(error => reject(error))
@@ -613,7 +616,7 @@ function removeTag(floID, tag) {
 }
 
 function checkTag(floID, tag) {
-    new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         DB.query("SELECT id FROM UserTag WHERE floID=? AND tag=?", [floID, tag])
             .then(result => resolve(result.length ? true : false))
             .catch(error => reject(error))
@@ -644,7 +647,7 @@ function removeDistributor(floID, asset) {
 }
 
 function checkDistributor(floID, asset) {
-    new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
         DB.query("SELECT id FROM Distributors WHERE floID=? AND asset=?", [floID, asset])
             .then(result => resolve(result.length ? true : false))
             .catch(error => reject(error))

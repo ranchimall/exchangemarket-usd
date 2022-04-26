@@ -74,9 +74,7 @@ function processCoupling(asset, cur_rate) {
         //console.debug("Sell:", best.sell);
         //console.debug("Buy:", best.buy);
         let quantity = Math.min(best.buy.quantity, best.sell.quantity, best.sell.chip_quantity);
-        let txQueries = [];
-        processOrders(best.sell, best.buy, txQueries, quantity);
-        updateBalance(best.sell, best.buy, txQueries, asset, cur_rate, quantity);
+        let txQueries = processOrders(best.sell, best.buy, asset, cur_rate, quantity);
         //begin audit
         beginAudit(best.sell.floID, best.buy.floID, asset, cur_rate, quantity).then(audit => {
             //process txn query in SQL
@@ -92,7 +90,7 @@ function processCoupling(asset, cur_rate) {
         let noBuy, noSell;
         if (error.buy === undefined)
             noBuy = false;
-        else if (error.buy !== false) {
+        else if (error.buy !== null) {
             console.error(error.buy);
             noBuy = null;
         } else {
@@ -101,7 +99,7 @@ function processCoupling(asset, cur_rate) {
         }
         if (error.sell === undefined)
             noSell = false;
-        else if (error.sell !== false) {
+        else if (error.sell !== null) {
             console.error(error.sell);
             noSell = null;
         } else {
@@ -112,35 +110,39 @@ function processCoupling(asset, cur_rate) {
     });
 }
 
-function processOrders(seller_best, buyer_best, txQueries, quantity) {
+function processOrders(seller_best, buyer_best, asset, cur_rate, quantity) {
+    let txQueries = [];
     if (quantity > buyer_best.quantity || quantity > seller_best.quantity)
         throw Error("Tx quantity cannot be more than order quantity");
+
     //Process Buy Order
     if (quantity == buyer_best.quantity)
         txQueries.push(["DELETE FROM BuyOrder WHERE id=?", [buyer_best.id]]);
     else
         txQueries.push(["UPDATE BuyOrder SET quantity=quantity-? WHERE id=?", [quantity, buyer_best.id]]);
+
     //Process Sell Order
     if (quantity == seller_best.quantity)
         txQueries.push(["DELETE FROM SellOrder WHERE id=?", [seller_best.id]]);
     else
         txQueries.push(["UPDATE SellOrder SET quantity=quantity-? WHERE id=?", [quantity, seller_best.id]]);
+
     //Process Sell Chip
     if (quantity == seller_best.chip_quantity)
         txQueries.push(["DELETE FROM SellChips WHERE id=?", [seller_best.chip_id]]);
     else
         txQueries.push(["UPDATE SellChips SET quantity=quantity-? WHERE id=?", [quantity, seller_best.chip_id]]);
-}
 
-function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, quantity) {
     //Update cash/asset balance for seller and buyer
-    let totalAmount = cur_price * quantity;
+    let totalAmount = cur_rate * quantity;
     txQueries.push(updateBalance.add(seller_best.floID, floGlobals.currency, totalAmount));
     txQueries.push(updateBalance.consume(buyer_best.floID, floGlobals.currency, totalAmount));
-    txQueries.push(updateBalance.add(seller_best.floID, asset, totalAmount));
-    txQueries.push(updateBalance.consume(buyer_best.floID, asset, totalAmount));
+    txQueries.push(updateBalance.consume(seller_best.floID, asset, quantity));
+    txQueries.push(updateBalance.add(buyer_best.floID, asset, quantity));
+
     //Add SellChips to Buyer
-    txQueries.push(["INSERT INTO SellChips(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_price, quantity]])
+    txQueries.push(["INSERT INTO SellChips(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_rate, quantity]])
+
     //Record transaction
     let time = Date.now();
     let hash = TRADE_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
@@ -148,13 +150,15 @@ function updateBalance(seller_best, buyer_best, txQueries, asset, cur_price, qua
         buyer: buyer_best.floID,
         asset: asset,
         quantity: quantity,
-        unitValue: cur_price,
+        unitValue: cur_rate,
         tx_time: time,
     }));
     txQueries.push([
         "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [seller_best.floID, buyer_best.floID, asset, quantity, cur_price, global.convertDateToString(time), hash]
+        [seller_best.floID, buyer_best.floID, asset, quantity, cur_rate, global.convertDateToString(time), hash]
     ]);
+
+    return txQueries;
 }
 
 function beginAudit(sellerID, buyerID, asset, unit_price, quantity) {

@@ -85,9 +85,11 @@ function loadRate(asset) {
             if (result.length)
                 resolve(currentRate[asset] = result[0].rate);
             else
-                DB.query("SELECT initialPrice FROM AssetList WHERE asset=?", [asset])
-                .then(result => resolve(currentRate[asset] = result[0].initialPrice))
-                .catch(error => reject(error))
+                DB.query("SELECT initialPrice FROM AssetList WHERE asset=?", [asset]).then(result => {
+                    currentRate[asset] = result[0].initialPrice;
+                    storeHistory(asset, currentRate[asset]);
+                    resolve(currentRate[asset]);
+                }).catch(error => reject(error))
         }).catch(error => reject(error));
     })
 }

@@ -48,7 +48,7 @@ CREATE TABLE UserBalance (
     quantity DECIMAL(16, 8) NOT NULL DEFAULT 0,
     PRIMARY KEY(floID, token),
     KEY(id)
-)
+);
 
 CREATE TABLE SellChips (
     id INT NOT NULL AUTO_INCREMENT,
@@ -77,7 +77,7 @@ CREATE TABLE Distributors(
     KEY(id),
     PRIMARY KEY(floID, asset),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
-)
+);
 
 /* User Requests */
 
@@ -213,7 +213,7 @@ CREATE TABLE AuditTrade(
 /* Backup Feature (Tables & Triggers) */
 
 CREATE TABLE _backup (
-    t_name TINYTEXT,
+    t_name VARCHAR(64),
     id INT,
     mode BOOLEAN DEFAULT TRUE,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -222,7 +222,7 @@ CREATE TABLE _backup (
 
 CREATE table _backupCache(
     id INT AUTO_INCREMENT,
-    t_name TINYTEXT,
+    t_name VARCHAR(64),
     data_cache LONGTEXT,
     status BOOLEAN,
     PRIMARY KEY(id)
