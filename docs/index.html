@@ -2125,30 +2125,30 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide'))
                 getRef("user_id").value = acc.floID;
                 getRef("sink_id").value = acc.sinkID;
+                // rupee balance init
+                allTokens[floGlobals.currency] = {
+                    total: 0,
+                    locked: 0,
+                    net: 0
+                }
                 // token balance
-                acc.vault.forEach(({ asset, quantity }) => {
-                    allTokens[asset] = {
-                        total: 0,
+                acc.tokenBalance.forEach(({ token, quantity }) => {
+                    allTokens[token] = {
+                        total: quantity,
                         locked: 0,
                         net: 0
                     }
-                    allTokens[asset].total += quantity
-                })
-                acc.sellOrders.forEach(({ quantity }) => {
+                })                   
+                acc.sellOrders.forEach(({ asset, quantity }) => {
                     allTokens[asset].locked += quantity
                 })
-                for (const asset in allTokens) {
-                    allTokens[asset].net = allTokens[asset].total - allTokens[asset].locked
+                allTokens[floGlobals.currency].locked = acc.buyOrders.reduce((a, x) => a + x.quantity * x.maxPrice, 0)
+                for (const token in allTokens) {
+                    allTokens[token].net = allTokens[token].total - allTokens[token].locked
                 }
                 console.debug("FLO", allTokens['FLO']);
                 console.log(await floExchangeAPI.getBalance(acc.floID))
 
-                //Rupee Balance
-                allTokens['rupee'] = {
-                    total: acc.cash,
-                    locked: acc.buyOrders.reduce((a, x) => a + x.quantity * x.maxPrice, 0),
-                }
-                allTokens['rupee'].net = allTokens['rupee'].total - allTokens['rupee'].locked
                 console.debug("RUPEE", allTokens['rupee']);
 
                 // render all assets in wallet
