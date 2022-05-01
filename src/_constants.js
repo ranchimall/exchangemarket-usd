@@ -4,12 +4,12 @@ module.exports = {
         PERIOD_INTERVAL: 15 * 60 * 1000 // 15 min
     },
     request: {
-        SIGN_EXPIRE_TIME: 1 * 60 * 1000, //1 min
+        SIGN_EXPIRE_TIME: 5 * 60 * 1000, //5 mins
         MAX_SESSION_TIMEOUT: 30 * 24 * 60 * 60 * 1000, //30 days
         INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
     },
     market: {
-        MAXIMUM_LAUNCH_SELL_CHIPS: 1000000,
+        MAXIMUM_LAUNCH_SELL_CHIPS: 250000,
         TRADE_HASH_PREFIX: "z1",
         TRANSFER_HASH_PREFIX: "z0"
     },
