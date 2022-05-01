@@ -1129,7 +1129,7 @@ sm-checkbox {
     }
   }
 }
-@media screen and (max-width: 80rem) {
+@media screen and (max-width: 80rem) and (min-width: 40rem) {
   .main_navbar__item {
     padding: 1.5rem 1rem;
     .icon {
