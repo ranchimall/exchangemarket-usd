@@ -8,7 +8,7 @@
     <title>RanchiMall exchange</title>
     <meta name="description" content="Trade FLO and FLO based RanchiMall tokens.">
 
-    <script src="css/components.js" defer></script>
+    <script src="scripts/components.js" defer></script>
     <link rel="stylesheet" href="css/main.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -282,9 +282,12 @@
                 <div class="grid gap-0-5">
                     <div class="flex align-center space-between">
                         <h4>Balance</h4>
-                        <button class="button" onclick="refresh();" title="Refresh">
-                            Refresh
-                        </button>
+                        <div class="multi-state-button">
+                            <button id="wallet_balance_refresh_button" class="button" onclick="updateRate(false,this);"
+                                title="Refresh">
+                                Refresh
+                            </button>
+                        </div>
                     </div>
                     <ul id="my_assets" class="grid"></ul>
                 </div>
@@ -1156,6 +1159,36 @@
         handleMobileChange(mobileQuery)
     </script>
     <script>
+        function buttonLoader(id, show) {
+            getRef(id).disabled = show;
+            const animOptions = {
+                duration: 200,
+                fill: 'forwards',
+                easing: 'ease'
+            }
+            if (show) {
+                try {
+                    getRef(id).animate([
+                        {
+                            clipPath: 'circle(100%)',
+                        },
+                        {
+                            clipPath: 'circle(0)',
+                        },
+                    ], animOptions).onfinish = e => {
+                        e.target.commitStyles()
+                        e.target.cancel()
+                    }
+                    getRef(id).parentNode.append(createElement('sm-spinner'))
+                } catch (e) {
+                    console.log(e)
+                }
+            } else {
+                getRef(id).style = ''
+                const potentialTarget = getRef(id).parentNode.querySelector('sm-spinner')
+                if (potentialTarget) potentialTarget.remove();
+            }
+        }
         const listedAssets = {
             rupee: {
                 icon: `<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -2043,7 +2076,9 @@
             }
         }
 
-        function updateRate(init = false) {
+        function updateRate(init = false, refreshButton) {
+            if (refreshButton)
+                buttonLoader('wallet_balance_refresh_button', true);
             floExchangeAPI.getRates().then(rates => {
                 console.debug(rates);
                 if (init) {
@@ -2081,7 +2116,8 @@
                 }
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
                     getRef('get_price').value = parseFloat(parseFloat(rates[pagesData.params.asset]).toFixed(4))
-
+                if (refreshButton)
+                    buttonLoader('wallet_balance_refresh_button', false);
             }).catch(error => console.error(error.message))
         }
 
@@ -2117,6 +2153,8 @@
         async function account() {
             floExchangeAPI.getAccount(proxy.userID, await proxy.secret).then(async acc => {
                 document.body.classList.add('is-signed-in');
+                // save login time
+                localStorage.setItem(`${acc.floID}_last_login`, Date.now());
                 getRef("login_form").classList.add('hide')
                 getRef('user_popup_button').classList.remove('hide')
                 accountDetails = acc

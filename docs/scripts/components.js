@@ -1519,8 +1519,8 @@ spinner.innerHTML = `
             box-sizing: border-box;
 }
 .loader {
-    height: var(--size, 1.5rem);
-    width: var(--size, 1.5rem);
+    height: var(--size, 1.2rem);
+    width: var(--size, 1.2rem);
     stroke-width: 8;
     overflow: visible;
     stroke: var(--accent-color, teal);
