@@ -1693,7 +1693,7 @@
                 }
             }
             catch (err) {
-                if ((err.message || err) === 'Insufficient rupe balance') {
+                if ((err.message || err) === 'Insufficient rupee balance') {
                     showWalletResult('error', `Failed`, err.message || err, 'open-upi')
                 } else {
                     showWalletResult('error', `Failed`, err.message || err)
@@ -2138,7 +2138,7 @@
                         locked: 0,
                         net: 0
                     }
-                })                   
+                })
                 acc.sellOrders.forEach(({ asset, quantity }) => {
                     allTokens[asset].locked += quantity
                 })
