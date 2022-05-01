@@ -2163,6 +2163,9 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide'))
                 getRef("user_id").value = acc.floID;
                 getRef("sink_id").value = acc.sinkID;
+                if(acc.subAdmin)
+                    console.info("logged in as subAdmin");
+                    
                 // rupee balance init
                 allTokens[floGlobals.currency] = {
                     total: 0,
