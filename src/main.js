@@ -68,14 +68,14 @@ function refreshDataFromBlockchain() {
                             for (let id of content.Trusted.add)
                                 promises.push(DB.query("INSERT INTO TrustedList (floID) VALUE (?) ON DUPLICATE KEY UPDATE floID=floID", [id]));
                     }
-                    //Tag List with priority and API
+                    //Tag List with priority
                     if (content.Tag) {
                         if (content.Tag.remove)
                             for (let t of content.Tag.remove)
                                 promises.push(DB.query("DELETE FROM TagList WHERE tag=?", [t]));
                         if (content.Tag.add)
                             for (let t in content.Tag.add)
-                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE tag=tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority, content.Tag.add[t].api]));
+                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE tag=tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority]));
                         if (content.Tag.update)
                             for (let t in content.Tag.update)
                                 for (let a in content.Tag.update[t])

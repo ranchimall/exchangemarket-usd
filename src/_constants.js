@@ -19,6 +19,7 @@ module.exports = {
         UP_RATE: 0.5 / 100, //0.5 % inc
         MAX_DOWN_PER_DAY: 4.8 / 100, //max 4.8% dec
         MAX_UP_PER_DAY: 12 / 100, //max 12% inc
+        CHECK_RATED_SELLER: false,
         TOP_RANGE: 10 / 100, //top 10%
         REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, // 1 hr
     },

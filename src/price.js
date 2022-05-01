@@ -6,6 +6,7 @@ const {
     UP_RATE,
     MAX_DOWN_PER_DAY,
     MAX_UP_PER_DAY,
+    CHECK_RATED_SELLER,
     TOP_RANGE,
     REC_HISTORY_INTERVAL
 } = require("./_constants")["price"];
@@ -181,6 +182,8 @@ function getRates(asset) {
 function checkForRatedSellers(asset) {
     //Check if there are best rated sellers?
     return new Promise((resolve, reject) => {
+        if (!CHECK_RATED_SELLER) //switch for the check case
+            return resolve(true);
         DB.query("SELECT MAX(sellPriority) as max_p FROM TagList").then(result => {
             let ratedMin = result[0].max_p * (1 - TOP_RANGE);
             DB.query("SELECT COUNT(*) as value FROM SellOrder WHERE floID IN (" +
