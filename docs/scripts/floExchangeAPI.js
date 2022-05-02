@@ -1137,15 +1137,21 @@
 
     exchangeAPI.init = function refreshDataFromBlockchain(adminID = floGlobals.adminID, appName = floGlobals.application) {
         return new Promise((resolve, reject) => {
-            let nodes, lastTx;
+            let nodes, assets = new Set(),
+                tags = new Set(),
+                lastTx;
             try {
                 nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
+                assets = new Set((localStorage.getItem('exchange-assets') || "").split(','));
+                tags = new Set((localStorage.getItem('exchange-tags') || "").split(','));
                 if (typeof nodes !== 'object' || nodes === null)
                     throw Error('nodes must be an object')
                 else
                     lastTx = parseInt(localStorage.getItem('exchange-lastTx')) || 0;
             } catch (error) {
                 nodes = {};
+                assets = new Set();
+                tags = new Set();
                 lastTx = 0;
             }
             floBlockchainAPI.readData(adminID, {
@@ -1164,9 +1170,25 @@
                             for (let n in content.Nodes.add)
                                 nodes[n] = content.Nodes.add[n];
                     }
+                    //Asset List
+                    if (content.Assets) {
+                        for (let a in content.Assets)
+                            assets.add(a);
+                    }
+                    //Tag List
+                    if (content.Tag) {
+                        if (content.Tag.remove)
+                            for (let t of content.Tag.remove)
+                                tags.delete(t);
+                        if (content.Tag.add)
+                            for (let t in content.Tag.add)
+                                tags.add(t);
+                    }
                 });
                 localStorage.setItem('exchange-lastTx', result.totalTxs);
                 localStorage.setItem('exchange-nodes', JSON.stringify(nodes));
+                localStorage.setItem('exchange-assets', Array.from(assets).join(","));
+                localStorage.setItem('exchange-tags', Array.from(tags).join(","));
                 nodeURL = nodes;
                 nodeKBucket = new K_Bucket(adminID, Object.keys(nodeURL));
                 nodeList = nodeKBucket.order;
@@ -1177,6 +1199,8 @@
 
     exchangeAPI.clearAllLocalData = function() {
         localStorage.removeItem('exchange-nodes');
+        localStorage.removeItem('exchange-assets');
+        localStorage.removeItem('exchange-tags');
         localStorage.removeItem('exchange-lastTx');
         localStorage.removeItem('exchange-proxy_secret');
         localStorage.removeItem('exchange-user_ID');
