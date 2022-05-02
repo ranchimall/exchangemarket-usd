@@ -448,6 +448,9 @@ ul {
   stroke: none;
 }
 
+details:not(:last-of-type) {
+  border-bottom: thin solid rgba(var(--text-color), 0.3);
+}
 details summary {
   display: flex;
   justify-content: space-between;
@@ -456,11 +459,12 @@ details summary {
       -ms-user-select: none;
           user-select: none;
   cursor: pointer;
+  padding: 1rem 0;
 }
-details[open] > summary {
-  margin-bottom: 1rem;
+details[open] {
+  padding-bottom: 1rem;
 }
-details[open] > summary .icon {
+details[open] summary .icon {
   transform: rotate(180deg);
 }
 
@@ -757,7 +761,6 @@ sm-checkbox {
           user-select: none;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.5rem 0.5rem 0.5rem;
   grid-template-columns: -webkit-min-content repeat(3, 1fr) -webkit-min-content;
   grid-template-columns: min-content repeat(3, 1fr) min-content;
   border-radius: 0.5rem;
@@ -781,8 +784,8 @@ sm-checkbox {
   pointer-events: none;
 }
 .order-card sm-checkbox {
-  padding: 1rem;
   cursor: pointer;
+  margin-right: 0.5rem;
 }
 .order-card__quantity, .order-card__price {
   font-size: 0.9rem;
@@ -1068,6 +1071,12 @@ sm-checkbox {
             clip-path: circle(100%);
   }
 }
+#help {
+  width: min(60ch, 100%);
+  margin-bottom: 3rem;
+  align-content: flex-start;
+}
+
 @media screen and (max-width: 40rem) and (any-hover: none) {
   .cancel-order span {
     display: none !important;
