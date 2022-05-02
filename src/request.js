@@ -325,24 +325,65 @@ function GetLoginCode(req, res) {
 }
 
 function ListSellOrders(req, res) {
-    //TODO: Limit size (best)
-    DB.query("SELECT * FROM SellOrder ORDER BY time_placed")
-        .then(result => res.send(result))
-        .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let asset = req.query.asset;
+        if (asset && !market.assetList.includes(asset))
+            res.status(INVALID.e_code).send("Invalid asset parameter");
+        else
+            DB.query("SELECT SellOrder.floID, SellOrder.asset, GREATEST(SellOrder.minPrice, SellChips.base) AS minPrice, SellOrder.quantity, SellOrder.time_placed FROM SellOrder" +
+                " INNER JOIN UserBalance ON UserBalance.floID = SellOrder.floID AND UserBalance.token = SellOrder.asset" +
+                " INNER JOIN SellChips ON SellChips.floID = SellOrder.floID AND SellChips.asset = SellOrder.asset" +
+                " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
+                " LEFT JOIN TagList ON TagList.tag = UserTag.tag" +
+                " WHERE UserBalance.quantity >= SellOrder.quantity" +
+                (asset ? " AND SellOrder.asset = ?" : "") +
+                " GROUP BY SellOrder.id" +
+                " ORDER BY TagList.sellPriority DESC, SellChips.locktime ASC, SellOrder.time_placed ASC" +
+                " LIMIT 100", [asset || null])
+            .then(result => res.send(result))
+            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    }
+
 }
 
 function ListBuyOrders(req, res) {
-    //TODO: Limit size (best)
-    DB.query("SELECT * FROM BuyOrder ORDER BY time_placed")
-        .then(result => res.send(result))
-        .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let asset = req.query.asset;
+        if (asset && !market.assetList.includes(asset))
+            res.status(INVALID.e_code).send("Invalid asset parameter");
+        else
+            DB.query("SELECT BuyOrder.floID, BuyOrder.asset, BuyOrder.maxPrice, BuyOrder.quantity, BuyOrder.time_placed FROM BuyOrder" +
+                " INNER JOIN UserBalance ON UserBalance.floID = BuyOrder.floID AND UserBalance.token = ?" +
+                " LEFT JOIN UserTag ON UserTag.floID = BuyOrder.floID" +
+                " LEFT JOIN TagList ON TagList.tag = UserTag.tag" +
+                " WHERE UserBalance.quantity >= BuyOrder.maxPrice * BuyOrder.quantity" +
+                (asset ? " AND BuyOrder.asset = ?" : "") +
+                " GROUP BY BuyOrder.id" +
+                " ORDER BY TagList.buyPriority DESC, BuyOrder.time_placed ASC" +
+                " LIMIT 100", [floGlobals.currency, asset || null])
+            .then(result => res.send(result))
+            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    }
 }
 
 function ListTradeTransactions(req, res) {
-    //TODO: Limit size (recent)
-    DB.query("SELECT * FROM TradeTransactions ORDER BY tx_time DESC")
-        .then(result => res.send(result))
-        .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    if (!serving)
+        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+    else {
+        let asset = req.query.asset;
+        if (asset && !market.assetList.includes(asset))
+            res.status(INVALID.e_code).send("Invalid asset parameter");
+        else
+            DB.query("SELECT * FROM TradeTransactions" +
+                (asset ? " WHERE asset = ?" : "") +
+                " ORDER BY tx_time DESC LIMIT 1000", [asset || null])
+            .then(result => res.send(result))
+            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+    }
 }
 
 function GetRates(req, res) {

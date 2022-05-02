@@ -705,5 +705,8 @@ module.exports = {
     },
     set assetList(assets) {
         assetList = assets;
+    },
+    get assetList() {
+        return assetList
     }
 };

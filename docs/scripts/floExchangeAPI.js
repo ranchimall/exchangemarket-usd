@@ -541,9 +541,9 @@
         });
     }
 
-    exchangeAPI.getBuyList = function() {
+    exchangeAPI.getBuyList = function(asset = null) {
         return new Promise((resolve, reject) => {
-            fetch_api('/list-buyorders')
+            fetch_api('/list-buyorders' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
                     .then(result => resolve(result))
                     .catch(error => reject(error)))
@@ -551,9 +551,9 @@
         });
     }
 
-    exchangeAPI.getSellList = function() {
+    exchangeAPI.getSellList = function(asset = null) {
         return new Promise((resolve, reject) => {
-            fetch_api('/list-sellorders')
+            fetch_api('/list-sellorders' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
                     .then(result => resolve(result))
                     .catch(error => reject(error)))
@@ -561,9 +561,9 @@
         });
     }
 
-    exchangeAPI.getTradeList = function() {
+    exchangeAPI.getTradeList = function(asset = null) {
         return new Promise((resolve, reject) => {
-            fetch_api('/list-trades')
+            fetch_api('/list-trades' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
                     .then(result => resolve(result))
                     .catch(error => reject(error)))
