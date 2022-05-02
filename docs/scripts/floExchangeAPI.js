@@ -1,6 +1,6 @@
 'use strict';
 
-(function(EXPORTS) { //floExchangeAPI v1.1.1
+(function(EXPORTS) { //floExchangeAPI v1.1.2
     const exchangeAPI = EXPORTS;
 
     /*Kademlia DHT K-bucket implementation as a binary tree.*/
@@ -1137,9 +1137,7 @@
 
     exchangeAPI.init = function refreshDataFromBlockchain(adminID = floGlobals.adminID, appName = floGlobals.application) {
         return new Promise((resolve, reject) => {
-            let nodes, assets = new Set(),
-                tags = new Set(),
-                lastTx;
+            let nodes, assets, tags, lastTx;
             try {
                 nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
                 assets = new Set((localStorage.getItem('exchange-assets') || "").split(','));
