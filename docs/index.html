@@ -20,6 +20,13 @@
     <script src="scripts/floTokenAPI.js"></script>
     <script src="scripts/floExchangeAPI.js"></script>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script>
+        const DEFAULT_TRADE_PRICE_DEVIATION = 15 / 100;
+        const deviation = {
+            'buy': 1 + DEFAULT_TRADE_PRICE_DEVIATION,
+            'sell': 1 - DEFAULT_TRADE_PRICE_DEVIATION
+        }
+    </script>
 </head>
 
 <body class="hide">
@@ -1090,7 +1097,7 @@
                                 getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
                             getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
                             getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(floGlobals.exchangeRates[params.asset])}</p>`
-                            getRef('get_price').value = parseFloat(floGlobals.exchangeRates[params.asset].toFixed(4))
+                            getRef('get_price').value = (parseFloat(floGlobals.exchangeRates[params.asset]) *  deviation[tradeType]).toFixed(6) ;
                             getRef('traded_asset').textContent = `Trade ${params.asset}`
                             getRef('trade_button').textContent = `${tradeType} ${params.asset}`
                             getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
@@ -1644,6 +1651,7 @@
             tradeType = e.detail.value
             const selectedAsset = pagesData.params.asset
             getRef('get_price').setAttribute('placeholder', tradeType === 'buy' ? 'Max price' : 'Min price')
+            getRef('get_price').value = (parseFloat(floGlobals.exchangeRates[selectedAsset]) *  deviation[tradeType]).toFixed(6) ;
             getRef('trade_button').textContent = `${tradeType} ${selectedAsset}`
             getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
             updateTooltip(selectedAsset, tradeType)
@@ -1717,7 +1725,7 @@
         })
         getRef('get_total').addEventListener('keyup', e => {
             const unitValue = parseFloat(getRef('get_price').value)
-            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(4)) || 0
+            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(6)) || 0
         })
 
         getRef('wallet_actions').addEventListener('click', e => {
@@ -2240,7 +2248,7 @@
                     }
                 }
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
-                    getRef('get_price').value = parseFloat(parseFloat(rates[pagesData.params.asset]).toFixed(4))
+                    getRef('get_price').value = (parseFloat(rates[pagesData.params.asset]) *  deviation[tradeType]).toFixed(6) ;
                 if (refreshButton)
                     buttonLoader('wallet_balance_refresh_button', false);
             }).catch(error => console.error(error.message))
