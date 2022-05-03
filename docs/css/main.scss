@@ -789,6 +789,8 @@ sm-checkbox {
 }
 
 .transaction-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 2.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
   &__type {
     font-size: 0.9rem;
@@ -815,7 +817,7 @@ sm-checkbox {
   }
 }
 
-#market_orders_list {
+#market_orders_wrapper {
   .list__header {
     font-size: 0.8rem;
     font-weight: 500;
@@ -1230,7 +1232,6 @@ sm-checkbox {
         transition: opacity 0.3s, transform 0.3s;
       }
       .icon {
-        opacity: 0;
         transform: translateX(100%);
       }
       span {
@@ -1252,15 +1253,6 @@ sm-checkbox {
         opacity: 1;
         transform: translateX(0);
       }
-    }
-  }
-  .transaction-card {
-    button {
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    &:hover button {
-      opacity: 1;
     }
   }
 }

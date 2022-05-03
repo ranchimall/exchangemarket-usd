@@ -829,6 +829,8 @@ sm-checkbox {
 }
 
 .transaction-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 2.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
 }
 .transaction-card__type {
@@ -852,14 +854,14 @@ sm-checkbox {
   color: rgba(var(--text-color), 0.9);
 }
 
-#market_orders_list .list__header {
+#market_orders_wrapper .list__header {
   font-size: 0.8rem;
   font-weight: 500;
 }
-#market_orders_list .list__header div {
+#market_orders_wrapper .list__header div {
   padding: 0.5rem 0;
 }
-#market_orders_list .list__header {
+#market_orders_wrapper .list__header {
   margin-bottom: 0.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
 }
@@ -1328,7 +1330,6 @@ sm-checkbox {
     transition: opacity 0.3s, transform 0.3s;
   }
   .order-card .cancel-order .icon {
-    opacity: 0;
     transform: translateX(100%);
   }
   .order-card .cancel-order span {
@@ -1342,13 +1343,5 @@ sm-checkbox {
 .order-card .cancel-order:hover span {
     opacity: 1;
     transform: translateX(0);
-  }
-
-  .transaction-card button {
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .transaction-card:hover button {
-    opacity: 1;
   }
 }

@@ -158,8 +158,8 @@
                                 animate>
                             </sm-input>
                             </sm-input>
-                            <sm-input id="get_total" placeholder="Total (₹)" type="number" min="0.01" step="0.01"
-                                required animate>
+                            <sm-input id="get_total" placeholder="Locked amount (₹)" type="number" min="0.00000001"
+                                step="0.00000001" required animate>
                             </sm-input>
                             <div class="grid gap-0-5">
                                 <div id="quantity_selector" class="flex align-center quantity-selector">
@@ -204,7 +204,7 @@
                         </h4>
                         <strip-select id="my_orders_category_selector" class="tab">
                             <strip-option value="open" selected>Open</strip-option>
-                            <strip-option value="completed">History</strip-option>
+                            <strip-option value="completed">Trades</strip-option>
                         </strip-select>
                     </div>
                     <div id="orders_section__header--secondary" class="flex w-100 align-center space-between hide">
@@ -241,7 +241,7 @@
             <section id="market" class="grid gap-1 hide mobile-page">
                 <div class="orders_section__header flex align-center space-between">
                     <h4 class="flex align-center">
-                        Market orders
+                        Market-wide trades
                         <button onclick="refresh();" title="Refresh" style="margin-left: 1rem;">
                             <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                 width="24px" fill="#000000">
@@ -253,13 +253,43 @@
                     </h4>
                     <strip-select id="market_orders_category_selector" class="tab">
                         <strip-option value="open" selected>Open</strip-option>
-                        <strip-option value="completed">History</strip-option>
+                        <strip-option value="completed">Trades</strip-option>
                     </strip-select>
                 </div>
-                <ul id="market_orders_list" class="observe-empty-state"></ul>
-                <p class="empty-state">
-                    No orders placed
-                </p>
+                <div id="market_orders_wrapper">
+                    <div class="grid gap-1">
+                        <div class="flex align-center space-between">
+                            <div class="grid">
+                                <h4>Open orders</h4>
+                                <p>Order placement denotes priority at which orders will get executed.</p>
+                            </div>
+                            <strip-select id="market_open_orders_type_selector" class="tab">
+                                <strip-option value="buy" selected>Buy</strip-option>
+                                <strip-option value="sell">Sell</strip-option>
+                            </strip-select>
+                        </div>
+                        <div id="market_open_orders_wrapper">
+                            <div>
+                                <ul id="market_buy_orders" class="observe-empty-state"></ul>
+                                <p class="empty-state">
+                                    No buy orders placed
+                                </p>
+                            </div>
+                            <div>
+                                <ul id="market_sell_orders" class="observe-empty-state"></ul>
+                                <p class="empty-state">
+                                    No sell orders placed
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <ul id="market_trades" class="observe-empty-state"></ul>
+                        <p class="empty-state">
+                            No trades happened
+                        </p>
+                    </div>
+                </div>
             </section>
             <section id="wallet" class="grid mobile-page hide">
                 <h4 id="wallet__header" class="flex align-center">
@@ -496,11 +526,13 @@
             </a>
         </nav>
     </article>
-
+    <!-- 
     * show all trades are happening at current price
     * show max price allow
-    * remove graph price
-    *
+    * add min price when total is entered
+    * add amount locked when quantity is entered
+    * add warning to show if an order is not considered
+ -->
 
     <sm-popup id="confirm_trade_popup">
         <header slot="header" class="popup__header">
@@ -667,7 +699,7 @@
             </div>
             <div class="grid">
                 <h5 id="transaction_time__label" class="label">Completed</h5>
-                <h4 id="transaction_time"></h4>
+                <time style="font-size: 0.9rem;" id="transaction_time"></time>
             </div>
         </div>
     </sm-popup>
@@ -711,7 +743,7 @@
                 <div class="order-card__quantity"></div>
             </div>
             <div class="grid">
-                <span class="label order-card__price-type">Ordered at</span>
+                <span class="label order-card__price-type"></span>
                 <div class="order-card__price"></div>
             </div>
             <time class="order-card__time"></time>
@@ -732,7 +764,7 @@
                 <div class="transaction-card__quantity"></div>
             </div>
             <div class="grid">
-                <span class="label transaction-card__price-type">Ordered at</span>
+                <span class="label transaction-card__price-type">Valid upto</span>
                 <div class="transaction-card__price"></div>
             </div>
             <div class="grid">
@@ -755,7 +787,7 @@
                 <div class="transaction-card__quantity"></div>
             </div>
             <div class="grid">
-                <span class="label transaction-card__price-type">Ordered at</span>
+                <span class="label transaction-card__price-type">Valid upto</span>
                 <div class="transaction-card__price"></div>
             </div>
             <div class="grid">
@@ -798,7 +830,7 @@
     <template id="market_transaction_list_template">
         <h4 class="grid list__header">
             <div>Quantity</div>
-            <div>Ordered at</div>
+            <div>Traded at</div>
             <div>Total</div>
             <div></div>
         </h4>
@@ -1124,7 +1156,7 @@
                             showSuggestedPrice(params.asset)
                             getRef('traded_asset').textContent = `Trade ${params.asset}`
                             getRef('trade_button').textContent = `${tradeType} ${params.asset}`
-                            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
+                            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
                             updateTooltip(params.asset, tradeType)
                         }
                         const animOptions = {
@@ -1313,6 +1345,14 @@
         mobileQuery.addEventListener('change', handleMobileChange)
 
         handleMobileChange(mobileQuery)
+        function showChild(id, index) {
+            [...getRef(id).children].forEach((child, i) => {
+                if (i === index)
+                    child.classList.remove('hide')
+                else
+                    child.classList.add('hide')
+            })
+        }
     </script>
     <script>
         function buttonLoader(id, show) {
@@ -1377,8 +1417,8 @@
             return listedAssets.hasOwnProperty(asset) ? listedAssets[asset].icon : listedAssets.default.icon;
         }
 
-        function formatAmount(amount) {
-            return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: 5 })
+        function formatAmount(amount, shorten = false) {
+            return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: shorten ? 2 : 8 })
         }
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
@@ -1386,17 +1426,24 @@
             return parseFloat((parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType]).toFixed(8))
         }
 
-        function showSuggestedPrice(asset) {
+        function showSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
             const tradeType = getRef('trade_type_selector').value
             getRef('get_price').innerHTML = `
                 <div class="grid">
-                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">${tradeType === 'buy' ? 'Buy order valid upto' : 'Sell order valid until'}</div>
+                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">Current price</div>
+                    <h3>${formatAmount(floGlobals.exchangeRates[asset])}</h3>
+                </div>
+                <div class="grid">
+                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">${tradeType === 'buy' ? 'Highest' : 'Lowest'} price</div>
                     <h3>${formatAmount(getSuggestedPrice(asset))}</h3>
                 </div>
                 <div class="tooltip">
                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                     <p class="banner">
-                        This is the ${tradeType === 'buy' ? `<b>Highest price</b> upto` : `<b>Lowest price</b> until`} which your order will be considered valid. System will always try to match your order with the best price.
+                        ${tradeType === 'buy' ?
+                    `<b>Highest price</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> higher than current price.` :
+                    `<b>Lowest price</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> lower than current price.`
+                } System will always try to execute your order at the <b>nearest price possible to current price</b>.
                     </p>
                 </div>
             `
@@ -1545,34 +1592,60 @@
                 }
                 getRef('orders_list').append(frag)
             },
-            async marketOrders() {
+            marketOrders() {
                 const frag = document.createDocumentFragment()
-                getRef('market_orders_list').innerHTML = '';
                 const ordersType = getRef('market_orders_category_selector').value
+                const openOrdersType = getRef('market_open_orders_type_selector').value
                 if (ordersType === 'open') {
-                    try {
-                        const [buyOrders, sellOrders] = await Promise.all([floExchangeAPI.getBuyList(), floExchangeAPI.getSellList()])
-                        const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
-                        allOpenOrders.forEach(order => {
-                            const { floID, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
-                            const orderDetails = {
-                                floID,
-                                asset,
-                                quantity,
-                                type: minPrice ? 'sell' : 'buy',
-                                unitValue: minPrice || maxPrice,
-                                time: time_placed
-                            }
-                            frag.append(render.marketOrderCard(orderDetails))
+                    showChild('market_orders_wrapper', 0)
+                    if (openOrdersType === 'buy') {
+                        showChild('market_open_orders_wrapper', 0)
+                        getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
+                        floExchangeAPI.getBuyList().then(buyOrders => {
+                            getRef('market_buy_orders').innerHTML = '';
+                            buyOrders.forEach(order => {
+                                const { id, asset, quantity, maxPrice, time_placed } = order
+                                const orderDetails = {
+                                    id,
+                                    asset,
+                                    quantity,
+                                    type: 'buy',
+                                    unitValue: maxPrice,
+                                    time: time_placed
+                                }
+                                frag.append(render.marketOrderCard(orderDetails))
+                            })
+                            getRef('market_buy_orders').append(frag)
+                        }).catch(err => {
+                            console.log(err)
+                        })
+                    } else {
+                        showChild('market_open_orders_wrapper', 1)
+                        getRef('market_sell_orders').innerHTML = '<sm-spinner></sm-spinner>';
+                        floExchangeAPI.getSellList().then(sellOrders => {
+                            getRef('market_sell_orders').innerHTML = '';
+                            sellOrders.forEach(order => {
+                                const { id, asset, quantity, minPrice, time_placed } = order
+                                const orderDetails = {
+                                    id,
+                                    asset,
+                                    quantity,
+                                    type: 'sell',
+                                    unitValue: minPrice,
+                                    time: time_placed
+                                }
+                                frag.append(render.marketOrderCard(orderDetails))
+                            })
+                            getRef('market_sell_orders').append(frag)
+                        }).catch(err => {
+                            console.log(err)
                         })
                     }
-                    catch (err) {
-                        notify(err.message, 'error')
-                    }
                 } else {
-                    try {
-                        const marketTransactions = await floExchangeAPI.getTradeList()
-                        marketTransactions.forEach(transaction => {
+                    showChild('market_orders_wrapper', 1)
+                    getRef('market_trades').innerHTML = '<sm-spinner></sm-spinner>';
+                    floExchangeAPI.getTradeList().then(trades => {
+                        trades.forEach(transaction => {
                             const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
                             const transactionDetails = {
                                 buyer,
@@ -1584,14 +1657,14 @@
                             }
                             frag.append(render.marketTransactionCard(transactionDetails))
                         })
+                        getRef('market_trades').innerHTML = '';
                         const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
-                        getRef('market_orders_list').append(marketTransactionList)
-                    }
-                    catch (err) {
-                        notify(err.message, 'error')
-                    }
+                        getRef('market_trades').append(marketTransactionList)
+                        getRef('market_trades').append(frag)
+                    }).catch(err => {
+                        console.log(err)
+                    })
                 }
-                getRef('market_orders_list').append(frag)
             }
         }
 
@@ -1684,8 +1757,9 @@
             tradeType = e.detail.value
             const selectedAsset = pagesData.params.asset
             showSuggestedPrice()
+            getRef('get_total').setAttribute('placeholder', tradeType === 'buy' ? `Locked amount (₹)` : `Min amount received (₹)`)
             getRef('trade_button').textContent = `${tradeType} ${selectedAsset}`
-            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
+            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
             updateTooltip(selectedAsset, tradeType)
         })
         getRef('price_duration_selector').addEventListener('change', e => {
@@ -1735,19 +1809,18 @@
                 const unitValue = getSuggestedPrice()
                 const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
-                    console.log(parseFloat((fraction * allTokens['rupee'].net).toFixed(4)), parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(4)))
-                    getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(2))
-                    getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(4))
+                    getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(8))
+                    getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(8))
                 } else {
-                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(2))
-                    getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(4))
+                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(8))
+                    getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(8))
 
                 }
             }
         })
         getRef('get_quantity').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
-            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(2)) || 0
+            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(8)) || 0
         })
         getRef('get_total').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
@@ -1760,7 +1833,7 @@
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
 
-                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[asset].net.toFixed(4))} ${asset}`
+                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[asset].net.toFixed(4))} ${asset}`
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
@@ -2096,7 +2169,8 @@
         getRef('my_orders_category_selector').addEventListener('change', render.userOrders)
 
         getRef('market_orders_category_selector').addEventListener('change', render.marketOrders)
-        getRef('market_orders_list').addEventListener('click', e => {
+        getRef('market_open_orders_type_selector').addEventListener('change', render.marketOrders)
+        getRef('market').addEventListener('click', e => {
             if (e.target.closest('.more-info')) {
                 showMoreDetails(e)
             }
