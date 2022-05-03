@@ -112,7 +112,10 @@
                 </sm-form>
                 <section id="exchange_wrapper" class="hide user-content">
                     <div id="asset_list_wrapper" class="grid gap-1 align-start">
-                        <h5>ASSETS</h5>
+                        <div class="flex align-center space-between">
+                            <h5>ASSETS</h5>
+                            <h5>PRICE</h5>
+                        </div>
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
@@ -150,10 +153,8 @@
                                     <strip-option value="sell">Sell</strip-option>
                                 </strip-select>
                             </div>
-                            <sm-input id="get_price" placeholder="Max price (₹)" type="number" step="0.0001" required
-                                animate>
-                            </sm-input>
-                            <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.0001" required
+                            <div id="get_price" class="flex align-center space-between"></div>
+                            <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.00000001" required
                                 animate>
                             </sm-input>
                             </sm-input>
@@ -336,6 +337,24 @@
                                     <a href="https://ranchimall.github.io/flopay/" target="_blank">FLO Pay</a>
                                 </strong>
                                 app.
+                            </p>
+                        </details>
+                        <details>
+                            <summary class="interact">
+                                <h4>
+                                    Why is there a difference between current asset prices and prices shown as
+                                    buying/selling price?
+                                </h4>
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                                    width="24px" fill="#000000">
+                                    <path d="M0 0h24v24H0V0z" fill="none" />
+                                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                                </svg>
+                            </summary>
+                            <p>
+                                Contrary to other exchanges, the price you see as buying/selling price works as a upper
+                                bound for buying and lower bound for selling. you order will bne executed at
+                                best price determined by the exchange algorithm.
                             </p>
                         </details>
                         <details>
@@ -1097,7 +1116,7 @@
                                 getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
                             getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
                             getRef('chart_asset').innerHTML = `<h4> ${params.asset}/INR</h4><p>${formatAmount(floGlobals.exchangeRates[params.asset])}</p>`
-                            getRef('get_price').value = (parseFloat(floGlobals.exchangeRates[params.asset]) *  deviation[tradeType]).toFixed(6) ;
+                            showSuggestedPrice(params.asset)
                             getRef('traded_asset').textContent = `Trade ${params.asset}`
                             getRef('trade_button').textContent = `${tradeType} ${params.asset}`
                             getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
@@ -1357,6 +1376,27 @@
             return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: 5 })
         }
 
+        function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
+            const tradeType = getRef('trade_type_selector').value
+            return parseFloat((parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType]).toFixed(8))
+        }
+
+        function showSuggestedPrice(asset) {
+            const tradeType = getRef('trade_type_selector').value
+            getRef('get_price').innerHTML = `
+                <div class="grid">
+                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">${tradeType === 'buy' ? 'Buy upto' : 'Sell till'}</div>
+                    <h3>${formatAmount(getSuggestedPrice(asset))}</h3>
+                </div>
+                <div class="tooltip">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+                    <p class="banner">
+                        This is the ${tradeType === 'buy' ? 'Highest price upto' : 'Lowest price until'} which your order will be considered valid. System will always try to match your order with the best price.
+                    </p>
+                </div>
+            `
+        }
+
         const chartDimensions = {
             height: 0,
             width: 0
@@ -1378,7 +1418,7 @@
                 card.dataset.type = type
                 card.querySelector('.order-card__type').textContent = type
                 card.querySelector('.order-card__quantity').textContent = `${quantity} ${asset}`
-                card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Max price' : 'Min price'
+                card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Valid upto' : 'Valid until'
                 card.querySelector('.order-card__price').textContent = formatAmount(price)
                 card.querySelector('.order-card__time').textContent = relativeTime.from(new Date(time).getTime())
                 return card
@@ -1650,8 +1690,7 @@
         getRef('trade_type_selector').addEventListener('change', e => {
             tradeType = e.detail.value
             const selectedAsset = pagesData.params.asset
-            getRef('get_price').setAttribute('placeholder', tradeType === 'buy' ? 'Max price' : 'Min price')
-            getRef('get_price').value = (parseFloat(floGlobals.exchangeRates[selectedAsset]) *  deviation[tradeType]).toFixed(6) ;
+            showSuggestedPrice()
             getRef('trade_button').textContent = `${tradeType} ${selectedAsset}`
             getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
             updateTooltip(selectedAsset, tradeType)
@@ -1663,7 +1702,7 @@
             hidePopup()
             const asset = pagesData.params.asset;
             const quantity = parseFloat(getRef('get_quantity').value)
-            const price = parseFloat(getRef('get_price').value)
+            const price = getSuggestedPrice()
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
@@ -1698,10 +1737,10 @@
         }
         getRef('quantity_selector').addEventListener('click', e => {
             if (e.target.closest('button')) {
-                const target = e.target.closest('button')
-                const unitValue = parseFloat(getRef('get_price').value)
-                const fraction = parseFloat(target.value)
                 const selectedAsset = pagesData.params.asset
+                const target = e.target.closest('button')
+                const unitValue = getSuggestedPrice()
+                const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
                     console.log(parseFloat((fraction * allTokens['rupee'].net).toFixed(4)), parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(4)))
                     getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(2))
@@ -1713,19 +1752,13 @@
                 }
             }
         })
-        getRef('get_price').addEventListener('keyup', e => {
-            const unitValue = parseFloat(getRef('get_price').value) || floGlobals.exchangeRates[pagesData.params.asset]
-
-            const quantity = parseFloat(getRef('get_quantity').value) || 0
-            getRef('get_total').value = parseFloat((quantity * unitValue).toFixed(2)) || 0
-        })
         getRef('get_quantity').addEventListener('keyup', e => {
-            const unitValue = parseFloat(getRef('get_price').value)
+            const unitValue = getSuggestedPrice()
             getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(2)) || 0
         })
         getRef('get_total').addEventListener('keyup', e => {
-            const unitValue = parseFloat(getRef('get_price').value)
-            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(6)) || 0
+            const unitValue = getSuggestedPrice()
+            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(8)) || 0
         })
 
         getRef('wallet_actions').addEventListener('click', e => {
@@ -2091,10 +2124,10 @@
                     const asset = pagesData.params.asset;
                     const tradeType = getRef('trade_type_selector').value
                     const quantity = parseFloat(getRef('get_quantity').value)
-                    const price = parseFloat(getRef('get_price').value)
+                    const price = getSuggestedPrice()
                     const total = parseFloat(getRef('get_total').value)
                     getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`
-                    getRef('confirm_trade__price_type').textContent = tradeType === 'buy' ? 'Max price' : 'Min price'
+                    getRef('confirm_trade__price_type').textContent = tradeType === 'buy' ? 'Valid upto' : 'Valid until'
                     getRef('confirm_trade__price').textContent = formatAmount(price)
                     getRef('confirm_trade__quantity').textContent = quantity
                     getRef('confirm_trade__total').textContent = formatAmount(total)
@@ -2247,8 +2280,10 @@
                         }
                     }
                 }
-                if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== ''))
-                    getRef('get_price').value = (parseFloat(rates[pagesData.params.asset]) *  deviation[tradeType]).toFixed(6) ;
+                if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== '')) {
+                    const tradeType = getRef('trade_type_selector').value
+                    showSuggestedPrice()
+                }
                 if (refreshButton)
                     buttonLoader('wallet_balance_refresh_button', false);
             }).catch(error => console.error(error.message))
@@ -2296,9 +2331,9 @@
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide'))
                 getRef("user_id").value = acc.floID;
                 getRef("sink_id").value = acc.sinkID;
-                if(acc.subAdmin)
+                if (acc.subAdmin)
                     console.info("logged in as subAdmin");
-                    
+
                 // rupee balance init
                 allTokens[floGlobals.currency] = {
                     total: 0,

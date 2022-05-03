@@ -143,6 +143,10 @@ sm-form {
   --gap: 1rem;
 }
 
+sm-copy {
+  font-size: 0.9rem;
+}
+
 ul {
   list-style: none;
 }
@@ -461,6 +465,9 @@ details summary {
   cursor: pointer;
   padding: 1rem 0;
 }
+details .icon {
+  flex-shrink: 0;
+}
 details[open] {
   padding-bottom: 1rem;
 }
@@ -518,6 +525,27 @@ sm-checkbox {
   flex-shrink: 0;
 }
 
+.tooltip {
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
+}
+.tooltip .banner {
+  position: absolute;
+  right: 0;
+  width: min(20rem, 100vw - 1rem);
+  display: none;
+  font-size: 0.9rem;
+  background-color: rgba(var(--foreground-color), 1);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.1);
+  border: solid thin rgba(var(--text-color), 0.2);
+}
+.tooltip:hover .banner {
+  display: flex;
+}
+
 .page-layout {
   display: grid;
   grid-template-columns: 1.5rem minmax(0, 1fr) 1.5rem;
@@ -557,10 +585,6 @@ sm-checkbox {
 }
 #sign_up header {
   padding: 1.5rem 0;
-}
-#sign_up sm-copy {
-  font-size: 0.9rem;
-  --button-border-radius: 0.5rem;
 }
 #sign_up .h2 {
   margin-bottom: 0.5rem;
