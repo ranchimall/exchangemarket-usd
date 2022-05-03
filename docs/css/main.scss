@@ -518,7 +518,7 @@ sm-checkbox {
     border: solid thin rgba(var(--text-color), 0.2);
   }
   &:hover .banner {
-    display: flex;
+    display: block;
   }
 }
 .page-layout {
