@@ -1422,12 +1422,10 @@
         }
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
-            const tradeType = getRef('trade_type_selector').value
             return parseFloat((parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType]).toFixed(8))
         }
 
         function showSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
-            const tradeType = getRef('trade_type_selector').value
             getRef('get_price').innerHTML = `
                 <div class="grid">
                     <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">Current price</div>
@@ -1490,15 +1488,16 @@
                 return card
             },
             marketOrderCard(orderDetails = {}) {
-                const { floID, asset, quantity, unitValue, time, type } = orderDetails
+                const { floID, asset, quantity, minPrice, maxPrice, time_placed, type } = orderDetails
                 const card = getRef('market_order_template').content.cloneNode(true).firstElementChild
+                const unitValue = minPrice || maxPrice;
                 card.dataset.type = type
                 card.classList.add(`transaction-card--${type}`)
                 card.querySelector('.transaction-card__type').textContent = type
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
                 card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
-                card.querySelector('.more-info').dataset.time = time
+                card.querySelector('.more-info').dataset.time = time_placed
                 card.querySelector('.more-info').dataset.buyer = type === 'buy' ? floID : undefined
                 card.querySelector('.more-info').dataset.seller = type === 'sell' ? floID : undefined
                 card.querySelector('.more-info').dataset.pending = true
@@ -1604,16 +1603,10 @@
                         floExchangeAPI.getBuyList().then(buyOrders => {
                             getRef('market_buy_orders').innerHTML = '';
                             buyOrders.forEach(order => {
-                                const { id, asset, quantity, maxPrice, time_placed } = order
-                                const orderDetails = {
-                                    id,
-                                    asset,
-                                    quantity,
-                                    type: 'buy',
-                                    unitValue: maxPrice,
-                                    time: time_placed
-                                }
-                                frag.append(render.marketOrderCard(orderDetails))
+                                frag.append(render.marketOrderCard({
+                                    ...order,
+                                    type: 'buy'
+                                }))
                             })
                             getRef('market_buy_orders').append(frag)
                         }).catch(err => {
@@ -1625,16 +1618,10 @@
                         floExchangeAPI.getSellList().then(sellOrders => {
                             getRef('market_sell_orders').innerHTML = '';
                             sellOrders.forEach(order => {
-                                const { id, asset, quantity, minPrice, time_placed } = order
-                                const orderDetails = {
-                                    id,
-                                    asset,
-                                    quantity,
-                                    type: 'sell',
-                                    unitValue: minPrice,
-                                    time: time_placed
-                                }
-                                frag.append(render.marketOrderCard(orderDetails))
+                                frag.append(render.marketOrderCard({
+                                    ...order,
+                                    type: 'sell'
+                                }))
                             })
                             getRef('market_sell_orders').append(frag)
                         }).catch(err => {
@@ -1817,6 +1804,26 @@
 
                 }
             }
+        })
+        getRef('get_quantity').addEventListener('focusin', e => {
+            if (tradeType === 'buy') {
+                getRef('quantity_selector_tip').innerHTML = `<b>Locked amount</b> is highest total amount you'll be charged for buying specified quantity, most likely you'll charged less than locked amount.`
+            } else {
+                getRef('quantity_selector_tip').innerHTML = `<b>Min amount</b> received is lowest total amount you'll get by selling specified quantity, most likely you will get more than this amount. `
+            }
+        })
+        getRef('get_total').addEventListener('focusin', e => {
+            if (tradeType === 'buy') {
+                getRef('quantity_selector_tip').innerHTML = `<b>Locked amount</b> is highest total amount you'll be charged for buying specified quantity, most likely you'll charged less than locked amount.`
+            } else {
+                getRef('quantity_selector_tip').innerHTML = `<b>Min amount</b> received is lowest total amount you'll get by selling specified quantity, most likely you will get more than this amount. `
+            }
+        })
+        getRef('get_quantity').addEventListener('focusout', e => {
+            getRef('quantity_selector_tip').textContent = `${tradeType} ${pagesData.params.asset} worth of the above percentage`
+        })
+        getRef('get_total').addEventListener('focusout', e => {
+            getRef('quantity_selector_tip').textContent = `${tradeType} ${pagesData.params.asset} worth of the above percentage`
         })
         getRef('get_quantity').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
@@ -2189,7 +2196,6 @@
                     break;
                 case 'confirm_trade_popup':
                     const asset = pagesData.params.asset;
-                    const tradeType = getRef('trade_type_selector').value
                     const quantity = parseFloat(getRef('get_quantity').value)
                     const price = getSuggestedPrice()
                     const total = parseFloat(getRef('get_total').value)
@@ -2348,7 +2354,6 @@
                     }
                 }
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== '')) {
-                    const tradeType = getRef('trade_type_selector').value
                     showSuggestedPrice()
                 }
                 if (refreshButton)
