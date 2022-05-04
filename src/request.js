@@ -332,7 +332,7 @@ function ListSellOrders(req, res) {
         if (asset && !market.assetList.includes(asset))
             res.status(INVALID.e_code).send("Invalid asset parameter");
         else
-            DB.query("SELECT SellOrder.floID, SellOrder.asset, GREATEST(SellOrder.minPrice, SellChips.base) AS minPrice, SellOrder.quantity, SellOrder.time_placed FROM SellOrder" +
+            DB.query("SELECT SellOrder.floID, SellOrder.asset, SellOrder.minPrice, SellOrder.quantity, SellOrder.time_placed FROM SellOrder" +
                 " INNER JOIN UserBalance ON UserBalance.floID = SellOrder.floID AND UserBalance.token = SellOrder.asset" +
                 " INNER JOIN SellChips ON SellChips.floID = SellOrder.floID AND SellChips.asset = SellOrder.asset" +
                 " LEFT JOIN UserTag ON UserTag.floID = SellOrder.floID" +
@@ -340,10 +340,13 @@ function ListSellOrders(req, res) {
                 " WHERE UserBalance.quantity >= SellOrder.quantity" +
                 (asset ? " AND SellOrder.asset = ?" : "") +
                 " GROUP BY SellOrder.id" +
-                " ORDER BY TagList.sellPriority DESC, SellChips.locktime ASC, SellOrder.time_placed ASC" +
+                " ORDER BY MAX(TagList.sellPriority) DESC, MIN(SellChips.locktime) ASC, SellOrder.time_placed ASC" +
                 " LIMIT 100", [asset || null])
             .then(result => res.send(result))
-            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+            .catch(error => {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Try again later!")
+            });
     }
 
 }
@@ -363,10 +366,13 @@ function ListBuyOrders(req, res) {
                 " WHERE UserBalance.quantity >= BuyOrder.maxPrice * BuyOrder.quantity" +
                 (asset ? " AND BuyOrder.asset = ?" : "") +
                 " GROUP BY BuyOrder.id" +
-                " ORDER BY TagList.buyPriority DESC, BuyOrder.time_placed ASC" +
+                " ORDER BY MAX(TagList.buyPriority) DESC, BuyOrder.time_placed ASC" +
                 " LIMIT 100", [floGlobals.currency, asset || null])
             .then(result => res.send(result))
-            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+            .catch(error => {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Try again later!")
+            });
     }
 }
 
@@ -382,7 +388,10 @@ function ListTradeTransactions(req, res) {
                 (asset ? " WHERE asset = ?" : "") +
                 " ORDER BY tx_time DESC LIMIT 1000", [asset || null])
             .then(result => res.send(result))
-            .catch(error => res.status(INTERNAL.e_code).send("Try again later!"));
+            .catch(error => {
+                console.error(error);
+                res.status(INTERNAL.e_code).send("Try again later!")
+            });
     }
 }
 
