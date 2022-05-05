@@ -258,24 +258,22 @@
                 </div>
                 <div id="market_orders_wrapper">
                     <div class="grid gap-1">
-                        <div class="flex align-center space-between">
-                            <div class="grid">
-                                <h4>Open orders</h4>
-                                <p>Order placement denotes priority at which orders will get executed.</p>
-                            </div>
-                            <strip-select id="market_open_orders_type_selector" class="tab">
-                                <strip-option value="buy" selected>Buy</strip-option>
-                                <strip-option value="sell">Sell</strip-option>
-                            </strip-select>
+                        <div class="grid">
+                            <h4>Open orders</h4>
+                            <p>Order placement denotes priority at which orders will get executed.</p>
                         </div>
-                        <div id="market_open_orders_wrapper">
-                            <div>
+                        <div class="flex text-center">
+                            <b class="flex-1" style="color: var(--green);">Buy</b>
+                            <b class="flex-1" style="color: var(--danger-color);">Sell</b>
+                        </div>
+                        <div id="market_open_orders_wrapper" class="flex gap-0-5">
+                            <div class="flex-1">
                                 <ul id="market_buy_orders" class="observe-empty-state"></ul>
                                 <p class="empty-state">
                                     No buy orders placed
                                 </p>
                             </div>
-                            <div>
+                            <div class="flex-1">
                                 <ul id="market_sell_orders" class="observe-empty-state"></ul>
                                 <p class="empty-state">
                                     No sell orders placed
@@ -530,7 +528,6 @@
     * show all trades are happening at current price
     * show max price allow
     * add min price when total is entered
-    * add amount locked when quantity is entered
     * add warning to show if an order is not considered
  -->
 
@@ -546,29 +543,7 @@
             <h3 id="confirm_trade__title" class="uppercase">BUY</h3>
         </header>
         <section class="grid gap-1-5">
-            <div class="grid gap-0-5">
-                <h5 id="confirm_trade__price_type"></h5>
-                <h4 id="confirm_trade__price"></h4>
-            </div>
-            <div class="grid gap-0-5">
-                <h5>Quantity</h5>
-                <h4 id="confirm_trade__quantity"></h4>
-            </div>
-            <div class="grid gap-0-5">
-                <h5>Total</h5>
-                <h4 id="confirm_trade__total"></h4>
-            </div>
-            <div class="flex align-center tip">
-                <svg class="icon margin-right-0-5" style="height: 1em; width: 1em;" xmlns="http://www.w3.org/2000/svg"
-                    enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
-                    <rect fill="none" height="24" width="24" y="0" />
-                    <path
-                        d="M7,20h4c0,1.1-0.9,2-2,2S7,21.1,7,20z M5,19h8v-2H5V19z M16.5,9.5c0,3.82-2.66,5.86-3.77,6.5H5.27 C4.16,15.36,1.5,13.32,1.5,9.5C1.5,5.36,4.86,2,9,2S16.5,5.36,16.5,9.5z M14.5,9.5C14.5,6.47,12.03,4,9,4S3.5,6.47,3.5,9.5 c0,2.47,1.49,3.89,2.35,4.5h6.3C13.01,13.39,14.5,11.97,14.5,9.5z M21.37,7.37L20,8l1.37,0.63L22,10l0.63-1.37L24,8l-1.37-0.63L22,6 L21.37,7.37z M19,6l0.94-2.06L22,3l-2.06-0.94L19,0l-0.94,2.06L16,3l2.06,0.94L19,6z" />
-                </svg>
-                <p id="confirm_trade__tip" style="font-size: inherit;">
-                    Buy FLO worth of the above percentage rupee
-                </p>
-            </div>
+            <div id="confirm_trade__details" class="grid gap-1-5"></div>
             <sm-button variant="primary" onclick="tradeAsset()" autofocus>Confirm</sm-button>
         </section>
     </sm-popup>
@@ -758,26 +733,27 @@
         </li>
     </template>
     <template id="market_order_template">
-        <li class="list__item transaction-card align-center">
-            <div class="grid">
-                <div class="transaction-card__type capitalize"></div>
-                <div class="transaction-card__quantity"></div>
+        <li class="live-order align-center">
+            <div class="flex gap-1 space-between align-start">
+                <b class="transaction-card__quantity"></b>
+                <button class="more-info" title="View order details">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                        <path d="M0 0h24v24H0V0z" fill="none" />
+                        <path
+                            d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                    </svg>
+                </button>
             </div>
-            <div class="grid">
-                <span class="label transaction-card__price-type">Valid upto</span>
-                <div class="transaction-card__price"></div>
+            <div class="flex gap-0-5">
+                <div class="grid flex-1">
+                    <span class="label">Valid upto</span>
+                    <b class="transaction-card__price"></b>
+                </div>
+                <div class="grid flex-1">
+                    <span class="label">Total</span>
+                    <div class="transaction-card__total"></div>
+                </div>
             </div>
-            <div class="grid">
-                <span class="label transaction-card__price-type">Total</span>
-                <div class="transaction-card__total"></div>
-            </div>
-            <button class="more-info" title="View order details">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
-                    <path d="M0 0h24v24H0V0z" fill="none" />
-                    <path
-                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
-            </button>
         </li>
     </template>
     <template id="transaction_template">
@@ -787,7 +763,7 @@
                 <div class="transaction-card__quantity"></div>
             </div>
             <div class="grid">
-                <span class="label transaction-card__price-type">Valid upto</span>
+                <span class="label transaction-card__price-type">Unit price</span>
                 <div class="transaction-card__price"></div>
             </div>
             <div class="grid">
@@ -1493,7 +1469,6 @@
                 const unitValue = minPrice || maxPrice;
                 card.dataset.type = type
                 card.classList.add(`transaction-card--${type}`)
-                card.querySelector('.transaction-card__type').textContent = type
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
                 card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
@@ -1594,40 +1569,34 @@
             marketOrders() {
                 const frag = document.createDocumentFragment()
                 const ordersType = getRef('market_orders_category_selector').value
-                const openOrdersType = getRef('market_open_orders_type_selector').value
                 if (ordersType === 'open') {
                     showChild('market_orders_wrapper', 0)
-                    if (openOrdersType === 'buy') {
-                        showChild('market_open_orders_wrapper', 0)
-                        getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
-                        floExchangeAPI.getBuyList().then(buyOrders => {
-                            getRef('market_buy_orders').innerHTML = '';
-                            buyOrders.forEach(order => {
-                                frag.append(render.marketOrderCard({
-                                    ...order,
-                                    type: 'buy'
-                                }))
-                            })
-                            getRef('market_buy_orders').append(frag)
-                        }).catch(err => {
-                            console.log(err)
+                    getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
+                    floExchangeAPI.getBuyList().then(buyOrders => {
+                        getRef('market_buy_orders').innerHTML = '';
+                        buyOrders.forEach(order => {
+                            frag.append(render.marketOrderCard({
+                                ...order,
+                                type: 'buy'
+                            }))
                         })
-                    } else {
-                        showChild('market_open_orders_wrapper', 1)
-                        getRef('market_sell_orders').innerHTML = '<sm-spinner></sm-spinner>';
-                        floExchangeAPI.getSellList().then(sellOrders => {
-                            getRef('market_sell_orders').innerHTML = '';
-                            sellOrders.forEach(order => {
-                                frag.append(render.marketOrderCard({
-                                    ...order,
-                                    type: 'sell'
-                                }))
-                            })
-                            getRef('market_sell_orders').append(frag)
-                        }).catch(err => {
-                            console.log(err)
+                        getRef('market_buy_orders').append(frag)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                    getRef('market_sell_orders').innerHTML = '<sm-spinner></sm-spinner>';
+                    floExchangeAPI.getSellList().then(sellOrders => {
+                        getRef('market_sell_orders').innerHTML = '';
+                        sellOrders.forEach(order => {
+                            frag.append(render.marketOrderCard({
+                                ...order,
+                                type: 'sell'
+                            }))
                         })
-                    }
+                        getRef('market_sell_orders').append(frag)
+                    }).catch(err => {
+                        console.log(err)
+                    })
                 } else {
                     showChild('market_orders_wrapper', 1)
                     getRef('market_trades').innerHTML = '<sm-spinner></sm-spinner>';
@@ -1818,12 +1787,6 @@
             } else {
                 getRef('quantity_selector_tip').innerHTML = `<b>Min amount</b> received is lowest total amount you'll get by selling specified quantity, most likely you will get more than this amount. `
             }
-        })
-        getRef('get_quantity').addEventListener('focusout', e => {
-            getRef('quantity_selector_tip').textContent = `${tradeType} ${pagesData.params.asset} worth of the above percentage`
-        })
-        getRef('get_total').addEventListener('focusout', e => {
-            getRef('quantity_selector_tip').textContent = `${tradeType} ${pagesData.params.asset} worth of the above percentage`
         })
         getRef('get_quantity').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
@@ -2176,7 +2139,6 @@
         getRef('my_orders_category_selector').addEventListener('change', render.userOrders)
 
         getRef('market_orders_category_selector').addEventListener('change', render.marketOrders)
-        getRef('market_open_orders_type_selector').addEventListener('change', render.marketOrders)
         getRef('market').addEventListener('click', e => {
             if (e.target.closest('.more-info')) {
                 showMoreDetails(e)
@@ -2197,19 +2159,29 @@
                 case 'confirm_trade_popup':
                     const asset = pagesData.params.asset;
                     const quantity = parseFloat(getRef('get_quantity').value)
-                    const price = getSuggestedPrice()
-                    const total = parseFloat(getRef('get_total').value)
+                    const currentPrice = parseFloat(floGlobals.exchangeRates[asset].toFixed(8));
+                    const price = parseFloat(getSuggestedPrice().toFixed(8));
+                    const total = formatAmount(parseFloat(getRef('get_total').value))
+                    const minTotal = formatAmount(parseFloat((currentPrice * quantity).toFixed(8)))
                     getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`
-                    getRef('confirm_trade__price_type').textContent = tradeType === 'buy' ? 'Valid upto' : 'Valid until'
-                    getRef('confirm_trade__price').textContent = formatAmount(price)
-                    getRef('confirm_trade__quantity').textContent = quantity
-                    getRef('confirm_trade__total').textContent = formatAmount(total)
-                    if (price !== floGlobals.exchangeRates[asset]) {
-                        getRef('confirm_trade__tip').textContent = `Trade will only happen at current price of ${asset}. So ${tradeType}ing at ${price > floGlobals.exchangeRates[asset] ? 'higher' : 'lower'} price won't execute until price matches that.`
-                        getRef('confirm_trade__tip').parentNode.classList.remove('hide')
-                    } else {
-                        getRef('confirm_trade__tip').parentNode.classList.add('hide')
-                    }
+                    getRef('confirm_trade__details').innerHTML = `
+                        <div class="grid">
+                            <p>Quantity</p>
+                            <b>${quantity} ${asset}</b>
+                        </div>
+                        <div class="grid">
+                            <p>${tradeType === 'buy' ? 'Min cost (Amount locked)' : 'Max earned'}</p>
+                            <div>
+                                <b>${minTotal}</b><span> @ ${currentPrice}/${asset}</span>
+                            </div>
+                        </div>
+                        <div class="grid gap-0-3">
+                            <p>${tradeType === 'buy' ? 'Max cost (Amount locked)' : 'Min earned'}</p>
+                            <div>
+                                <b>${total}</b><span> @ ${price}/${asset}</span>
+                            </div>
+                        </div>
+                    `;
                     break;
             }
         })
