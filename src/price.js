@@ -25,10 +25,21 @@ function storeHistory(asset, rate) {
     DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate.toFixed(8)])
         .then(_ => null).catch(error => console.error(error))
 }
-setInterval(() => {
-    for (let asset in currentRate)
-        storeHistory(asset, currentRate[asset]);
-}, REC_HISTORY_INTERVAL);
+
+storeHistory.start = function() {
+    storeHistory.stop();
+    storeHistory.instance = setInterval(() => {
+        for (let asset in currentRate)
+            storeHistory(asset, currentRate[asset]);
+    }, REC_HISTORY_INTERVAL);
+}
+
+storeHistory.stop = function() {
+    if (storeHistory.instance !== undefined) {
+        clearInterval(storeHistory.instance);
+        delete storeHistory.instance;
+    }
+}
 
 function getPastRate(asset, hrs = 24) {
     return new Promise((resolve, reject) => {
@@ -196,6 +207,7 @@ function checkForRatedSellers(asset) {
 module.exports = {
     getRates,
     getHistory,
+    storeHistory,
     updateLastTime,
     MIN_TIME,
     noOrder(asset, buy, sell) {

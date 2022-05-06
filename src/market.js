@@ -662,6 +662,7 @@ periodicProcess.start = function() {
     periodicProcess.stop();
     periodicProcess();
     assetList.forEach(asset => coupling.initiate(asset));
+    coupling.price.storeHistory.start();
     periodicProcess.instance = setInterval(periodicProcess, PERIOD_INTERVAL);
 };
 
@@ -671,6 +672,7 @@ periodicProcess.stop = function() {
         delete periodicProcess.instance;
     }
     coupling.stopAll();
+    coupling.price.storeHistory.stop();
 };
 
 function blockchainReCheck() {
