@@ -689,6 +689,8 @@ periodicProcess.stop = function() {
     coupling.price.storeHistory.stop();
 };
 
+var lastSyncBlockHeight = 0;
+
 function blockchainReCheck() {
     if (blockchainReCheck.timeout !== undefined) {
         clearTimeout(blockchainReCheck.timeout);
@@ -697,12 +699,17 @@ function blockchainReCheck() {
     if (!global.sinkID)
         return blockchainReCheck.timeout = setTimeout(blockchainReCheck, WAIT_TIME);
 
-    confirmDepositFLO();
-    confirmDepositToken();
-    retryWithdrawalFLO();
-    retryWithdrawalToken();
-    confirmWithdrawalFLO();
-    confirmWithdrawalToken();
+    floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
+        if (lastSyncBlockHeight < result.blocks[0].height) {
+            lastSyncBlockHeight = result.blocks[0].height;
+            confirmDepositFLO();
+            confirmDepositToken();
+            retryWithdrawalFLO();
+            retryWithdrawalToken();
+            confirmWithdrawalFLO();
+            confirmWithdrawalToken();
+        }
+    }).catch(error => console.error(error));
 }
 
 module.exports = {
