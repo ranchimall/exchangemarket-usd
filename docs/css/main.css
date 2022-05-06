@@ -898,6 +898,9 @@ sm-checkbox {
   border-radius: 0.5rem;
   background-color: rgba(var(--text-color), 0.03);
 }
+.live-order:not(:last-of-type) {
+  margin-bottom: 0.5rem;
+}
 .live-order[data-type=buy] {
   background-color: #00fa9a10;
 }

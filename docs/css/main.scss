@@ -845,6 +845,9 @@ sm-checkbox {
   padding: 1rem;
   border-radius: 0.5rem;
   background-color: rgba(var(--text-color), 0.03);
+  &:not(:last-of-type) {
+    margin-bottom: 0.5rem;
+  }
   &[data-type="buy"] {
     background-color: #00fa9a10;
   }
