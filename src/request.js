@@ -490,7 +490,6 @@ module.exports = {
     WithdrawFLO,
     DepositToken,
     WithdrawToken,
-    periodicProcess: market.periodicProcess,
     AddUserTag,
     RemoveUserTag,
     AddDistributor,
@@ -510,8 +509,10 @@ module.exports = {
     },
     pause() {
         serving = false;
+        market.periodicProcess.stop();
     },
     resume() {
         serving = true;
+        market.periodicProcess.start();
     }
 };

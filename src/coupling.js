@@ -3,6 +3,7 @@
 const price = require("./price");
 
 const {
+    WAIT_TIME,
     TRADE_HASH_PREFIX
 } = require("./_constants")["market"];
 
@@ -12,10 +13,30 @@ const updateBalance = {};
 updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
 updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [floID, token, amount, amount]];
 
-function startCouplingForAsset(asset) {
-    price.getRates(asset).then(cur_rate => {
+const couplingInstance = {},
+    couplingTimeout = {};
+
+function stopAllInstance() {
+    for (let asset in couplingTimeout) {
+        if (couplingTimeout[asset])
+            clearTimeout(couplingTimeout[asset]);
+        delete couplingInstance[asset];
+        delete couplingTimeout[asset];
+    }
+}
+
+function startCouplingForAsset(asset, updatePrice = false) {
+    if (couplingInstance[asset] === true) { //if coupling is already running for asset
+        if (updatePrice) { //wait until current instance is over
+            if (couplingTimeout[asset]) clearTimeout(couplingTimeout[asset]);
+            couplingTimeout[asset] = setTimeout(() => startCouplingForAsset(asset, true), WAIT_TIME);
+        }
+        return;
+    }
+    price.getRates(asset, updatePrice).then(cur_rate => {
         cur_rate = cur_rate.toFixed(8);
-        processCoupling(asset, cur_rate);
+        couplingInstance[asset] = true; //set instance as running
+        recursiveCoupling(asset, cur_rate, updatePrice);
     }).catch(error => console.error(error));
 }
 
@@ -69,45 +90,64 @@ const getBestBuyer = (asset, cur_rate) => new Promise((resolve, reject) => {
     }).catch(error => reject(error))
 });
 
-function processCoupling(asset, cur_rate) {
-    getBestPair(asset, cur_rate).then(best => {
-        //console.debug("Sell:", best.sell);
-        //console.debug("Buy:", best.buy);
-        let quantity = Math.min(best.buy.quantity, best.sell.quantity, best.sell.chip_quantity);
-        let txQueries = processOrders(best.sell, best.buy, asset, cur_rate, quantity);
-        //begin audit
-        beginAudit(best.sell.floID, best.buy.floID, asset, cur_rate, quantity).then(audit => {
-            //process txn query in SQL
-            DB.transaction(txQueries).then(_ => {
-                console.log(`Transaction was successful! BuyOrder:${best.buy.id}| SellOrder:${best.sell.id}`);
-                audit.end();
-                price.updateLastTime();
-                //Since a tx was successful, match again
-                processCoupling(asset, cur_rate);
-            }).catch(error => console.error(error));
-        }).catch(error => console.error(error));
+function recursiveCoupling(asset, cur_rate, flag = false) {
+    processCoupling(asset, cur_rate).then(result => {
+        console.log(result);
+        if (couplingInstance[asset] === true)
+            recursiveCoupling(asset, cur_rate, true);
     }).catch(error => {
-        let noBuy, noSell;
-        if (error.buy === undefined)
-            noBuy = false;
-        else if (error.buy !== null) {
-            console.error(error.buy);
-            noBuy = null;
-        } else {
-            console.log("No valid buyOrders for Asset:", asset);
-            noBuy = true;
+        //noBuy = error[0], noSell = error[1], reason = error[2]
+        price.noOrder(asset, error[0], error[1]);
+        console.error(error[2]);
+        //set timeout for next coupling (if not order placement occurs)
+        if (flag) {
+            price.updateLastTime(asset);
+            if (couplingInstance[asset] === true && flag) {
+                //if price was updated and/or trade happened, reset timer
+                if (couplingTimeout[asset]) clearTimeout(couplingTimeout[asset]);
+                couplingTimeout[asset] = setTimeout(() => startCouplingForAsset(asset, true), price.MIN_TIME);
+            }
         }
-        if (error.sell === undefined)
-            noSell = false;
-        else if (error.sell !== null) {
-            console.error(error.sell);
-            noSell = null;
-        } else {
-            console.log("No valid sellOrders for Asset:", asset);
-            noSell = true;
-        }
-        price.noOrder(asset, noBuy, noSell);
-    });
+        delete couplingInstance[asset];
+    })
+}
+
+function processCoupling(asset, cur_rate) {
+    return new Promise((resolve, reject) => {
+        getBestPair(asset, cur_rate).then(best => {
+            //console.debug("Sell:", best.sell);
+            //console.debug("Buy:", best.buy);
+            let quantity = Math.min(best.buy.quantity, best.sell.quantity, best.sell.chip_quantity);
+            let txQueries = processOrders(best.sell, best.buy, asset, cur_rate, quantity);
+            //begin audit
+            beginAudit(best.sell.floID, best.buy.floID, asset, cur_rate, quantity).then(audit => {
+                //process txn query in SQL
+                DB.transaction(txQueries).then(_ => {
+                    audit.end();
+                    resolve(`Transaction was successful! BuyOrder:${best.buy.id}| SellOrder:${best.sell.id}`)
+                }).catch(error => reject([null, null, error]));
+            }).catch(error => reject([null, null, error]));
+        }).catch(error => {
+            let noBuy, noSell;
+            if (error.buy === undefined)
+                noBuy = false;
+            else if (error.buy === null)
+                noBuy = true;
+            else {
+                console.error(error.buy);
+                noBuy = null;
+            }
+            if (error.sell === undefined)
+                noSell = false;
+            else if (error.sell === null)
+                noSell = true;
+            else {
+                console.error(error.sell);
+                noSell = null;
+            }
+            reject([noBuy, noSell, `No valid ${noSell? 'sellOrders': ''} | ${noBuy? 'buyOrders': ''} for Asset: ${asset}`]);
+        });
+    })
 }
 
 function processOrders(seller_best, buyer_best, asset, cur_rate, quantity) {
@@ -208,6 +248,7 @@ function auditBalance(sellerID, buyerID, asset) {
 
 module.exports = {
     initiate: startCouplingForAsset,
+    stopAll: stopAllInstance,
     updateBalance,
     price,
     set DB(db) {

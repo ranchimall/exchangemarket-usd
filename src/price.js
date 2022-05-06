@@ -81,8 +81,8 @@ function loadRate(asset) {
     return new Promise((resolve, reject) => {
         if (typeof currentRate[asset] !== "undefined")
             return resolve(currentRate[asset]);
-        updateLastTime(asset);
         DB.query("SELECT rate FROM PriceHistory WHERE asset=? ORDER BY rec_time DESC LIMIT 1", [asset]).then(result => {
+            updateLastTime(asset);
             if (result.length)
                 resolve(currentRate[asset] = result[0].rate);
             else
@@ -136,12 +136,12 @@ fetchRates.USD_INR = function() {
 }
 */
 
-function getRates(asset) {
+function getRates(asset, updatePrice = false) {
     return new Promise((resolve, reject) => {
         loadRate(asset).then(_ => {
             //console.debug(asset, currentRate[asset]);
             let cur_time = Date.now();
-            if (cur_time - lastTime[asset] < MIN_TIME) //Minimum time to update not crossed: No update required
+            if (!updatePrice || cur_time - lastTime[asset] < MIN_TIME) //Minimum time to update not crossed: No update required
                 resolve(currentRate[asset]);
             else if (noBuyOrder[asset] && noSellOrder[asset]) //Both are not available: No update required
                 resolve(currentRate[asset]);
@@ -152,10 +152,9 @@ function getRates(asset) {
                     if (noBuyOrder[asset]) {
                         //No Buy, But Sell available: Decrease the price
                         let tmp_val = currentRate[asset] * (1 - DOWN_RATE);
-                        if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY)) {
+                        if (tmp_val >= ratePast24hr * (1 - MAX_DOWN_PER_DAY))
                             currentRate[asset] = tmp_val;
-                            updateLastTime(asset);
-                        } else
+                        else
                             console.debug("Max Price down for the day has reached");
                         resolve(currentRate[asset]);
                     } else if (noSellOrder[asset]) {
@@ -163,10 +162,9 @@ function getRates(asset) {
                         checkForRatedSellers(asset).then(result => {
                             if (result) {
                                 let tmp_val = currentRate[asset] * (1 + UP_RATE);
-                                if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY)) {
+                                if (tmp_val <= ratePast24hr * (1 + MAX_UP_PER_DAY))
                                     currentRate[asset] = tmp_val;
-                                    updateLastTime(asset);
-                                } else
+                                else
                                     console.debug("Max Price up for the day has reached");
                             }
                         }).catch(error => console.error(error)).finally(_ => resolve(currentRate[asset]));
@@ -199,6 +197,7 @@ module.exports = {
     getRates,
     getHistory,
     updateLastTime,
+    MIN_TIME,
     noOrder(asset, buy, sell) {
         noBuyOrder[asset] = buy;
         noSellOrder[asset] = sell;

@@ -4,10 +4,6 @@ const express = require('express');
 //const sessions = require('express-session');
 const Request = require('./request');
 
-const {
-    PERIOD_INTERVAL
-} = require("./_constants")["app"];
-
 module.exports = function App(secret, DB) {
 
     if (!(this instanceof App))
@@ -98,7 +94,6 @@ module.exports = function App(secret, DB) {
     Request.secret = secret;
 
     //Properties
-    var periodInstance = null;
     let self = this;
 
     //return server, express-app
@@ -132,23 +127,8 @@ module.exports = function App(secret, DB) {
     });
 
     //(Node is not master) Pause serving the clients
-    self.pause = () => {
-        Request.pause();
-        if (periodInstance !== null) {
-            clearInterval(periodInstance);
-            periodInstance = null;
-        }
-    }
-
+    self.pause = () => Request.pause();
     //(Node is master) Resume serving the clients
-    self.resume = () => {
-        Request.resume();
-        Request.periodicProcess();
-        if (periodInstance === null)
-            periodInstance = setInterval(Request.periodicProcess, PERIOD_INTERVAL);
-    }
+    self.resume = () => Request.resume();
 
-    Object.defineProperty(self, "periodInstance", {
-        get: () => periodInstance
-    });
 }

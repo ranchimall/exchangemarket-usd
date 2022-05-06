@@ -3,14 +3,13 @@
 const coupling = require('./coupling');
 
 const {
+    PERIOD_INTERVAL,
+    WAIT_TIME,
+    LAUNCH_SELLER_TAG,
     MAXIMUM_LAUNCH_SELL_CHIPS,
     TRADE_HASH_PREFIX,
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
-
-const LAUNCH_SELLER_TAG = "launch-seller";
-
-const MINI_PERIOD_INTERVAL = require('./_constants')['app']['PERIOD_INTERVAL'] / 10;
 
 const updateBalance = coupling.updateBalance;
 
@@ -135,9 +134,10 @@ function addSellOrder(floID, asset, quantity, min_price) {
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID, asset, quantity).then(_ => {
-                DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price])
-                    .then(result => resolve('Sell Order placed successfully'))
-                    .catch(error => reject(error));
+                DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price]).then(result => {
+                    resolve('Sell Order placed successfully');
+                    coupling.initiate(asset);
+                }).catch(error => reject(error));
             }).catch(error => reject(error))
         }).catch(error => reject(error));
     });
@@ -168,9 +168,10 @@ function addBuyOrder(floID, asset, quantity, max_price) {
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, floGlobals.currency, quantity * max_price).then(_ => {
-            DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price])
-                .then(result => resolve('Buy Order placed successfully'))
-                .catch(error => reject(error));
+            DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price]).then(result => {
+                resolve('Buy Order placed successfully');
+                coupling.initiate(asset);
+            }).catch(error => reject(error));
         }).catch(error => reject(error));
     });
 }
@@ -332,7 +333,6 @@ function confirmDepositFLO() {
                 confirmDepositFLO.addSellChipsIfLaunchSeller(req.floID, amount).then(txQueries => {
                     txQueries.push(updateBalance.add(req.floID, "FLO", amount));
                     txQueries.push(["UPDATE InputFLO SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, req.id]]);
-                    console.debug(txQueries)
                     DB.transaction(txQueries)
                         .then(result => console.debug("FLO deposited:", req.floID, amount))
                         .catch(error => console.error(error))
@@ -656,16 +656,30 @@ function checkDistributor(floID, asset) {
 
 function periodicProcess() {
     blockchainReCheck();
-    assetList.forEach(asset => coupling.initiate(asset));
 }
 
+periodicProcess.start = function() {
+    periodicProcess.stop();
+    periodicProcess();
+    assetList.forEach(asset => coupling.initiate(asset));
+    periodicProcess.instance = setInterval(periodicProcess, PERIOD_INTERVAL);
+};
+
+periodicProcess.stop = function() {
+    if (periodicProcess.instance !== undefined) {
+        clearInterval(periodicProcess.instance);
+        delete periodicProcess.instance;
+    }
+    coupling.stopAll();
+};
+
 function blockchainReCheck() {
-    if (blockchainReCheck.timeout) {
+    if (blockchainReCheck.timeout !== undefined) {
         clearTimeout(blockchainReCheck.timeout);
-        blockchainReCheck.timeout = null;
+        delete blockchainReCheck.timeout;
     }
     if (!global.sinkID)
-        return blockchainReCheck.timeout = setTimeout(blockchainReCheck, MINI_PERIOD_INTERVAL);
+        return blockchainReCheck.timeout = setTimeout(blockchainReCheck, WAIT_TIME);
 
     confirmDepositFLO();
     confirmDepositToken();
@@ -674,7 +688,6 @@ function blockchainReCheck() {
     confirmWithdrawalFLO();
     confirmWithdrawalToken();
 }
-blockchainReCheck.timeout = null;
 
 module.exports = {
     login,
