@@ -203,7 +203,7 @@
                             My orders
                         </h4>
                         <strip-select id="my_orders_category_selector" class="tab">
-                            <strip-option value="open" selected>Open</strip-option>
+                            <strip-option value="open" selected>Live</strip-option>
                             <strip-option value="completed">Trades</strip-option>
                         </strip-select>
                     </div>
@@ -252,14 +252,14 @@
                         </button>
                     </h4>
                     <strip-select id="market_orders_category_selector" class="tab">
-                        <strip-option value="open" selected>Open</strip-option>
+                        <strip-option value="open" selected>Live</strip-option>
                         <strip-option value="completed">Trades</strip-option>
                     </strip-select>
                 </div>
                 <div id="market_orders_wrapper">
                     <div class="grid gap-1">
                         <div class="grid">
-                            <h4>Open orders</h4>
+                            <h4>Live orders</h4>
                             <p>Order placement denotes priority at which orders will get executed.</p>
                         </div>
                         <div class="flex text-center">
@@ -2084,6 +2084,7 @@
                                     fill: 'forwards'
                                 })
                                     .onfinish = () => {
+                                        if (!target.parentNode) return
                                         const height = target.getBoundingClientRect().height
                                         const siblings = Array.from(target.parentNode.children)
                                         const nextSiblings = siblings.slice(siblings.indexOf(target) + 1)
@@ -2170,7 +2171,7 @@
                             <b>${quantity} ${asset}</b>
                         </div>
                         <div class="grid">
-                            <p>${tradeType === 'buy' ? 'Min cost (Amount locked)' : 'Max earned'}</p>
+                            <p>${tradeType === 'buy' ? 'Min cost' : 'Max earned'}</p>
                             <div>
                                 <b>${minTotal}</b><span> @ ${currentPrice}/${asset}</span>
                             </div>
@@ -2181,6 +2182,9 @@
                                 <b>${total}</b><span> @ ${price}/${asset}</span>
                             </div>
                         </div>
+                        <p>
+                            <strong>All trades will be executed at current price.</strong>
+                        </p>
                     `;
                     break;
             }
