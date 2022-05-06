@@ -133,7 +133,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
         else if (!assetList.includes(asset))
             return reject(INVALID(`Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
-            checkSellRequirement(floID, asset, quantity).then(_ => {
+            checkSellRequirement(floID, asset, quantity, min_price).then(_ => {
                 DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price]).then(result => {
                     resolve('Sell Order placed successfully');
                     coupling.initiate(asset);
@@ -143,17 +143,31 @@ function addSellOrder(floID, asset, quantity, min_price) {
     });
 }
 
-const checkSellRequirement = (floID, asset, quantity) => new Promise((resolve, reject) => {
+const checkSellRequirement = (floID, asset, quantity, min_price) => new Promise((resolve, reject) => {
     Promise.all([
         DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=?", [floID, asset]),
         DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=?", [floID, asset])
     ]).then(result => {
         let total = result[0][0].total_chips,
             locked = result[1][0].locked;
-        if (total >= locked + quantity)
-            resolve(true);
-        else
+        if (total < locked + quantity)
             reject(INVALID(`Insufficient sell-chips for ${asset}`));
+        else Promise.all([
+            DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=? AND base>=?", [floID, asset, min_price]),
+            DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=? AND minPrice>=?", [floID, asset, min_price])
+        ]).then(result => {
+            let g_total = result[0][0].total_chips,
+                g_locked = result[1][0].locked;
+            let l_total = total - g_total,
+                l_locked = locked - g_locked;
+            var rem = g_total - g_locked;
+            if (l_locked > l_total)
+                rem -= l_locked - l_total;
+            if (rem < quantity)
+                reject(INVALID(`Cannot sell below purchased price`));
+            else
+                resolve(true);
+        }).catch(error => reject(error))
     }).catch(error => reject(error))
 });
 
