@@ -400,16 +400,23 @@ function GetRates(req, res) {
         res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
     else {
         let asset = req.query.asset,
-            rates = market.rates;
+            rates = market.rates,
+            countDown = market.priceCountDown;
         if (asset) {
             if (asset in rates)
-                res.send(rates[asset].toString());
+                res.send({
+                    asset: asset,
+                    rate: rates[asset],
+                    countDown: countDown[asset]
+                });
             else
                 res.status(INVALID.e_code).send("Invalid asset parameter");
         } else
-            res.send(rates);
+            res.send({
+                rates,
+                countDown
+            });
     }
-
 }
 
 function GetRateHistory(req, res) {

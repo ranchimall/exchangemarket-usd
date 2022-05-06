@@ -1,7 +1,6 @@
 module.exports = {
     app: {
-        BLOCKCHAIN_REFRESH_INTERVAL: 1 * 60 * 60 * 1000, // 1 hr
-        PERIOD_INTERVAL: 15 * 60 * 1000 // 15 min
+        BLOCKCHAIN_REFRESH_INTERVAL: 1 * 60 * 60 * 1000, //1 hr
     },
     request: {
         SIGN_EXPIRE_TIME: 5 * 60 * 1000, //5 mins
@@ -9,6 +8,9 @@ module.exports = {
         INVALID_SERVER_MSG: "INCORRECT_SERVER_ERROR" //Should be reflected in public backend script
     },
     market: {
+        PERIOD_INTERVAL: 5 * 60 * 1000, //5 min,
+        WAIT_TIME: 2 * 60 * 1000, //2 mins,
+        LAUNCH_SELLER_TAG: "launch-seller",
         MAXIMUM_LAUNCH_SELL_CHIPS: 250000,
         TRADE_HASH_PREFIX: "z1",
         TRANSFER_HASH_PREFIX: "z0"
@@ -16,15 +18,15 @@ module.exports = {
     price: {
         MIN_TIME: 1 * 60 * 60 * 1000, // 1 hr
         DOWN_RATE: 0.2 / 100, //0.2% dec
-        UP_RATE: 0.5 / 100, //0.5 % inc
+        UP_RATE: 0.5 / 100, //0.5% inc
         MAX_DOWN_PER_DAY: 4.8 / 100, //max 4.8% dec
         MAX_UP_PER_DAY: 12 / 100, //max 12% inc
         CHECK_RATED_SELLER: false,
         TOP_RANGE: 10 / 100, //top 10%
-        REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, // 1 hr
+        REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, //1 hr
     },
     backup: {
-        SHARE_THRESHOLD: 50 / 100, // 50%
+        SHARE_THRESHOLD: 50 / 100, //50%
         HASH_N_ROW: 100,
         SINK_KEY_INDICATOR: '$$$',
         BACKUP_INTERVAL: 5 * 60 * 1000, //5 min

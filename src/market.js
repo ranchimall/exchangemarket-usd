@@ -695,6 +695,9 @@ module.exports = {
     get rates() {
         return coupling.price.currentRates;
     },
+    get priceCountDown() {
+        return coupling.price.lastTimes;
+    },
     addBuyOrder,
     addSellOrder,
     cancelOrder,

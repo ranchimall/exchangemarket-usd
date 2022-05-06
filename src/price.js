@@ -207,5 +207,11 @@ module.exports = {
     },
     get currentRates() {
         return Object.assign({}, currentRate);
+    },
+    get lastTimes() {
+        let countDown = {};
+        for (let asset in lastTime)
+            countDown[asset] = lastTime[asset] + MIN_TIME;
+        return countDown;
     }
 }
