@@ -2294,7 +2294,8 @@
         function updateRate(init = false, refreshButton) {
             if (refreshButton)
                 buttonLoader('wallet_balance_refresh_button', true);
-            floExchangeAPI.getRates().then(rates => {
+            floExchangeAPI.getRates().then(result => {
+                let rates = result.rates;
                 console.debug(rates);
                 if (init) {
                     floGlobals.exchangeRates = rates

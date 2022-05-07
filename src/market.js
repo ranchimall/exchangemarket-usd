@@ -153,8 +153,8 @@ const checkSellRequirement = (floID, asset, quantity, min_price) => new Promise(
         if (total < locked + quantity)
             reject(INVALID(`Insufficient sell-chips for ${asset}`));
         else Promise.all([
-            DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=? AND base>=?", [floID, asset, min_price]),
-            DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=? AND minPrice>=?", [floID, asset, min_price])
+            DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=? AND base<=?", [floID, asset, min_price]),
+            DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=? AND minPrice<=?", [floID, asset, min_price])
         ]).then(result => {
             let g_total = result[0][0].total_chips,
                 g_locked = result[1][0].locked;
@@ -675,7 +675,7 @@ function periodicProcess() {
 periodicProcess.start = function() {
     periodicProcess.stop();
     periodicProcess();
-    assetList.forEach(asset => coupling.initiate(asset));
+    assetList.forEach(asset => coupling.initiate(asset, true));
     coupling.price.storeHistory.start();
     periodicProcess.instance = setInterval(periodicProcess, PERIOD_INTERVAL);
 };
