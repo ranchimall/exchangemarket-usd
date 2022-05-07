@@ -201,15 +201,17 @@ function cancelOrder(type, id, floID) {
             tableName = "SellOrder";
         else
             return reject(INVALID("Invalid Order type! Order type must be buy (or) sell"));
-        DB.query(`SELECT floID FROM ${tableName} WHERE id=?`, [id]).then(result => {
+        DB.query(`SELECT floID, asset FROM ${tableName} WHERE id=?`, [id]).then(result => {
             if (result.length < 1)
                 return reject(INVALID("Order not found!"));
             else if (result[0].floID !== floID)
                 return reject(INVALID("Order doesnt belong to the current user"));
+            let asset = result[0].asset;
             //Delete the order 
-            DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id])
-                .then(result => resolve(tableName + "#" + id + " cancelled successfully"))
-                .catch(error => reject(error));
+            DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id]).then(result => {
+                resolve(tableName + "#" + id + " cancelled successfully");
+                coupling.initiate(asset);
+            }).catch(error => reject(error));
         }).catch(error => reject(error));
     });
 }
