@@ -179,7 +179,7 @@ ul {
   text-overflow: ellipsis;
 }
 
-.breakable {
+.wrap-around {
   overflow-wrap: break-word;
   word-wrap: break-word;
   -ms-word-break: break-all;
@@ -772,6 +772,9 @@ sm-checkbox {
 #my_orders,
 #market {
   width: min(42rem, 100%);
+}
+
+#my_orders {
   grid-template-rows: auto 1fr;
 }
 
@@ -877,6 +880,15 @@ sm-checkbox {
   content-visibility: auto;
   contain-intrinsic-size: 2.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
+}
+
+#market_asset_rates {
+  display: grid;
+  gap: 0.5rem;
+}
+#market_asset_rates .listed-asset {
+  padding: 1rem;
+  background-color: rgba(var(--text-color), 0.03);
 }
 
 #market_orders_wrapper .list__header {
@@ -1310,6 +1322,13 @@ sm-checkbox {
   }
   .main_navbar__item .item__title {
     display: none !important;
+  }
+}
+@media screen and (min-width: 52rem) {
+  body:not(.is-signed-in) #market {
+    gap: 2rem;
+    width: 100%;
+    grid-template-columns: 18rem 1fr;
   }
 }
 @media screen and (min-width: 64rem) {

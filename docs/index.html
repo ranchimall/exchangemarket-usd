@@ -199,7 +199,7 @@
             <section id="my_orders" class="grid gap-1 hide mobile-page">
                 <div id="my_orders_section__header" class="orders_section__header flex">
                     <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
-                        <h4>
+                        <h4 id="my_orders__title">
                             My orders
                         </h4>
                         <strip-select id="my_orders_category_selector" class="tab">
@@ -238,10 +238,19 @@
                     <p>My orders will only show completed orders</p>
                 </div>
             </section>
-            <section id="market" class="grid gap-1 hide mobile-page">
-                <div class="orders_section__header flex align-center space-between">
-                    <h4 class="flex align-center">
-                        Market-wide trades
+            <section id="market" class="grid gap-1-5 hide mobile-page">
+                <div class="grid gap-1 align-start">
+                    <div class="flex align-center space-between">
+                        <h5>ASSETS</h5>
+                        <h5>PRICE</h5>
+                    </div>
+                    <ul id="market_asset_rates"></ul>
+                </div>
+                <div class="grid gap-0-5 align-start">
+                    <div class="orders_section__header flex align-center">
+                        <h4 id="market_orders__title" class="flex align-center">
+                            Market-wide trades
+                        </h4>
                         <button onclick="refresh();" title="Refresh" style="margin-left: 1rem;">
                             <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                 width="24px" fill="#000000">
@@ -250,42 +259,39 @@
                                     d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
                             </svg>
                         </button>
-                    </h4>
-                    <strip-select id="market_orders_category_selector" class="tab">
-                        <strip-option value="open" selected>Live</strip-option>
-                        <strip-option value="completed">Trades</strip-option>
-                    </strip-select>
-                </div>
-                <div id="market_orders_wrapper">
-                    <div class="grid gap-1">
-                        <div class="grid">
-                            <h4>Live orders</h4>
-                            <p>Order placement denotes priority at which orders will get executed.</p>
-                        </div>
-                        <div class="flex text-center">
-                            <b class="flex-1" style="color: var(--green);">Buy</b>
-                            <b class="flex-1" style="color: var(--danger-color);">Sell</b>
-                        </div>
-                        <div id="market_open_orders_wrapper" class="flex gap-0-5">
-                            <div class="flex-1">
-                                <ul id="market_buy_orders" class="observe-empty-state"></ul>
-                                <p class="empty-state">
-                                    No buy orders placed
-                                </p>
-                            </div>
-                            <div class="flex-1">
-                                <ul id="market_sell_orders" class="observe-empty-state"></ul>
-                                <p class="empty-state">
-                                    No sell orders placed
-                                </p>
-                            </div>
-                        </div>
+                        <strip-select id="market_orders_category_selector" class="tab justify-right">
+                            <strip-option value="open" selected>Live</strip-option>
+                            <strip-option value="completed">Trades</strip-option>
+                        </strip-select>
                     </div>
-                    <div>
-                        <ul id="market_trades" class="observe-empty-state"></ul>
-                        <p class="empty-state">
-                            No trades happened
-                        </p>
+                    <div id="market_orders_wrapper">
+                        <div class="grid gap-1">
+                            <p>Order placement denotes priority at which orders will get executed.</p>
+                            <div class="flex text-center">
+                                <b class="flex-1" style="color: var(--green);">Buy</b>
+                                <b class="flex-1" style="color: var(--danger-color);">Sell</b>
+                            </div>
+                            <div id="market_open_orders_wrapper" class="flex gap-0-5">
+                                <div class="flex-1">
+                                    <ul id="market_buy_orders" class="observe-empty-state"></ul>
+                                    <p class="empty-state">
+                                        No buy orders placed
+                                    </p>
+                                </div>
+                                <div class="flex-1">
+                                    <ul id="market_sell_orders" class="observe-empty-state"></ul>
+                                    <p class="empty-state">
+                                        No sell orders placed
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <ul id="market_trades" class="observe-empty-state"></ul>
+                            <p class="empty-state">
+                                No trades happened
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -513,7 +519,7 @@
                 </svg>
                 <div class="item__title">Wallet</div>
             </a>
-            <a href="#/help" class="main_navbar__item user-content hide interact">
+            <a href="#/help" class="main_navbar__item interact">
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px"
                     fill="#000000">
                     <path d="M0 0h24v24H0V0z" fill="none" />
@@ -525,9 +531,6 @@
         </nav>
     </article>
     <!-- 
-    * show all trades are happening at current price
-    * show max price allow
-    * add min price when total is entered
     * add warning to show if an order is not considered
  -->
 
@@ -685,7 +688,7 @@
             <a class="listed-asset interact grid align-center">
                 <div class="listed-asset__icon"></div>
                 <h4 class="listed-asset__name"></h4>
-                <strong class="listed-asset__rate"></strong>
+                <b class="listed-asset__rate"></b>
             </a>
         </li>
     </template>
@@ -747,11 +750,11 @@
             <div class="flex gap-0-5">
                 <div class="grid flex-1">
                     <span class="label">Valid upto</span>
-                    <b class="transaction-card__price"></b>
+                    <b class="transaction-card__price wrap-around"></b>
                 </div>
                 <div class="grid flex-1">
-                    <span class="label">Total</span>
-                    <div class="transaction-card__total"></div>
+                    <span class="label">Amount</span>
+                    <div class="transaction-card__total wrap-around"></div>
                 </div>
             </div>
         </li>
@@ -767,7 +770,7 @@
                 <div class="transaction-card__price"></div>
             </div>
             <div class="grid">
-                <span class="label transaction-card__price-type">Total</span>
+                <span class="label transaction-card__price-type">Amount</span>
                 <div class="transaction-card__total"></div>
             </div>
             <button class="more-info" title="View transaction details">
@@ -807,7 +810,7 @@
         <h4 class="grid list__header">
             <div>Quantity</div>
             <div>Traded at</div>
-            <div>Total</div>
+            <div>Amount</div>
             <div></div>
         </h4>
     </template>
@@ -1113,7 +1116,7 @@
                 const urlSearchParams = new URLSearchParams('?' + searchParams);
                 params = Object.fromEntries(urlSearchParams.entries());
             }
-            if (typeof proxy.userID === "undefined" && !['exchange', 'market'].includes(pageId)) {
+            if (typeof proxy.userID === "undefined" && !['exchange', 'market', 'help'].includes(pageId)) {
                 pageId = 'exchange'
                 history.replaceState(null, null, '#/exchange')
             }
@@ -1429,11 +1432,11 @@
         }
         const render = {
             listedAsset(name, rate) {
-                const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild.firstElementChild
-                clone.href = `#/exchange?asset=${name}`
-                clone.dataset.listedAsset = name
+                const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
+                clone.firstElementChild.href = `#/exchange?asset=${name}`
+                clone.firstElementChild.dataset.listedAsset = name
                 clone.querySelector('.listed-asset__icon').innerHTML = getIcon(name)
-                clone.querySelector('.listed-asset__rate').textContent = rate
+                clone.querySelector('.listed-asset__rate').textContent = formatAmount(rate)
                 clone.querySelector('.listed-asset__name').textContent = name
                 return clone
             },
@@ -1456,7 +1459,7 @@
                 card.querySelector('.transaction-card__type').textContent = type
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
                 card.querySelector('.more-info').dataset.other = other
@@ -1471,7 +1474,7 @@
                 card.classList.add(`transaction-card--${type}`)
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
                 card.querySelector('.more-info').dataset.time = time_placed
                 card.querySelector('.more-info').dataset.buyer = type === 'buy' ? floID : undefined
                 card.querySelector('.more-info').dataset.seller = type === 'sell' ? floID : undefined
@@ -1483,7 +1486,7 @@
                 const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat((unitValue * quantity).toFixed(2)))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
                 card.querySelector('.more-info').dataset.time = time
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
@@ -1526,6 +1529,7 @@
                 const frag = document.createDocumentFragment()
                 const ordersType = getRef('my_orders_category_selector').value
                 if (ordersType === 'open') {
+                    getRef('my_orders__title').textContent = 'My orders'
                     const allOpenOrders = [...buyOrders, ...sellOrders].sort((a, b) => new Date(b.time_placed).getTime() - new Date(a.time_placed).getTime())
                     allOpenOrders.forEach(order => {
                         const { id, asset, quantity, minPrice = undefined, maxPrice = undefined, time_placed } = order
@@ -1540,6 +1544,7 @@
                         frag.append(render.orderCard(orderDetails))
                     })
                 } else {
+                    getRef('my_orders__title').textContent = 'My trades'
                     transactions.forEach(transaction => {
                         const { asset, quantity, unitValue, tx_time, buyer, seller } = transaction
                         let type, other;
@@ -1570,6 +1575,7 @@
                 const frag = document.createDocumentFragment()
                 const ordersType = getRef('market_orders_category_selector').value
                 if (ordersType === 'open') {
+                    getRef('market_orders__title').textContent = 'Market-wide orders';
                     showChild('market_orders_wrapper', 0)
                     getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getBuyList().then(buyOrders => {
@@ -1598,6 +1604,7 @@
                         console.log(err)
                     })
                 } else {
+                    getRef('market_orders__title').textContent = 'Market-wide trades';
                     showChild('market_orders_wrapper', 1)
                     getRef('market_trades').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getTradeList().then(trades => {
@@ -2319,6 +2326,14 @@
                             textContent: asset,
                             attributes: { value: asset },
                         }));
+                        getRef('market_asset_rates').append(createElement('li', {
+                            className: 'listed-asset grid align-center',
+                            innerHTML: `
+                                <div class="listed-asset__icon">${getIcon(asset)}</div>
+                                <h4 class="listed-asset__name">${asset}</h4>
+                                <b class="listed-asset__rate">${formatAmount(rate)}</b>
+                            `
+                        }))
                     })
                 } else {
                     // update rates in UI
@@ -2330,6 +2345,7 @@
                         }
                     }
                 }
+
                 if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== '')) {
                     showSuggestedPrice()
                 }
@@ -2370,6 +2386,7 @@
         async function account() {
             floExchangeAPI.getAccount(proxy.userID, await proxy.secret).then(async acc => {
                 document.body.classList.add('is-signed-in');
+                getRef('market_asset_rates').parentNode.remove()
                 // save login time
                 localStorage.setItem(`${acc.floID}_last_login`, Date.now());
                 getRef("login_form").classList.add('hide')
