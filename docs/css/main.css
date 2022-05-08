@@ -702,6 +702,15 @@ sm-checkbox {
           user-select: none;
   color: inherit;
 }
+.listed-asset__countdown {
+  justify-self: flex-end;
+  border-radius: 0.3rem;
+  padding: 0.2rem 0.4rem;
+  grid-column: 1/-1;
+  font-size: 0.8rem;
+  background-color: #f0e68ca0;
+  color: rgba(0, 0, 0, 0.9);
+}
 .listed-asset__icon {
   display: flex;
 }

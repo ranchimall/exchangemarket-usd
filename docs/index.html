@@ -112,9 +112,12 @@
                 </sm-form>
                 <section id="exchange_wrapper" class="hide user-content">
                     <div id="asset_list_wrapper" class="grid gap-1 align-start">
-                        <div class="flex align-center space-between">
-                            <h5>ASSETS</h5>
-                            <h5>PRICE</h5>
+                        <div class="grid gap-0-3">
+                            <div class="flex align-center space-between">
+                                <h5>ASSETS</h5>
+                                <h5>PRICE</h5>
+                            </div>
+                            <p>Asset prices may change after timer is up.</p>
                         </div>
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
@@ -689,6 +692,7 @@
                 <div class="listed-asset__icon"></div>
                 <h4 class="listed-asset__name"></h4>
                 <b class="listed-asset__rate"></b>
+                <div class="listed-asset__countdown"></div>
             </a>
         </li>
     </template>
@@ -1399,6 +1403,14 @@
         function formatAmount(amount, shorten = false) {
             return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: shorten ? 2 : 8 })
         }
+        // Convert milliseconds to time left in HH:MM:SS format
+        function getTimeLeft(milliseconds) {
+            const diff = milliseconds - Date.now()
+            const hours = Math.floor(diff / 3600000)
+            const minutes = Math.floor((diff % 3600000) / 60000)
+            const seconds = Math.floor(((diff % 3600000) % 60000) / 1000)
+            return `${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+        }
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
             return parseFloat((parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType]).toFixed(8))
@@ -1430,14 +1442,18 @@
             height: 0,
             width: 0
         }
+        floGlobals.countDownIntervals = {}
         const render = {
-            listedAsset(name, rate) {
+            listedAsset(name, rate, countDown) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
                 clone.firstElementChild.href = `#/exchange?asset=${name}`
                 clone.firstElementChild.dataset.listedAsset = name
                 clone.querySelector('.listed-asset__icon').innerHTML = getIcon(name)
                 clone.querySelector('.listed-asset__rate').textContent = formatAmount(rate)
                 clone.querySelector('.listed-asset__name').textContent = name
+                floGlobals.countDownIntervals[name] = setInterval(() => {
+                    clone.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown)}`;
+                }, 1000);
                 return clone
             },
             orderCard(orderDetails = {}) {
@@ -2301,8 +2317,7 @@
         function updateRate(init = false, refreshButton) {
             if (refreshButton)
                 buttonLoader('wallet_balance_refresh_button', true);
-            floExchangeAPI.getRates().then(result => {
-                let rates = result.rates;
+            floExchangeAPI.getRates().then(({ rates, countDown }) => {
                 console.debug(rates);
                 if (init) {
                     floGlobals.exchangeRates = rates
@@ -2321,7 +2336,7 @@
                             }
                         }
                         // dynamically render listed assets if not already rendered
-                        getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate))));
+                        getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate)), countDown[asset]));
                         getRef('wallet_asset_selector').append(createElement('sm-option', {
                             textContent: asset,
                             attributes: { value: asset },
@@ -2342,6 +2357,12 @@
                         const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
                         if (listedAsset) {
                             listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rate))
+                            if (floGlobals.countDownIntervals.hasOwnProperty(asset)) {
+                                clearInterval(floGlobals.countDownIntervals[asset]);
+                            }
+                            floGlobals.countDownIntervals[asset] = setInterval(() => {
+                                listedAsset.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown[asset])}`
+                            }, 1000)
                         }
                     }
                 }
