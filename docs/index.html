@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta asset="viewport" content="width=device-width, initial-scale=1.0">
     <title>RanchiMall exchange</title>
-    <meta name="description" content="Trade FLO and FLO based RanchiMall tokens.">
+    <meta asset="description" content="Trade FLO and FLO based RanchiMall tokens.">
 
     <script src="scripts/components.js" defer></script>
     <link rel="stylesheet" href="css/main.min.css">
@@ -690,7 +690,7 @@
         <li>
             <a class="listed-asset interact grid align-center">
                 <div class="listed-asset__icon"></div>
-                <h4 class="listed-asset__name"></h4>
+                <h4 class="listed-asset__asset"></h4>
                 <b class="listed-asset__rate"></b>
                 <div class="listed-asset__countdown"></div>
             </a>
@@ -902,14 +902,14 @@
         }
 
         // returns dom with specified element
-        function createElement(tagName, options = {}) {
-            const { className, textContent, innerHTML, attributes = {} } = options
-            const elem = document.createElement(tagName)
+        function createElement(tagasset, options = {}) {
+            const { classasset, textContent, innerHTML, attributes = {} } = options
+            const elem = document.createElement(tagasset)
             for (let attribute in attributes) {
                 elem.setAttribute(attribute, attributes[attribute])
             }
-            if (className)
-                elem.className = className
+            if (classasset)
+                elem.classasset = classasset
             if (textContent)
                 elem.textContent = textContent
             if (innerHTML)
@@ -1442,18 +1442,24 @@
             height: 0,
             width: 0
         }
-        floGlobals.countDownIntervals = {}
+        floGlobals.countDowns = {
+            intervals: {},
+            timeouts: {}
+        }
         const render = {
-            listedAsset(name, rate, countDown) {
+            listedAsset(asset, rate, countDown) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
-                clone.firstElementChild.href = `#/exchange?asset=${name}`
-                clone.firstElementChild.dataset.listedAsset = name
-                clone.querySelector('.listed-asset__icon').innerHTML = getIcon(name)
+                clone.firstElementChild.href = `#/exchange?asset=${asset}`
+                clone.firstElementChild.dataset.listedAsset = asset
+                clone.querySelector('.listed-asset__icon').innerHTML = getIcon(asset)
                 clone.querySelector('.listed-asset__rate').textContent = formatAmount(rate)
-                clone.querySelector('.listed-asset__name').textContent = name
-                floGlobals.countDownIntervals[name] = setInterval(() => {
+                clone.querySelector('.listed-asset__asset').textContent = asset
+                floGlobals.countDowns.intervals[asset] = setInterval(() => {
                     clone.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown)}`;
                 }, 1000);
+                floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
+                    updateRate()
+                }, countDown - Date.now());
                 return clone
             },
             orderCard(orderDetails = {}) {
@@ -1511,7 +1517,7 @@
             assetBalanceCard(asset) {
                 const { net, locked } = allTokens[asset]
                 const card = getRef('asset_balance_card_template').content.cloneNode(true).firstElementChild
-                card.className = `balance-card ${locked ? 'is-locked' : ''}`
+                card.classasset = `balance-card ${locked ? 'is-locked' : ''}`
                 card.querySelector('.balance-card__token').textContent = asset
                 card.querySelector('.balance-card__icon').innerHTML = getIcon(asset)
                 const templateToClone = locked ? 'locked_balance_template' : 'net_balance_template';
@@ -2342,10 +2348,10 @@
                             attributes: { value: asset },
                         }));
                         getRef('market_asset_rates').append(createElement('li', {
-                            className: 'listed-asset grid align-center',
+                            classasset: 'listed-asset grid align-center',
                             innerHTML: `
                                 <div class="listed-asset__icon">${getIcon(asset)}</div>
-                                <h4 class="listed-asset__name">${asset}</h4>
+                                <h4 class="listed-asset__asset">${asset}</h4>
                                 <b class="listed-asset__rate">${formatAmount(rate)}</b>
                             `
                         }))
@@ -2357,12 +2363,18 @@
                         const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
                         if (listedAsset) {
                             listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rate))
-                            if (floGlobals.countDownIntervals.hasOwnProperty(asset)) {
-                                clearInterval(floGlobals.countDownIntervals[asset]);
+                            if (floGlobals.countDowns.intervals.hasOwnProperty(asset)) {
+                                clearInterval(floGlobals.countDowns.intervals[asset]);
                             }
-                            floGlobals.countDownIntervals[asset] = setInterval(() => {
+                            if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
+                                clearTimeout(floGlobals.countDowns.timeouts[asset]);
+                            }
+                            floGlobals.countDowns.intervals[asset] = setInterval(() => {
                                 listedAsset.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown[asset])}`
                             }, 1000)
+                            floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
+                                updateRate()
+                            }, countDown[asset] - Date.now());
                         }
                     }
                 }
