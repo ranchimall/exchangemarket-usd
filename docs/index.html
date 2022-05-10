@@ -865,15 +865,14 @@
         //Checks for internet connection status
         if (!navigator.onLine)
             notify(
-                "There seems to be a problem connecting to the internet, Please check you internet connection.",
+                "There seems to be a problem connecting to the internet. Please check your internet connection.",
                 "error",
-                { sound: true }
             );
         window.addEventListener("offline", () => {
             notify(
-                "There seems to be a problem connecting to the internet, Please check you internet connection.",
+                "There seems to be a problem connecting to the internet. Please check your internet connection.",
                 "error",
-                { pinned: true, sound: true }
+                { pinned: true }
             );
         });
         window.addEventListener("online", () => {
@@ -1446,6 +1445,11 @@
             intervals: {},
             timeouts: {}
         }
+        // convert GMT to IST
+        function getIST(originalTime) {
+            const d = new Date(originalTime);
+            return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()) / 1000;
+        }
         const render = {
             listedAsset(asset, rate, countDown) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
@@ -1532,8 +1536,9 @@
             chart(asset, duration = '48 weeks') {
                 floExchangeAPI.getRateHistory(asset, duration).then(data => {
                     data = data.map(({ time, rate }) => {
+                        console.log(time, getIST(time))
                         return {
-                            time: new Date(time).getTime() / 1000,
+                            time: getIST(time),
                             value: rate
                         }
                     })
