@@ -1536,7 +1536,6 @@
             chart(asset, duration = '48 weeks') {
                 floExchangeAPI.getRateHistory(asset, duration).then(data => {
                     data = data.map(({ time, rate }) => {
-                        console.log(time, getIST(time))
                         return {
                             time: getIST(time),
                             value: rate
