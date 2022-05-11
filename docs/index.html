@@ -117,7 +117,7 @@
                                 <h5>ASSETS</h5>
                                 <h5>PRICE</h5>
                             </div>
-                            <p>Asset prices may change after timer is up.</p>
+                            <p>Countdown shows next est. time until asset prices are updated</p>
                         </div>
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
@@ -625,8 +625,8 @@
             <input type="text" id="sink_id" style="display: none;" hidden />
             <sm-input id="get_receiver_id" placeholder="Receiver FLO ID" error-text="Invalid FLO ID" data-flo-id
                 required animate></sm-input>
-            <sm-input id="get_user_amount" placeholder="Quantity" type="number" min="0.01" step="0.00001" required
-                animate>
+            <sm-input id="get_user_amount" placeholder="Quantity" type="number" min="0.00000001" step="0.00000001"
+                required animate>
             </sm-input>
             <div id="wallet_quantity_selector" class="flex align-center quantity-selector">
                 <span id="wallet_quantity_type">Rupee</span>
@@ -635,6 +635,10 @@
                 <button class="button" value="0.75">75%</button>
                 <button class="button" value="1">100%</button>
             </div>
+            <p id="withdraw_flo_tip" class="hide">*While withdrawing 100% of balance FLO, <b>0.1 FLO</b> is reserved for
+                transactions
+                on blockchain.
+            </p>
             <sm-input id="get_private_key" placeholder="FLO private key" type="password" required
                 error-text="Invalid private key" data-private-key="" animate>
             </sm-input>
@@ -1858,12 +1862,10 @@
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
 
-                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[asset].net.toFixed(4))} ${asset}`
+                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[asset].net.toFixed(8))} ${asset}`
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
-                getRef('get_user_amount').setAttribute('step', asset === 'rupee' ? '0.01' : '0.00001')
-                getRef('get_user_amount').setAttribute('min', asset === 'rupee' ? '0.01' : '0.00001')
                 // default form element state
                 getRef('get_receiver_id').removeAttribute('required')
                 getRef('get_receiver_id').classList.add('hide')
@@ -1872,6 +1874,9 @@
                 getRef('wallet_quantity_selector').classList.remove('hide')
                 switch (type) {
                     case 'withdraw':
+                        if (asset === 'FLO') {
+                            getRef('withdraw_flo_tip').classList.remove('hide')
+                        }
                         break;
                     case 'deposit':
                         getRef('get_private_key').setAttribute('required', '')
@@ -1944,7 +1949,11 @@
                 const target = e.target.closest('button')
                 const asset = getRef('wallet_asset_selector').value
                 const fraction = parseFloat(target.value)
-                getRef('get_user_amount').value = parseFloat((allTokens[asset].net * fraction).toFixed(asset === "rupee" ? 2 : 4))
+                let total = parseFloat((allTokens[asset].net * fraction).toFixed(8));
+                if (asset == 'FLO' && fraction === 1 & total > 0.1) {
+                    total -= 0.1;
+                }
+                getRef('get_user_amount').value = total
             }
         })
         getRef('wallet_popup__cta').addEventListener('click', async e => {
@@ -1991,6 +2000,7 @@
             }
             finally {
                 hideProcess('wallet_popup__cta_wrapper')
+                refresh()
             }
         })
 
@@ -2248,6 +2258,7 @@
             switch (e.target.id) {
                 case 'wallet_popup':
                     hideWalletResult()
+                    getRef('withdraw_flo_tip').classList.add('hide')
                     break;
             }
         })
