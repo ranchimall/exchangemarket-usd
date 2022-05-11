@@ -4,18 +4,24 @@ const market = require("./market");
 
 const {
     SIGN_EXPIRE_TIME,
-    MAX_SESSION_TIMEOUT,
-    INVALID_SERVER_MSG
+    MAX_SESSION_TIMEOUT
 } = require("./_constants")["request"];
+
+const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
 
 var DB, trustedIDs, secret; //container for database
 
-global.INVALID = function(message) {
+global.INVALID = function(ecode, message) {
     if (!(this instanceof INVALID))
-        return new INVALID(message);
+        return new INVALID(ecode, message);
     this.message = message;
+    this.ecode = ecode;
 }
 INVALID.e_code = 400;
+INVALID.prototype.toString = function() {
+    return "E" + this.ecode + ": " + this.message;
+}
+INVALID.str = (ecode, message) => INVALID(ecode, message).toString();
 
 global.INTERNAL = function INTERNAL(message) {
     if (!(this instanceof INTERNAL))
@@ -23,31 +29,37 @@ global.INTERNAL = function INTERNAL(message) {
     this.message = message;
 }
 INTERNAL.e_code = 500;
+INTERNAL.prototype.toString = function() {
+    return "E" + eCode.INTERNAL_ERROR + ": " + this.message;
+}
+INTERNAL.str = (ecode, message) => INTERNAL(ecode, message).toString();
+
+const INCORRECT_SERVER_ERROR = INVALID(eCode.INCORRECT_SERVER, "Incorrect server");
 
 var serving;
 
 function validateRequest(request, sign, floID, pubKey) {
     return new Promise((resolve, reject) => {
         if (!serving)
-            reject(INVALID(INVALID_SERVER_MSG));
+            reject(INCORRECT_SERVER_ERROR);
         else if (!request.timestamp)
-            reject(INVALID("Timestamp parameter missing"));
+            reject(INVALID(eCode.MISSING_PARAMETER, "Timestamp parameter missing"));
         else if (Date.now() - SIGN_EXPIRE_TIME > request.timestamp)
-            reject(INVALID("Signature Expired"));
+            reject(INVALID(eCode.EXPIRED_SIGNATURE, "Signature Expired"));
         else if (!floCrypto.validateAddr(floID))
-            reject(INVALID("Invalid floID"));
+            reject(INVALID(eCode.INVALID_FLO_ID, "Invalid floID"));
         else if (typeof request !== "object")
-            reject(INVALID("Request is not an object"));
+            reject(INVALID(eCode.INVALID_REQUEST_FORMAT, "Request is not an object"));
         else validateRequest.getSignKey(floID, pubKey).then(signKey => {
             let req_str = Object.keys(request).sort().map(r => r + ":" + request[r]).join("|");
             try {
                 if (!floCrypto.verifySign(req_str, sign, signKey))
-                    reject(INVALID("Invalid request signature! Re-login if this error occurs frequently"));
+                    reject(INVALID(eCode.INVALID_SIGNATURE, "Invalid request signature"));
                 else validateRequest.checkIfSignUsed(sign)
                     .then(result => resolve(req_str))
                     .catch(error => reject(error))
             } catch {
-                reject(INVALID("Corrupted sign/key"));
+                reject(INVALID(eCode.INVALID_SIGNATURE, "Corrupted sign/key"));
             }
         }).catch(error => reject(error));
     });
@@ -57,22 +69,22 @@ validateRequest.getSignKey = (floID, pubKey) => new Promise((resolve, reject) =>
     if (!pubKey)
         DB.query("SELECT session_time, proxyKey FROM UserSession WHERE floID=?", [floID]).then(result => {
             if (result.length < 1)
-                reject(INVALID("Session not active"));
+                reject(INVALID(eCode.SESSION_INVALID, "Session not active"));
             else if (result[0].session_time + MAX_SESSION_TIMEOUT < Date.now())
-                reject(INVALID("Session Expired! Re-login required"));
+                reject(INVALID(eCode.SESSION_EXPIRED, "Session Expired! Re-login required"));
             else
                 resolve(result[0].proxyKey);
         }).catch(error => reject(error));
     else if (floCrypto.getFloID(pubKey) === floID)
         resolve(pubKey);
     else
-        reject(INVALID("Invalid pubKey"));
+        reject(INVALID(eCode.INVALID_PUBLIC_KEY, "Invalid pubKey"));
 });
 
 validateRequest.checkIfSignUsed = sign => new Promise((resolve, reject) => {
     DB.query("SELECT id FROM RequestLog WHERE sign=?", [sign]).then(result => {
         if (result.length)
-            reject(INVALID("Duplicate signature"));
+            reject(INVALID(eCode.DUPLICATE_SIGNATURE, "Duplicate signature"));
         else
             resolve(true);
     }).catch(error => reject(error))
@@ -91,18 +103,18 @@ function processRequest(res, rText, validateObj, sign, floID, pubKey, marketFn) 
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
-                res.status(INVALID.e_code).send(error.message);
+                res.status(INVALID.e_code).send(error.toString());
             else {
                 console.error(error);
-                res.status(INTERNAL.e_code).send(rText + " failed! Try again later!");
+                res.status(INTERNAL.e_code).send(INTERNAL.str(rText + " failed! Try again later!"));
             }
         })
     }).catch(error => {
         if (error instanceof INVALID)
-            res.status(INVALID.e_code).send(error.message);
+            res.status(INVALID.e_code).send(error.toString());
         else {
             console.error(error);
-            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            res.status(INTERNAL.e_code).send(INTERNAL.str("Request processing failed! Try again later!"));
         }
     })
 }
@@ -123,10 +135,10 @@ function Account(req, res) {
         });
     }).catch(error => {
         if (error instanceof INVALID)
-            res.status(INVALID.e_code).send(error.message);
+            res.status(INVALID.e_code).send(error.toString());
         else {
             console.error(error);
-            res.status(INTERNAL.e_code).send("Request processing failed! Try again later!");
+            res.status(INTERNAL.e_code).send(INTERNAL.str("Request processing failed! Try again later!"));
         }
     });
 }
@@ -134,9 +146,9 @@ function Account(req, res) {
 function Login(req, res) {
     let data = req.body;
     if (!data.code || data.hash != Crypto.SHA1(data.code + secret))
-        res.status(INVALID.e_code).send("Invalid Code");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_LOGIN_CODE, "Invalid Code"));
     else if (!data.pubKey)
-        res.status(INVALID.e_code).send("Public key missing");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else
         processRequest(res, "Login", {
                 type: "login",
@@ -256,7 +268,7 @@ function WithdrawToken(req, res) {
 function AddUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
-        res.status(INVALID.e_code).send("Access Denied");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else processRequest(res, "Add user-tag", {
             type: "add_tag",
             user: data.user,
@@ -270,7 +282,7 @@ function AddUserTag(req, res) {
 function RemoveUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
-        res.status(INVALID.e_code).send("Access Denied");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else processRequest(res, "Remove user-tag", {
             type: "remove_tag",
             user: data.user,
@@ -284,7 +296,7 @@ function RemoveUserTag(req, res) {
 function AddDistributor(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
-        res.status(INVALID.e_code).send("Access Denied");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else processRequest(res, "Add distributor", {
             type: "add_distributor",
             distributor: data.distributor,
@@ -298,7 +310,7 @@ function AddDistributor(req, res) {
 function RemoveDistributor(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
-        res.status(INVALID.e_code).send("Access Denied");
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else processRequest(res, "Remove distributor", {
             type: "remove_distributor",
             distributor: data.distributor,
@@ -313,7 +325,7 @@ function RemoveDistributor(req, res) {
 
 function GetLoginCode(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let randID = floCrypto.randString(8, true) + Math.round(Date.now() / 1000);
         let hash = Crypto.SHA1(randID + secret);
@@ -326,11 +338,11 @@ function GetLoginCode(req, res) {
 
 function ListSellOrders(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let asset = req.query.asset;
         if (asset && !market.assetList.includes(asset))
-            res.status(INVALID.e_code).send("Invalid asset parameter");
+            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TOKEN_NAME, "Invalid asset parameter"));
         else
             DB.query("SELECT SellOrder.floID, SellOrder.asset, SellOrder.minPrice, SellOrder.quantity, SellOrder.time_placed FROM SellOrder" +
                 " INNER JOIN UserBalance ON UserBalance.floID = SellOrder.floID AND UserBalance.token = SellOrder.asset" +
@@ -345,7 +357,7 @@ function ListSellOrders(req, res) {
             .then(result => res.send(result))
             .catch(error => {
                 console.error(error);
-                res.status(INTERNAL.e_code).send("Try again later!")
+                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
             });
     }
 
@@ -353,11 +365,11 @@ function ListSellOrders(req, res) {
 
 function ListBuyOrders(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let asset = req.query.asset;
         if (asset && !market.assetList.includes(asset))
-            res.status(INVALID.e_code).send("Invalid asset parameter");
+            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TOKEN_NAME, "Invalid asset parameter"));
         else
             DB.query("SELECT BuyOrder.floID, BuyOrder.asset, BuyOrder.maxPrice, BuyOrder.quantity, BuyOrder.time_placed FROM BuyOrder" +
                 " INNER JOIN UserBalance ON UserBalance.floID = BuyOrder.floID AND UserBalance.token = ?" +
@@ -371,18 +383,18 @@ function ListBuyOrders(req, res) {
             .then(result => res.send(result))
             .catch(error => {
                 console.error(error);
-                res.status(INTERNAL.e_code).send("Try again later!")
+                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
             });
     }
 }
 
 function ListTradeTransactions(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let asset = req.query.asset;
         if (asset && !market.assetList.includes(asset))
-            res.status(INVALID.e_code).send("Invalid asset parameter");
+            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TOKEN_NAME, "Invalid asset parameter"));
         else
             DB.query("SELECT * FROM TradeTransactions" +
                 (asset ? " WHERE asset = ?" : "") +
@@ -390,14 +402,14 @@ function ListTradeTransactions(req, res) {
             .then(result => res.send(result))
             .catch(error => {
                 console.error(error);
-                res.status(INTERNAL.e_code).send("Try again later!")
+                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
             });
     }
 }
 
 function GetRates(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let asset = req.query.asset,
             rates = market.rates,
@@ -410,7 +422,7 @@ function GetRates(req, res) {
                     countDown: countDown[asset]
                 });
             else
-                res.status(INVALID.e_code).send("Invalid asset parameter");
+                res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TOKEN_NAME, "Invalid asset parameter"));
         } else
             res.send({
                 rates,
@@ -421,7 +433,7 @@ function GetRates(req, res) {
 
 function GetRateHistory(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let asset = req.query.asset,
             duration = req.query.duration || "";
@@ -429,10 +441,10 @@ function GetRateHistory(req, res) {
             .then(result => res.send(result))
             .catch(error => {
                 if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
+                    res.status(INVALID.e_code).send(error.toString());
                 else {
                     console.error(error);
-                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Unable to process! Try again later!"));
                 }
             });
     }
@@ -440,19 +452,19 @@ function GetRateHistory(req, res) {
 
 function GetTransaction(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let txid = req.query.txid;
         if (!txid)
-            res.status(INVALID.e_code).send("txid (transactionID) parameter missing");
+            res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "txid (transactionID) parameter missing"));
         else market.getTransactionDetails(txid)
             .then(result => res.send(result))
             .catch(error => {
                 if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
+                    res.status(INVALID.e_code).send(error.toString());
                 else {
                     console.error(error);
-                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Unable to process! Try again later!"));
                 }
             });
     }
@@ -460,7 +472,7 @@ function GetTransaction(req, res) {
 
 function GetBalance(req, res) {
     if (!serving)
-        res.status(INVALID.e_code).send(INVALID_SERVER_MSG);
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
     else {
         let floID = req.query.floID || req.query.addr,
             token = req.query.token || req.query.asset;
@@ -468,10 +480,10 @@ function GetBalance(req, res) {
             .then(result => res.send(result))
             .catch(error => {
                 if (error instanceof INVALID)
-                    res.status(INVALID.e_code).send(error.message);
+                    res.status(INVALID.e_code).send(error.toString());
                 else {
                     console.error(error);
-                    res.status(INTERNAL.e_code).send("Unable to process! Try again later!");
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Unable to process! Try again later!"));
                 }
             });
     }

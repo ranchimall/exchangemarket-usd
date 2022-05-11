@@ -11,6 +11,8 @@ const {
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
 
+const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
+
 const updateBalance = coupling.updateBalance;
 
 var DB, assetList; //container for database and allowed assets
@@ -36,7 +38,7 @@ function logout(floID) {
 function getRateHistory(asset, duration) {
     return new Promise((resolve, reject) => {
         if (!asset || !assetList.includes(asset))
-            reject(INVALID(`Invalid asset(${asset})`));
+            reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset(${asset})`));
         else
             coupling.price.getHistory(asset, duration)
             .then(result => resolve(result))
@@ -47,11 +49,11 @@ function getRateHistory(asset, duration) {
 function getBalance(floID, token) {
     return new Promise((resolve, reject) => {
         if (floID && !floCrypto.validateAddr(floID))
-            reject(INVALID(`Invalid floID(${floID})`));
+            reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID(${floID})`));
         else if (token && token !== floGlobals.currency && !assetList.includes(token))
-            reject(INVALID(`Invalid token(${token})`));
+            reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid token(${token})`));
         else if (!floID && !token)
-            reject(INVALID('Missing parameters: requires atleast one (floID, token)'));
+            reject(INVALID(eCode.MISSING_PARAMETER, 'Missing parameters: requires atleast one (floID, token)'));
         else {
             var promise;
             if (floID && token)
@@ -114,9 +116,9 @@ const getAssetBalance = (floID, asset) => new Promise((resolve, reject) => {
 getAssetBalance.check = (floID, asset, amount) => new Promise((resolve, reject) => {
     getAssetBalance(floID, asset).then(balance => {
         if (balance.total < amount)
-            reject(INVALID(`Insufficient ${asset}`));
+            reject(INVALID(eCode.INSUFFICIENT_BALANCE, `Insufficient ${asset}`));
         else if (balance.net < amount)
-            reject(INVALID(`Insufficient ${asset} (Some are locked in orders)`));
+            reject(INVALID(eCode.INSUFFICIENT_BALANCE, `Insufficient ${asset} (Some are locked in orders)`));
         else
             resolve(true);
     }).catch(error => reject(error))
@@ -125,13 +127,13 @@ getAssetBalance.check = (floID, asset, amount) => new Promise((resolve, reject) 
 function addSellOrder(floID, asset, quantity, min_price) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
-            return reject(INVALID(`Invalid floID (${floID})`));
+            return reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID (${floID})`));
         else if (typeof quantity !== "number" || quantity <= 0)
-            return reject(INVALID(`Invalid quantity (${quantity})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
         else if (typeof min_price !== "number" || min_price <= 0)
-            return reject(INVALID(`Invalid min_price (${min_price})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid min_price (${min_price})`));
         else if (!assetList.includes(asset))
-            return reject(INVALID(`Invalid asset (${asset})`));
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID, asset, quantity, min_price).then(_ => {
                 DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price]).then(result => {
@@ -151,7 +153,7 @@ const checkSellRequirement = (floID, asset, quantity, min_price) => new Promise(
         let total = result[0][0].total_chips,
             locked = result[1][0].locked;
         if (total < locked + quantity)
-            reject(INVALID(`Insufficient sell-chips for ${asset}`));
+            reject(INVALID(eCode.INSUFFICIENT_SELLCHIP, `Insufficient sell-chips for ${asset}`));
         else Promise.all([
             DB.query("SELECT IFNULL(SUM(quantity), 0) AS total_chips FROM SellChips WHERE floID=? AND asset=? AND base<=?", [floID, asset, min_price]),
             DB.query("SELECT IFNULL(SUM(quantity), 0) AS locked FROM SellOrder WHERE floID=? AND asset=? AND minPrice<=?", [floID, asset, min_price])
@@ -164,7 +166,7 @@ const checkSellRequirement = (floID, asset, quantity, min_price) => new Promise(
             if (l_locked > l_total)
                 rem -= l_locked - l_total;
             if (rem < quantity)
-                reject(INVALID(`Cannot sell below purchased price`));
+                reject(INVALID(eCode.GREATER_SELLCHIP_BASE, `Cannot sell below purchased price`));
             else
                 resolve(true);
         }).catch(error => reject(error))
@@ -174,13 +176,13 @@ const checkSellRequirement = (floID, asset, quantity, min_price) => new Promise(
 function addBuyOrder(floID, asset, quantity, max_price) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
-            return reject(INVALID(`Invalid floID (${floID})`));
+            return reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID (${floID})`));
         else if (typeof quantity !== "number" || quantity <= 0)
-            return reject(INVALID(`Invalid quantity (${quantity})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
         else if (typeof max_price !== "number" || max_price <= 0)
-            return reject(INVALID(`Invalid max_price (${max_price})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid max_price (${max_price})`));
         else if (!assetList.includes(asset))
-            return reject(INVALID(`Invalid asset (${asset})`));
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset (${asset})`));
         getAssetBalance.check(floID, floGlobals.currency, quantity * max_price).then(_ => {
             DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price]).then(result => {
                 resolve('Buy Order placed successfully');
@@ -193,19 +195,19 @@ function addBuyOrder(floID, asset, quantity, max_price) {
 function cancelOrder(type, id, floID) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
-            return reject(INVALID(`Invalid floID (${floID})`));
+            return reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID (${floID})`));
         let tableName;
         if (type === "buy")
             tableName = "BuyOrder";
         else if (type === "sell")
             tableName = "SellOrder";
         else
-            return reject(INVALID("Invalid Order type! Order type must be buy (or) sell"));
+            return reject(INVALID(eCode.INVALID_TYPE, "Invalid Order type! Order type must be buy (or) sell"));
         DB.query(`SELECT floID, asset FROM ${tableName} WHERE id=?`, [id]).then(result => {
             if (result.length < 1)
-                return reject(INVALID("Order not found!"));
+                return reject(INVALID(eCode.NOT_FOUND, "Order not found!"));
             else if (result[0].floID !== floID)
-                return reject(INVALID("Order doesnt belong to the current user"));
+                return reject(INVALID(eCode.NOT_OWNER, "Order doesnt belong to the current user"));
             let asset = result[0].asset;
             //Delete the order 
             DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id]).then(result => {
@@ -262,7 +264,7 @@ function getTransactionDetails(txid) {
             tableName = 'TradeTransactions';
             type = 'trade';
         } else
-            return reject(INVALID("Invalid TransactionID"));
+            return reject(INVALID(eCode.INVALID_TX_ID, "Invalid TransactionID"));
         DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
             if (result.length) {
                 let details = result[0];
@@ -271,7 +273,7 @@ function getTransactionDetails(txid) {
                     details.receiver = JSON.parse(details.receiver);
                 resolve(details);
             } else
-                reject(INVALID("Transaction not found"));
+                reject(INVALID(eCode.NOT_FOUND, "Transaction not found"));
         }).catch(error => reject(error))
     })
 }
@@ -279,9 +281,9 @@ function getTransactionDetails(txid) {
 function transferToken(sender, receivers, token) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(sender))
-            reject(INVALID(`Invalid sender (${sender})`));
+            reject(INVALID(eCode.INVALID_FLO_ID, `Invalid sender (${sender})`));
         else if (token !== floGlobals.currency && !assetList.includes(token))
-            reject(INVALID(`Invalid token (${token})`));
+            reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid token (${token})`));
         else {
             let invalidIDs = [],
                 totalAmount = 0;
@@ -291,7 +293,7 @@ function transferToken(sender, receivers, token) {
                 else
                     totalAmount += receivers[floID];
             if (invalidIDs.length)
-                reject(INVALID(`Invalid receiver (${invalidIDs})`));
+                reject(INVALID(eCode.INVALID_FLO_ID, `Invalid receiver (${invalidIDs})`));
             else getAssetBalance.check(sender, token, totalAmount).then(_ => {
                 let txQueries = [];
                 txQueries.push(updateBalance.consume(sender, token, totalAmount));
@@ -328,11 +330,11 @@ function depositFLO(floID, txid) {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
-                        return reject(INVALID("Transaction already in process"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
                     case "REJECTED":
-                        return reject(INVALID("Transaction already rejected"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already rejected"));
                     case "SUCCESS":
-                        return reject(INVALID("Transaction already used to add coins"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add coins"));
                 }
             } else
                 DB.query("INSERT INTO InputFLO(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
@@ -417,9 +419,9 @@ confirmDepositFLO.addSellChipsIfLaunchSeller = function(floID, quantity) {
 function withdrawFLO(floID, amount) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
-            return reject(INVALID(`Invalid floID (${floID})`));
+            return reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID (${floID})`));
         else if (typeof amount !== "number" || amount <= 0)
-            return reject(INVALID(`Invalid amount (${amount})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
         getAssetBalance.check(floID, "FLO", amount).then(_ => {
             let txQueries = [];
             txQueries.push(updateBalance.consume(floID, "FLO", amount));
@@ -477,11 +479,11 @@ function depositToken(floID, txid) {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
-                        return reject(INVALID("Transaction already in process"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
                     case "REJECTED":
-                        return reject(INVALID("Transaction already rejected"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already rejected"));
                     case "SUCCESS":
-                        return reject(INVALID("Transaction already used to add tokens"));
+                        return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add tokens"));
                 }
             } else
                 DB.query("INSERT INTO InputToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
@@ -550,11 +552,11 @@ confirmDepositToken.checkTx = function(sender, txid) {
 function withdrawToken(floID, token, amount) {
     return new Promise((resolve, reject) => {
         if (!floCrypto.validateAddr(floID))
-            return reject(INVALID(`Invalid floID (${floID})`));
+            return reject(INVALID(eCode.INVALID_FLO_ID, `Invalid floID (${floID})`));
         else if (typeof amount !== "number" || amount <= 0)
-            return reject(INVALID(`Invalid amount (${amount})`));
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
         else if ((!assetList.includes(token) && token !== floGlobals.currency) || token === "FLO")
-            return reject(INVALID("Invalid Token"));
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, "Invalid Token"));
         //Check for FLO balance (transaction fee)
         let required_flo = floGlobals.sendAmt + floGlobals.fee;
         getAssetBalance.check(floID, "FLO", required_flo).then(_ => {
@@ -614,9 +616,9 @@ function addTag(floID, tag) {
             .then(result => resolve(`Added ${floID} to ${tag}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
-                    reject(INVALID(`${floID} already in ${tag}`));
+                    reject(INVALID(eCode.DUPLICATE_ENTRY, `${floID} already in ${tag}`));
                 else if (error.code === "ER_NO_REFERENCED_ROW")
-                    reject(INVALID(`Invalid Tag`));
+                    reject(INVALID(eCode.INVALID_TAG, `Invalid Tag`));
                 else
                     reject(error);
             });
@@ -645,9 +647,9 @@ function addDistributor(floID, asset) {
             .then(result => resolve(`Added ${asset} distributor: ${floID}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
-                    reject(INVALID(`${floID} is already ${asset} disributor`));
+                    reject(INVALID(eCode.DUPLICATE_ENTRY, `${floID} is already ${asset} disributor`));
                 else if (error.code === "ER_NO_REFERENCED_ROW")
-                    reject(INVALID(`Invalid Asset`));
+                    reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid Asset`));
                 else
                     reject(error);
             });

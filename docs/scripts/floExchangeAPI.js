@@ -468,7 +468,7 @@
         return new Promise((resolve, reject) => {
             let curPos = fetch_api.curPos || 0;
             if (curPos >= nodeList.length)
-                return reject(ExchangeError(ExchangeError.NODES_OFFLINE_CODE, 'No Node online! Try again later'));
+                return reject(ExchangeError(ExchangeError.NODES_OFFLINE_CODE, 'No Node online! Try again later', errorCode.NODES_OFFLINE));
             let url = "https://" + nodeURL[nodeList[curPos]];
             (options ? fetch(url + api, options) : fetch(url + api))
             .then(result => resolve(result)).catch(error => {
@@ -482,17 +482,62 @@
         })
     }
 
-    function ExchangeError(status, message) {
-        if (message === ExchangeError.INVALID_SERVER_MSG)
-            location.reload();
-        else if (this instanceof ExchangeError) {
-            this.message = message;
-            this.status = status;
-        } else
-            return new ExchangeError(status, message);
+    const errorCode = exchangeAPI.errorCode = {
+        INCORRECT_SERVER: '000',
+
+        //INVALID INPUTS: 0XX
+        INVALID_REQUEST_FORMAT: '001',
+        ACCESS_DENIED: '002',
+        INVALID_FLO_ID: '011',
+        INVALID_LOGIN_CODE: '012',
+        INVALID_PRIVATE_KEY: '013',
+        INVALID_PUBLIC_KEY: '014',
+        INVALID_SIGNATURE: '015',
+        EXPIRED_SIGNATURE: '016',
+        DUPLICATE_SIGNATURE: '017',
+        SESSION_INVALID: '018',
+        SESSION_EXPIRED: '019',
+        INVALID_TOKEN_NAME: '021',
+        INVALID_NUMBER: '022',
+        INVALID_TYPE: '023',
+        INVALID_TX_ID: '024',
+        INVALID_TAG: '025',
+        MISSING_PARAMETER: '099',
+
+        //INCORRECT DATA: 1XX
+        NOT_FOUND: '101',
+        NOT_OWNER: '102',
+        DUPLICATE_ENTRY: '103',
+
+        //INSUFFICIENT: 2XX
+        INSUFFICIENT_BALANCE: '201',
+        INSUFFICIENT_SELLCHIP: '203',
+        GREATER_SELLCHIP_BASE: '204',
+
+        //OTHERS
+        NODES_OFFLINE: '404',
+        INTERNAL_ERROR: '500'
+    };
+
+    const parseErrorCode = exchangeAPI.parseErrorCode = function(message) {
+        let code = message.match(/^E\d{3}:/g);
+        if (!code || !code.length)
+            return null;
+        else
+            return code[0].substring(1, 4);
     }
 
-    ExchangeError.INVALID_SERVER_MSG = "INCORRECT_SERVER_ERROR";
+    function ExchangeError(status, message, code = null) {
+        if (parseErrorCode(message) === errorCode.INCORRECT_SERVER)
+            location.reload();
+        else if (this instanceof ExchangeError) {
+            this.code = code || parseErrorCode(message);
+            this.message = message.replace(/^E\d{3}:/g, '').trim();
+            this.status = status;
+        } else
+            return new ExchangeError(status, message, code);
+    }
+
     ExchangeError.BAD_REQUEST_CODE = 400;
     ExchangeError.BAD_RESPONSE_CODE = 500;
     ExchangeError.NODES_OFFLINE_CODE = 404;
@@ -594,7 +639,7 @@
     exchangeAPI.getBalance = function(floID = null, token = null) {
         return new Promise((resolve, reject) => {
             if (!floID && !token)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Need atleast one argument"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Need atleast one argument", errorCode.MISSING_PARAMETER));
             let queryStr = (floID ? "floID=" + floID : "") +
                 (floID && token ? "&" : "") +
                 (token ? "token=" + token : "");
@@ -609,7 +654,7 @@
     exchangeAPI.getTx = function(txid) {
         return new Promise((resolve, reject) => {
             if (!txid)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'txid required'));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'txid required', errorCode.MISSING_PARAMETER));
             fetch_api('/get-transaction?txid=' + txid)
                 .then(result => responseParse(result)
                     .then(result => resolve(result))
@@ -639,7 +684,7 @@
     exchangeAPI.signUp = function (privKey, code, hash) {
         return new Promise((resolve, reject) => {
             if (!code || !hash)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing", errorCode.MISSING_PARAMETER));
             let request = {
                 pubKey: floCrypto.getPubKeyHex(privKey),
                 floID: floCrypto.getFloID(privKey),
@@ -671,7 +716,7 @@
     exchangeAPI.login = function(privKey, proxyKey, code, hash) {
         return new Promise((resolve, reject) => {
             if (!code || !hash)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing", errorCode.MISSING_PARAMETER));
             let request = {
                 proxyKey: proxyKey,
                 floID: floCrypto.getFloID(privKey),
@@ -681,7 +726,7 @@
                 hash: hash
             };
             if (!privKey || !request.floID)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private key"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private key", errorCode.INVALID_PRIVATE_KEY));
             request.sign = signRequest({
                 type: "login",
                 random: code,
@@ -733,9 +778,9 @@
     exchangeAPI.buy = function(asset, quantity, max_price, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= 0)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
             else if (typeof max_price !== "number" || max_price <= 0)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid max_price (${max_price})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid max_price (${max_price})`, errorCode.INVALID_NUMBER));
             let request = {
                 floID: floID,
                 asset: asset,
@@ -771,9 +816,9 @@
     exchangeAPI.sell = function(asset, quantity, min_price, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= 0)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
             else if (typeof min_price !== "number" || min_price <= 0)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid min_price (${min_price})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid min_price (${min_price})`, errorCode.INVALID_NUMBER));
             let request = {
                 floID: floID,
                 asset: asset,
@@ -809,7 +854,7 @@
     exchangeAPI.cancelOrder = function(type, id, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (type !== "buy" && type !== "sell")
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid type (${type}): type should be sell (or) buy`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid type (${type}): type should be sell (or) buy`, errorCode.INVALID_TYPE));
             let request = {
                 floID: floID,
                 orderType: type,
@@ -843,7 +888,7 @@
     exchangeAPI.transferToken = function(receiver, token, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof receiver !== 'object' || receiver === null)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid receiver: parameter is not an object"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid receiver: parameter is not an object", errorCode.INVALID_FLO_ID));
             let invalidIDs = [],
                 invalidAmt = [];
             for (let f in receiver) {
@@ -853,9 +898,9 @@
                     invalidAmt.push(receiver[f])
             }
             if (invalidIDs.length)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid receiver (${invalidIDs})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid receiver (${invalidIDs})`, errorCode.INVALID_FLO_ID));
             else if (invalidAmt.length)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid amount (${invalidAmt})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid amount (${invalidAmt})`, errorCode.INVALID_NUMBER));
             let request = {
                 floID: floID,
                 token: token,
@@ -888,7 +933,9 @@
     exchangeAPI.depositFLO = function(quantity, floID, sinkID, privKey, proxySecret = null) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= floGlobals.fee)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
+            else if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
             floBlockchainAPI.sendTx(floID, sinkID, quantity, privKey, '(deposit in market)').then(txid => {
                 let request = {
                     floID: floID,
@@ -950,7 +997,7 @@
     exchangeAPI.depositToken = function(token, quantity, floID, sinkID, privKey, proxySecret = null) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key"));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
             floTokenAPI.sendToken(privKey, quantity, sinkID, '(deposit in market)', token).then(txid => {
                 let request = {
                     floID: floID,
