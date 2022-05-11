@@ -328,7 +328,7 @@
                     <div class="flex align-center space-between">
                         <h4>Balance</h4>
                         <div class="multi-state-button">
-                            <button id="wallet_balance_refresh_button" class="button" onclick="updateRate(false,this);"
+                            <button id="wallet_balance_refresh_button" class="button" onclick="refresh(false,this);"
                                 title="Refresh">
                                 Refresh
                             </button>
@@ -863,17 +863,20 @@
         const relativeTime = new RelativeTime({ style: 'narrow' });
 
         //Checks for internet connection status
-        if (!navigator.onLine)
+        if (!navigator.onLine) {
             notify(
                 "There seems to be a problem connecting to the internet. Please check your internet connection.",
                 "error",
+                { pinned: true }
             );
+        }
         window.addEventListener("offline", () => {
             notify(
                 "There seems to be a problem connecting to the internet. Please check your internet connection.",
                 "error",
                 { pinned: true }
             );
+            location.reload()
         });
         window.addEventListener("online", () => {
             getRef("notification_drawer").clearAll();
@@ -1088,6 +1091,7 @@
 
         const pagesData = {
             lastPage: '',
+            currentPage: '',
             params: {}
         }
         async function showPage(targetPage, options = {}) {
@@ -1123,6 +1127,7 @@
                 pageId = 'exchange'
                 history.replaceState(null, null, '#/exchange')
             }
+            pagesData.currentPage = pageId
             if (!firstLoad)
                 switch (pageId) {
                     case 'exchange':
@@ -1335,9 +1340,17 @@
                     child.classList.add('hide')
             })
         }
+        function handleVisibilityChange() {
+            if (document.visibilityState === "hidden") {
+                // code if page is hidden 
+            } else {
+                updateRate();
+            }
+        }
+        document.addEventListener("visibilitychange", handleVisibilityChange, false);
     </script>
     <script>
-        function buttonLoader(id, show) {
+        function buttonLoader(id, show = false) {
             getRef(id).disabled = show;
             const animOptions = {
                 duration: 200,
@@ -1345,23 +1358,30 @@
                 easing: 'ease'
             }
             if (show) {
-                try {
-                    getRef(id).animate([
-                        {
-                            clipPath: 'circle(100%)',
-                        },
-                        {
-                            clipPath: 'circle(0)',
-                        },
-                    ], animOptions).onfinish = e => {
-                        e.target.commitStyles()
-                        e.target.cancel()
-                    }
-                    getRef(id).parentNode.append(createElement('sm-spinner'))
-                } catch (e) {
-                    console.log(e)
+                getRef(id).parentNode.append(createElement('sm-spinner'))
+                getRef(id).animate([
+                    {
+                        clipPath: 'circle(100%)',
+                    },
+                    {
+                        clipPath: 'circle(0)',
+                    },
+                ], animOptions).onfinish = e => {
+                    e.target.commitStyles()
+                    e.target.cancel()
                 }
             } else {
+                getRef(id).animate([
+                    {
+                        clipPath: 'circle(0)',
+                    },
+                    {
+                        clipPath: 'circle(100%)',
+                    },
+                ], animOptions).onfinish = e => {
+                    e.target.commitStyles()
+                    e.target.cancel()
+                }
                 getRef(id).style = ''
                 const potentialTarget = getRef(id).parentNode.querySelector('sm-spinner')
                 if (potentialTarget) potentialTarget.remove();
@@ -1463,6 +1483,7 @@
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
                     updateRate()
+                    delete floGlobals.countDowns.timeouts[asset]
                 }, countDown - Date.now());
                 return clone
             },
@@ -1533,7 +1554,8 @@
                 card.appendChild(assetBalance)
                 return card
             },
-            chart(asset, duration = '48 weeks') {
+            chart(asset = 'FLO', duration = '48 weeks') {
+                if (pagesData.currentPage !== 'exchange') return
                 floExchangeAPI.getRateHistory(asset, duration).then(data => {
                     data = data.map(({ time, rate }) => {
                         return {
@@ -1799,9 +1821,9 @@
                 const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
                     getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(8))
-                    getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / unitValue).toFixed(8))
+                    getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / getSuggestedPrice()).toFixed(8))
                 } else {
-                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * floGlobals.exchangeRates[selectedAsset]).toFixed(8))
+                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * getSuggestedPrice()).toFixed(8))
                     getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(8))
 
                 }
@@ -2324,9 +2346,7 @@
             }
         }
 
-        function updateRate(init = false, refreshButton) {
-            if (refreshButton)
-                buttonLoader('wallet_balance_refresh_button', true);
+        function updateRate(init = false) {
             floExchangeAPI.getRates().then(({ rates, countDown }) => {
                 console.debug(rates);
                 if (init) {
@@ -2370,28 +2390,27 @@
                             if (floGlobals.countDowns.intervals.hasOwnProperty(asset)) {
                                 clearInterval(floGlobals.countDowns.intervals[asset]);
                             }
-                            if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
-                                clearTimeout(floGlobals.countDowns.timeouts[asset]);
-                            }
                             floGlobals.countDowns.intervals[asset] = setInterval(() => {
                                 listedAsset.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown[asset])}`
                             }, 1000)
+                            if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
+                                clearTimeout(floGlobals.countDowns.timeouts[asset]);
+                                delete floGlobals.countDowns.timeouts[asset]
+                            }
                             floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
                                 updateRate()
                             }, countDown[asset] - Date.now());
                         }
                     }
                 }
-
-                if (pagesData.params.hasOwnProperty('asset' && pagesData.params.asset !== '')) {
-                    showSuggestedPrice()
-                }
-                if (refreshButton)
-                    buttonLoader('wallet_balance_refresh_button', false);
+                render.chart(pagesData.params.asset)
+                showSuggestedPrice()
             }).catch(error => console.error(error.message))
         }
 
-        function refresh(init = false) {
+        async function refresh(init = false, refreshButton) {
+            if (refreshButton)
+                buttonLoader('wallet_balance_refresh_button', true);
             if (init) {
                 console.info("init");
                 if (!proxy.userID) {
@@ -2414,8 +2433,11 @@
                 console.info("refresh");
             render.marketOrders();
             updateRate(init)
-            if (proxy.userID)
-                account();
+            if (proxy.userID) {
+                await account();
+                if (refreshButton)
+                    buttonLoader('wallet_balance_refresh_button', false);
+            }
         }
 
         let accountDetails = {}
