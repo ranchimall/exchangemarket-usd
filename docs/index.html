@@ -21,10 +21,11 @@
     <script src="scripts/floExchangeAPI.js"></script>
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>
-        const DEFAULT_TRADE_PRICE_DEVIATION = 15 / 100;
+        const DEFAULT_TRADE_PRICE_DEVIATION_BUY = 15 / 100;
+        const DEFAULT_TRADE_PRICE_DEVIATION_SELL = 10 / 100;
         const deviation = {
-            'buy': 1 + DEFAULT_TRADE_PRICE_DEVIATION,
-            'sell': 1 - DEFAULT_TRADE_PRICE_DEVIATION
+            'buy': 1 + DEFAULT_TRADE_PRICE_DEVIATION_BUY,
+            'sell': 1 - DEFAULT_TRADE_PRICE_DEVIATION_SELL
         }
     </script>
 </head>
@@ -1464,8 +1465,8 @@
                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                     <p class="banner">
                         ${tradeType === 'buy' ?
-                    `<b>Valid upto</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> higher than current price.` :
-                    `<b>Valid until</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> lower than current price.`
+                    `<b>Valid upto</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_BUY * 100}%</b> higher than current price.` :
+                    `<b>Valid until</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_SELL * 100}%</b> lower than current price.`
                 } System will always try to execute your order at the <b>nearest price possible to current price</b>.
                     </p>
                 </div>
