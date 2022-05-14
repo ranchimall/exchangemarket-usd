@@ -18,8 +18,8 @@ body {
 body {
   --accent-color: #504dff;
   --text-color: 20, 20, 20;
-  --background-color: 240, 240, 240;
-  --foreground-color: 250, 250, 250;
+  --foreground-color: 252, 253, 255;
+  --background-color: 241, 243, 248;
   --danger-color: rgb(255, 75, 75);
   --green: #1cad59;
   scrollbar-width: thin;
@@ -32,8 +32,8 @@ body {
 body[data-theme="dark"] {
   --accent-color: #a3a1ff;
   --text-color: 220, 220, 220;
-  --background-color: 10, 10, 10;
-  --foreground-color: 24, 24, 24;
+  --foreground-color: 27, 28, 29;
+  --background-color: 21, 22, 22;
   --danger-color: rgb(255, 106, 106);
   --green: #00e676;
   sm-popup::part(popup) {
@@ -654,7 +654,6 @@ sm-checkbox {
 }
 .listed-asset {
   position: relative;
-  grid-template-columns: auto 1fr auto;
   gap: 0.5rem;
   padding: 1rem 0;
   border-radius: 0.5rem;
@@ -663,21 +662,38 @@ sm-checkbox {
   transition: background-color 0.3s;
   user-select: none;
   color: inherit;
+  grid-template-columns: auto 1fr auto auto;
+  grid-template-areas: "icon name rate right-arrow" "icon name countdown right-arrow";
+  &__icon {
+    grid-area: icon;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    display: flex;
+    background-color: var(--accent-color);
+    .icon {
+      height: 1.2rem;
+      width: 1.2rem;
+      fill: rgba(var(--background-color), 1);
+    }
+  }
+  &__name {
+    grid-area: name;
+    margin-left: 0.3rem;
+  }
+  &__rate {
+    grid-area: rate;
+  }
   &__countdown {
+    grid-area: countdown;
     justify-self: flex-end;
     border-radius: 0.3rem;
     padding: 0.2rem 0.4rem;
-    grid-column: 1/-1;
     font-size: 0.8rem;
     background-color: #f0e68cc0;
     color: rgba(0, 0, 0, 0.9);
   }
-  &__icon {
-    display: flex;
-    .icon {
-      height: 1.5rem;
-      width: 1.5rem;
-    }
+  &__right-arrow {
+    grid-area: right-arrow;
   }
 }
 .quantity-selector {
@@ -1180,7 +1196,7 @@ sm-checkbox {
       width: 100%;
       height: 100%;
       gap: 1.5rem;
-      grid-template-columns: 16rem minmax(0, 1fr);
+      grid-template-columns: 17rem minmax(0, 1fr);
       align-items: flex-start;
     }
   }

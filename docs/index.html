@@ -697,6 +697,11 @@
                 <h4 class="listed-asset__name"></h4>
                 <b class="listed-asset__rate"></b>
                 <div class="listed-asset__countdown"></div>
+                <svg class="icon listed-asset__right-arrow hide-on-desktop" xmlns="http://www.w3.org/2000/svg"
+                    height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
+                    <path d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path>
+                </svg>
             </a>
         </li>
     </template>
@@ -1446,15 +1451,15 @@
                     <h3>${formatAmount(floGlobals.exchangeRates[asset])}</h3>
                 </div>
                 <div class="grid">
-                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">${tradeType === 'buy' ? 'Highest' : 'Lowest'} price</div>
+                    <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">Valid ${tradeType === 'buy' ? 'upto' : 'until'}</div>
                     <h3>${formatAmount(getSuggestedPrice(asset))}</h3>
                 </div>
                 <div class="tooltip">
                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                     <p class="banner">
                         ${tradeType === 'buy' ?
-                    `<b>Highest price</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> higher than current price.` :
-                    `<b>Lowest price</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> lower than current price.`
+                    `<b>Valid upto</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> higher than current price.` :
+                    `<b>Valid until</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION * 100}%</b> lower than current price.`
                 } System will always try to execute your order at the <b>nearest price possible to current price</b>.
                     </p>
                 </div>
@@ -1483,7 +1488,7 @@
                 clone.querySelector('.listed-asset__rate').textContent = formatAmount(rate)
                 clone.querySelector('.listed-asset__name').textContent = asset
                 floGlobals.countDowns.intervals[asset] = setInterval(() => {
-                    clone.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown)}`;
+                    clone.querySelector('.listed-asset__countdown').textContent = getTimeLeft(countDown);
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
                     updateRate()
@@ -1510,7 +1515,7 @@
                 card.querySelector('.transaction-card__type').textContent = type
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
                 card.querySelector('.more-info').dataset.other = other
@@ -1525,7 +1530,7 @@
                 card.classList.add(`transaction-card--${type}`)
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.time = time_placed
                 card.querySelector('.more-info').dataset.buyer = type === 'buy' ? floID : undefined
                 card.querySelector('.more-info').dataset.seller = type === 'sell' ? floID : undefined
@@ -1537,7 +1542,7 @@
                 const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
                 card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity))
+                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.time = time
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
@@ -1567,7 +1572,8 @@
                             value: rate
                         }
                     })
-                    lineSeries.setData(data);
+                    if (lineSeries)
+                        lineSeries.setData(data);
                     new ResizeObserver(entries => {
                         chartDimensions.height = entries[0].contentRect.height - 10;
                         chartDimensions.width = entries[0].contentRect.width;
@@ -2402,7 +2408,7 @@
                                 clearInterval(floGlobals.countDowns.intervals[asset]);
                             }
                             floGlobals.countDowns.intervals[asset] = setInterval(() => {
-                                listedAsset.querySelector('.listed-asset__countdown').textContent = `Est. time left: ${getTimeLeft(countDown[asset])}`
+                                listedAsset.querySelector('.listed-asset__countdown').textContent = getTimeLeft(countDown[asset])
                             }, 1000)
                             if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
                                 clearTimeout(floGlobals.countDowns.timeouts[asset]);
