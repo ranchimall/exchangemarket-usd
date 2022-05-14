@@ -743,6 +743,7 @@ smNotifications.innerHTML = `
                     max-width: 100%;
                     padding: 1rem;
                     align-items: center;
+                    box-shadow: 0 0.5rem 1rem 0 rgba(0,0,0,0.14);
                     touch-action: none;
                 }
                 .icon-container:not(:empty){
@@ -802,6 +803,25 @@ smNotifications.innerHTML = `
                 }
                 .close:active{
                     transform: scale(0.9);
+                }
+                .action{
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0.5rem 0.8rem;
+                    border-radius: 0.2rem;
+                    border: none;
+                    background-color: rgba(var(--text-color, (17,17,17)), 0.03);
+                    font-family: inherit;
+                    font-size: inherit;
+                    color: var(--accent-color, teal);
+                    font-weight: 500;
+                    cursor: pointer;
+                }
+                @media screen and (max-width: 640px){
+                    .notification-panel:not(:empty){
+                        padding-bottom: 3rem;
+                    }
                 }
                 @media screen and (min-width: 640px){
                     .notification-panel{
@@ -880,7 +900,7 @@ customElements.define('sm-notifications', class extends HTMLElement {
     }
 
     createNotification(message, options = {}) {
-        const { pinned = false, icon = '' } = options;
+        const { pinned = false, icon = '', action } = options;
         const notification = document.createElement('output')
         notification.id = this.randString(8)
         notification.classList.add('notification');
@@ -889,6 +909,11 @@ customElements.define('sm-notifications', class extends HTMLElement {
                         <div class="icon-container">${icon}</div>
                         <p>${message}</p>
                         `;
+        if (action) {
+            composition += `
+                                <button class="action">${action.label}</button>
+                            `
+        }
         if (pinned) {
             notification.classList.add('pinned');
             composition += `
@@ -930,6 +955,8 @@ customElements.define('sm-notifications', class extends HTMLElement {
             e.target.commitStyles()
             e.target.cancel()
         }
+        if (notification.querySelector('.action'))
+            notification.querySelector('.action').addEventListener('click', options.action.callback)
         return notification.id;
     }
 

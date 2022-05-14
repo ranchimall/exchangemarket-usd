@@ -75,12 +75,13 @@
             </div>
             <theme-toggle id="theme_toggle"></theme-toggle>
             <button id="user_popup_button" class="hide" onclick="showPopup('user_popup')">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px"
-                    fill="#000000">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon margin-right-0-5" height="24px" viewBox="0 0 24 24"
+                    width="24px" fill="#000000">
                     <path d="M0 0h24v24H0V0z" fill="none" />
                     <path
                         d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
                 </svg>
+                <div class="my-flo-id"></div>
             </button>
         </header>
         <section id="pages_container">
@@ -1447,8 +1448,14 @@
             return [`${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`, ((diff % 3600000) / 60000).toFixed(2)]
         }
 
+        // remove digitals after specified decimal places without rounding
+        function toFixed(num, fixed = 8) {
+            var re = new RegExp('^-?\\d+(?:\.\\d{0,' + (fixed || -1) + '})?');
+            return parseFloat(num.toString().match(re)[0]);
+        }
+
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
-            return parseFloat((parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType]).toFixed(8))
+            return toFixed(parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType], 8)
         }
 
         function showSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
@@ -1497,7 +1504,7 @@
                 floGlobals.countDowns.intervals[asset] = setInterval(() => {
                     const [timeLeft, minutes] = getTimeLeft(countDown)
                     clone.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
-                    const pathLength = 65 - Math.ceil((minutes / 60) * 65)
+                    const pathLength = 63 - Math.ceil((minutes / 60) * 63)
                     clone.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
@@ -1725,7 +1732,7 @@
         function getChartTheme() {
             const theme = getRef('theme_toggle').value
             const textColor = window.getComputedStyle(document.body).getPropertyValue('--text-color')
-            const accentColor = theme === 'dark' ? '#a3a1ff' : '#504dff'
+            const accentColor = window.getComputedStyle(document.body).getPropertyValue('--accent-color')
             return {
                 chart: {
                     layout: {
@@ -1841,11 +1848,11 @@
                 const unitValue = getSuggestedPrice()
                 const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
-                    getRef('get_total').value = parseFloat((fraction * allTokens['rupee'].net).toFixed(8))
-                    getRef('get_quantity').value = parseFloat(((allTokens['rupee'].net * fraction) / getSuggestedPrice()).toFixed(8))
+                    getRef('get_total').value = toFixed(fraction * allTokens['rupee'].net)
+                    getRef('get_quantity').value = toFixed((allTokens['rupee'].net * fraction) / getSuggestedPrice())
                 } else {
-                    getRef('get_total').value = parseFloat((fraction * allTokens[selectedAsset].net * getSuggestedPrice()).toFixed(8))
-                    getRef('get_quantity').value = parseFloat((allTokens[selectedAsset].net * fraction).toFixed(8))
+                    getRef('get_total').value = toFixed(fraction * allTokens[selectedAsset].net * getSuggestedPrice())
+                    getRef('get_quantity').value = toFixed(allTokens[selectedAsset].net * fraction)
 
                 }
             }
@@ -1866,11 +1873,11 @@
         })
         getRef('get_quantity').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
-            getRef('get_total').value = parseFloat((parseFloat(e.target.value) * unitValue).toFixed(8)) || 0
+            getRef('get_total').value = toFixed(parseFloat(e.target.value) * unitValue)
         })
         getRef('get_total').addEventListener('keyup', e => {
             const unitValue = getSuggestedPrice()
-            getRef('get_quantity').value = parseFloat((parseFloat(e.target.value) / unitValue).toFixed(8)) || 0
+            getRef('get_quantity').value = toFixed(parseFloat(e.target.value) / unitValue)
         })
 
         getRef('wallet_actions').addEventListener('click', e => {
@@ -1879,7 +1886,7 @@
                 const type = target.value
                 const asset = getRef('wallet_asset_selector').value
 
-                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[asset].net.toFixed(8))} ${asset}`
+                getRef('wallet_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${toFixed(allTokens[asset].net)} ${asset}`
                 getRef('wallet_popup__cta').textContent = `${type} ${asset}`
                 getRef('wallet_popup__cta').setAttribute('value', type)
                 getRef('wallet_popup__title').textContent = `${type} ${asset}`
@@ -1966,7 +1973,7 @@
                 const target = e.target.closest('button')
                 const asset = getRef('wallet_asset_selector').value
                 const fraction = parseFloat(target.value)
-                let total = parseFloat((allTokens[asset].net * fraction).toFixed(8));
+                let total = toFixed(allTokens[asset].net * fraction);
                 if (asset == 'FLO' && fraction === 1 & total > 0.1) {
                     total -= 0.1;
                 }
@@ -2242,10 +2249,10 @@
                 case 'confirm_trade_popup':
                     const asset = pagesData.params.asset;
                     const quantity = parseFloat(getRef('get_quantity').value)
-                    const currentPrice = parseFloat(floGlobals.exchangeRates[asset].toFixed(8));
-                    const price = parseFloat(getSuggestedPrice().toFixed(8));
+                    const currentPrice = toFixed(floGlobals.exchangeRates[asset]);
+                    const price = toFixed(getSuggestedPrice());
                     const total = formatAmount(parseFloat(getRef('get_total').value))
-                    const minTotal = formatAmount(parseFloat((currentPrice * quantity).toFixed(8)))
+                    const minTotal = formatAmount(toFixed(currentPrice * quantity))
                     getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`
                     getRef('confirm_trade__details').innerHTML = `
                         <div class="grid">
@@ -2421,7 +2428,7 @@
                             floGlobals.countDowns.intervals[asset] = setInterval(() => {
                                 const [timeLeft, minutes] = getTimeLeft(countDown[asset])
                                 listedAsset.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
-                                const pathLength = 65 - Math.ceil((minutes / 60) * 65)
+                                const pathLength = 63 - Math.ceil((minutes / 60) * 63)
                                 listedAsset.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                             }, 1000)
                             if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
@@ -2485,6 +2492,7 @@
                 console.debug(acc);
                 //Element display
                 document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide'))
+                document.querySelectorAll(".my-flo-id").forEach(elem => elem.textContent = acc.floID)
                 getRef("user_id").value = acc.floID;
                 getRef("sink_id").value = acc.sinkID;
                 if (acc.subAdmin)
