@@ -657,7 +657,6 @@ sm-checkbox {
   gap: 0.5rem;
   padding: 1rem 0;
   border-radius: 0.5rem;
-  opacity: 0.8;
   font-weight: 400;
   transition: background-color 0.3s;
   user-select: none;
@@ -684,16 +683,33 @@ sm-checkbox {
     grid-area: rate;
   }
   &__countdown {
+    display: flex;
+    align-items: center;
     grid-area: countdown;
     justify-self: flex-end;
-    border-radius: 0.3rem;
-    padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
-    background-color: #f0e68cc0;
-    color: rgba(0, 0, 0, 0.9);
+    color: var(--accent-color);
+    .icon {
+      margin-left: 0.3rem;
+      overflow: visible;
+      stroke-width: 4;
+      fill: none;
+      .path-a {
+        stroke: var(--accent-color);
+        stroke-dashoffset: var(--path-length, 0);
+        stroke-dasharray: 65;
+      }
+      .path-b {
+        stroke: rgba(var(--text-color), 0.2);
+      }
+    }
   }
   &__right-arrow {
     grid-area: right-arrow;
+    background-color: rgba(var(--text-color), 0.1);
+    border-radius: 1rem;
+    padding: 0.1rem;
+    margin-left: 0.3rem;
   }
 }
 .quantity-selector {

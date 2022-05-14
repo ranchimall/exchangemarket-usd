@@ -696,7 +696,13 @@
                 <div class="listed-asset__icon"></div>
                 <h4 class="listed-asset__name"></h4>
                 <b class="listed-asset__rate"></b>
-                <div class="listed-asset__countdown"></div>
+                <div class="listed-asset__countdown">
+                    timer
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 24">
+                        <path class="path-a" d="M11.5,2a10,10,0,1,1-10,10,10,10,0,0,1,10-10" />
+                        <path class="path-b" d="M11.5,2a10,10,0,1,1-10,10,10,10,0,0,1,10-10" />
+                    </svg>
+                </div>
                 <svg class="icon listed-asset__right-arrow hide-on-desktop" xmlns="http://www.w3.org/2000/svg"
                     height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
                     <path d="M0 0h24v24H0z" fill="none"></path>
@@ -1434,10 +1440,10 @@
         // Convert milliseconds to time left in HH:MM:SS format
         function getTimeLeft(milliseconds) {
             const diff = milliseconds - Date.now()
-            const hours = Math.floor(diff / 3600000)
+            // const hours = Math.floor(diff / 3600000)
             const minutes = Math.floor((diff % 3600000) / 60000)
             const seconds = Math.floor(((diff % 3600000) % 60000) / 1000)
-            return `${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
+            return [`${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`, ((diff % 3600000) / 60000).toFixed(2)]
         }
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
@@ -1488,7 +1494,10 @@
                 clone.querySelector('.listed-asset__rate').textContent = formatAmount(rate)
                 clone.querySelector('.listed-asset__name').textContent = asset
                 floGlobals.countDowns.intervals[asset] = setInterval(() => {
-                    clone.querySelector('.listed-asset__countdown').textContent = getTimeLeft(countDown);
+                    const [timeLeft, minutes] = getTimeLeft(countDown)
+                    clone.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
+                    const pathLength = 65 - Math.ceil((minutes / 60) * 65)
+                    clone.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
                     updateRate()
@@ -1577,7 +1586,8 @@
                     new ResizeObserver(entries => {
                         chartDimensions.height = entries[0].contentRect.height - 10;
                         chartDimensions.width = entries[0].contentRect.width;
-                        chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
+                        if (chart)
+                            chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
                     }).observe(getRef('price_chart_wrapper'));
                 })
             },
@@ -2408,7 +2418,10 @@
                                 clearInterval(floGlobals.countDowns.intervals[asset]);
                             }
                             floGlobals.countDowns.intervals[asset] = setInterval(() => {
-                                listedAsset.querySelector('.listed-asset__countdown').textContent = getTimeLeft(countDown[asset])
+                                const [timeLeft, minutes] = getTimeLeft(countDown[asset])
+                                listedAsset.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
+                                const pathLength = 65 - Math.ceil((minutes / 60) * 65)
+                                listedAsset.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                             }, 1000)
                             if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
                                 clearTimeout(floGlobals.countDowns.timeouts[asset]);
@@ -2516,7 +2529,7 @@
                 showPage(window.location.hash);
             }).catch(error => {
                 console.debug(error)
-                if (error.message === 'Invalid request signature! Re-login if this error occurs frequently') {
+                if (['015', '016', '018', '019'].includes(error.code)) {
                     proxy.clear()
                     location.reload()
                 }
