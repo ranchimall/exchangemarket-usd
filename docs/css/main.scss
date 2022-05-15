@@ -203,6 +203,15 @@ ul {
 .flex {
   display: flex;
 }
+.flex-1 {
+  flex: 1;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.direction-column {
+  flex-direction: column;
+}
 
 .grid {
   display: grid;
@@ -281,10 +290,6 @@ ul {
 
 .justify-self-end {
   justify-self: end;
-}
-
-.direction-column {
-  flex-direction: column;
 }
 
 .space-between {
@@ -394,12 +399,12 @@ ul {
   width: 100%;
   padding: 0 1.5rem;
   align-items: center;
+  justify-items: flex-start;
 }
 
 .popup__header__close {
   padding: 0.5rem;
-  margin-left: -0.7rem;
-  cursor: pointer;
+  margin-left: -0.5rem;
 }
 
 #main_page {
@@ -830,6 +835,7 @@ sm-checkbox {
 
 .transaction-card,
 .live-order {
+  gap: 0 1rem;
   &__type {
     font-size: 0.9rem;
     font-weight: 500;
@@ -852,6 +858,9 @@ sm-checkbox {
   &__price {
     font-size: 0.9rem;
     color: rgba(var(--text-color), 0.9);
+  }
+  .more-info {
+    padding: 0.3rem;
   }
 }
 .transaction-card {
@@ -1133,6 +1142,7 @@ sm-checkbox {
     --width: 24rem;
   }
   .popup__header {
+    grid-column: 1/-1;
     padding: 1rem 1.5rem 0 1.5rem;
   }
   #confirmation_popup {

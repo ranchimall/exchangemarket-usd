@@ -1621,7 +1621,7 @@
                     })
                 } else {
                     getRef('my_orders__title').textContent = 'My trades'
-                    transactions.forEach(transaction => {
+                    transactions.reverse().forEach(transaction => {
                         const { asset, quantity, unitValue, tx_time, buyer, seller } = transaction
                         let type, other;
                         if (seller === proxy.userID) {
