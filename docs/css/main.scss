@@ -333,7 +333,7 @@ ul {
   margin-left: 0.5rem;
 }
 .icon-only {
-  padding: 0.6rem;
+  padding: 0.5rem;
   aspect-ratio: 1/1;
   background-color: transparent;
 }
@@ -422,7 +422,6 @@ ul {
   margin-right: auto;
   h4 {
     text-transform: capitalize;
-    font-size: 0.9rem;
     font-weight: 600;
   }
 
@@ -769,7 +768,7 @@ sm-checkbox {
 
 #my_orders,
 #market {
-  width: min(42rem, 100%);
+  width: min(46rem, 100%);
 }
 #my_orders {
   grid-template-rows: auto 1fr;
@@ -832,7 +831,7 @@ sm-checkbox {
     margin-left: 0.3rem;
   }
 }
-
+.completed-trade,
 .transaction-card,
 .live-order {
   gap: 0 1rem;
@@ -859,6 +858,10 @@ sm-checkbox {
     font-size: 0.9rem;
     color: rgba(var(--text-color), 0.9);
   }
+  &__time {
+    font-size: 0.8rem;
+    color: rgba(var(--text-color), 0.8);
+  }
   .more-info {
     padding: 0.3rem;
   }
@@ -867,6 +870,15 @@ sm-checkbox {
   content-visibility: auto;
   contain-intrinsic-size: 2.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
+}
+.completed-trade {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+  background-color: rgba(var(--text-color), 0.03);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
 }
 #market_asset_rates {
   display: grid;
@@ -1251,6 +1263,22 @@ sm-checkbox {
       gap: 2rem;
       width: 100%;
       grid-template-columns: 18rem 1fr;
+    }
+  }
+  .completed-trade {
+    grid-template-columns: 1fr 1fr 1fr 8rem;
+    grid-template-areas: "quantity price amount info";
+    .quantity-block {
+      grid-area: quantity;
+    }
+    .price-block {
+      grid-area: price;
+    }
+    .amount-block {
+      grid-area: amount;
+    }
+    .info-block {
+      grid-area: info;
     }
   }
 }

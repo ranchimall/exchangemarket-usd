@@ -347,7 +347,7 @@ ul {
 }
 
 .icon-only {
-  padding: 0.6rem;
+  padding: 0.5rem;
   aspect-ratio: 1/1;
   background-color: transparent;
 }
@@ -447,7 +447,6 @@ ul {
 }
 .logo h4 {
   text-transform: capitalize;
-  font-size: 0.9rem;
   font-weight: 600;
 }
 .logo .main-logo {
@@ -814,7 +813,7 @@ sm-checkbox {
 
 #my_orders,
 #market {
-  width: min(42rem, 100%);
+  width: min(46rem, 100%);
 }
 
 #my_orders {
@@ -882,46 +881,78 @@ sm-checkbox {
   margin-left: 0.3rem;
 }
 
+.completed-trade,
 .transaction-card,
 .live-order {
   gap: 0 1rem;
 }
+.completed-trade__type,
 .transaction-card__type,
 .live-order__type {
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 0.3rem;
 }
-.transaction-card[data-type=Bought] .transaction-card__type, .transaction-card--buy .transaction-card__type,
+.completed-trade[data-type=Bought] .completed-trade__type, .completed-trade--buy .completed-trade__type,
+.completed-trade[data-type=Bought] .transaction-card__type,
+.completed-trade--buy .transaction-card__type,
+.completed-trade[data-type=Bought] .live-order__type,
+.completed-trade--buy .live-order__type,
+.transaction-card[data-type=Bought] .completed-trade__type,
+.transaction-card--buy .completed-trade__type,
+.transaction-card[data-type=Bought] .transaction-card__type,
+.transaction-card--buy .transaction-card__type,
 .transaction-card[data-type=Bought] .live-order__type,
 .transaction-card--buy .live-order__type,
+.live-order[data-type=Bought] .completed-trade__type,
+.live-order--buy .completed-trade__type,
 .live-order[data-type=Bought] .transaction-card__type,
 .live-order--buy .transaction-card__type,
 .live-order[data-type=Bought] .live-order__type,
 .live-order--buy .live-order__type {
   color: var(--green);
 }
-.transaction-card[data-type=Sold] .transaction-card__type, .transaction-card--sell .transaction-card__type,
+.completed-trade[data-type=Sold] .completed-trade__type, .completed-trade--sell .completed-trade__type,
+.completed-trade[data-type=Sold] .transaction-card__type,
+.completed-trade--sell .transaction-card__type,
+.completed-trade[data-type=Sold] .live-order__type,
+.completed-trade--sell .live-order__type,
+.transaction-card[data-type=Sold] .completed-trade__type,
+.transaction-card--sell .completed-trade__type,
+.transaction-card[data-type=Sold] .transaction-card__type,
+.transaction-card--sell .transaction-card__type,
 .transaction-card[data-type=Sold] .live-order__type,
 .transaction-card--sell .live-order__type,
+.live-order[data-type=Sold] .completed-trade__type,
+.live-order--sell .completed-trade__type,
 .live-order[data-type=Sold] .transaction-card__type,
 .live-order--sell .transaction-card__type,
 .live-order[data-type=Sold] .live-order__type,
 .live-order--sell .live-order__type {
   color: var(--danger-color);
 }
+.completed-trade__total,
 .transaction-card__total,
 .live-order__total {
   font-weight: 700;
   font-size: 0.9rem;
   color: rgba(var(--text-color), 0.8);
 }
-.transaction-card__quantity, .transaction-card__price,
+.completed-trade__quantity, .completed-trade__price,
+.transaction-card__quantity,
+.transaction-card__price,
 .live-order__quantity,
 .live-order__price {
   font-size: 0.9rem;
   color: rgba(var(--text-color), 0.9);
 }
+.completed-trade__time,
+.transaction-card__time,
+.live-order__time {
+  font-size: 0.8rem;
+  color: rgba(var(--text-color), 0.8);
+}
+.completed-trade .more-info,
 .transaction-card .more-info,
 .live-order .more-info {
   padding: 0.3rem;
@@ -931,6 +962,16 @@ sm-checkbox {
   content-visibility: auto;
   contain-intrinsic-size: 2.5rem;
   grid-template-columns: repeat(3, 1fr) 2rem;
+}
+
+.completed-trade {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 1fr 1fr;
+  background-color: rgba(var(--text-color), 0.03);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 #market_asset_rates {
@@ -1377,6 +1418,23 @@ sm-checkbox {
     gap: 2rem;
     width: 100%;
     grid-template-columns: 18rem 1fr;
+  }
+
+  .completed-trade {
+    grid-template-columns: 1fr 1fr 1fr 8rem;
+    grid-template-areas: "quantity price amount info";
+  }
+  .completed-trade .quantity-block {
+    grid-area: quantity;
+  }
+  .completed-trade .price-block {
+    grid-area: price;
+  }
+  .completed-trade .amount-block {
+    grid-area: amount;
+  }
+  .completed-trade .info-block {
+    grid-area: info;
   }
 }
 @media screen and (min-width: 64rem) {

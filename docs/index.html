@@ -74,7 +74,7 @@
                 </div>
             </div>
             <theme-toggle id="theme_toggle"></theme-toggle>
-            <button id="user_popup_button" class="hide" onclick="showPopup('user_popup')">
+            <button id="user_popup_button" class="hide user-content button--small" onclick="showPopup('user_popup')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon margin-right-0-5" height="24px" viewBox="0 0 24 24"
                     width="24px" fill="#000000">
                     <path d="M0 0h24v24H0V0z" fill="none" />
@@ -256,7 +256,7 @@
                         <h4 id="market_orders__title" class="flex align-center">
                             Market-wide trades
                         </h4>
-                        <button onclick="refresh();" title="Refresh" style="margin-left: 1rem;">
+                        <button class="icon-only" onclick="refresh();" title="Refresh">
                             <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                 width="24px" fill="#000000">
                                 <path d="M0 0h24v24H0V0z" fill="none" />
@@ -758,7 +758,7 @@
     </template>
     <template id="market_order_template">
         <li class="live-order align-center">
-            <div class="flex gap-1 space-between align-start">
+            <div class="flex gap-1 space-between align-center">
                 <b class="transaction-card__quantity"></b>
                 <button class="more-info" title="View order details">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
@@ -781,40 +781,52 @@
         </li>
     </template>
     <template id="transaction_template">
-        <li class="list__item transaction-card align-center">
-            <div class="grid">
-                <div class="transaction-card__type capitalize"></div>
-                <div class="transaction-card__quantity"></div>
+        <li class="completed-trade align-center">
+            <div class="grid quantity-block">
+                <div class="completed-trade__type capitalize"></div>
+                <b class="completed-trade__quantity"></b>
             </div>
-            <div class="grid">
-                <span class="label transaction-card__price-type">Unit price</span>
-                <div class="transaction-card__price"></div>
+            <div class="flex align-center info-block">
+                <time class="completed-trade__time"></time>
+                <button class="more-info" title="View transaction details">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                        <path d="M0 0h24v24H0V0z" fill="none" />
+                        <path
+                            d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                    </svg>
+                </button>
             </div>
-            <div class="grid">
-                <span class="label transaction-card__price-type">Amount</span>
-                <div class="transaction-card__total"></div>
+            <div class="grid price-block">
+                <span class="label">Unit price</span>
+                <b class="completed-trade__price"></b>
             </div>
-            <button class="more-info" title="View transaction details">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
-                    <path d="M0 0h24v24H0V0z" fill="none" />
-                    <path
-                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
-            </button>
+            <div class="grid amount-block">
+                <span class="label">Amount</span>
+                <b class="completed-trade__total"></b>
+            </div>
         </li>
     </template>
     <template id="market_transaction_template">
-        <li class="list__item transaction-card align-center">
-            <div class="transaction-card__quantity"></div>
-            <div class="transaction-card__price"></div>
-            <div class="transaction-card__total"></div>
-            <button class="more-info" title="View transaction details">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
-                    <path d="M0 0h24v24H0V0z" fill="none" />
-                    <path
-                        d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                </svg>
-            </button>
+        <li class="completed-trade align-center">
+            <b class="completed-trade__quantity quantity-block"></b>
+            <div class="flex align-center info-block">
+                <time class="completed-trade__time"></time>
+                <button class="more-info" title="View transaction details">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
+                        <path d="M0 0h24v24H0V0z" fill="none" />
+                        <path
+                            d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="grid  price-block">
+                <span class="label">Traded at</span>
+                <b class="completed-trade__price"></b>
+            </div>
+            <div class="grid amount-block">
+                <span class="label">Amount</span>
+                <b class="completed-trade__total"></b>
+            </div>
         </li>
     </template>
     <template id="market_order_list_template">
@@ -1145,12 +1157,13 @@
                 history.replaceState(null, null, '#/exchange')
             }
             pagesData.currentPage = pageId
-            if (!firstLoad)
+            if (!firstLoad) {
                 switch (pageId) {
                     case 'exchange':
                         if (!document.body.classList.contains('is-signed-in')) break;
                         if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
-                            params.asset = 'FLO'
+                            if (getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`))
+                                getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`).click()
                         }
                         if (params.hasOwnProperty('asset') && params.asset !== '') {
                             if (getRef('listed_assets').querySelector('.listed-asset--active'))
@@ -1226,6 +1239,7 @@
                     case 'wallet':
                         break;
                 }
+            }
             if (pagesData.lastPage !== pageId) {
                 document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide'))
                 getRef(pageId).classList.remove('hide')
@@ -1529,14 +1543,14 @@
                 const { buyer, seller, type, other, asset, quantity, unitValue, time } = transactionDetails
                 const card = getRef('transaction_template').content.cloneNode(true).firstElementChild
                 card.dataset.type = type
-                card.querySelector('.transaction-card__type').textContent = type
-                card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
-                card.querySelector('.transaction-card__price').textContent = formatAmount(unitValue)
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
+                card.querySelector('.completed-trade__type').textContent = type
+                card.querySelector('.completed-trade__quantity').textContent = `${quantity} ${asset}`
+                card.querySelector('.completed-trade__time').textContent = getFormattedTime(time)
+                card.querySelector('.completed-trade__price').textContent = formatAmount(unitValue)
+                card.querySelector('.completed-trade__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
                 card.querySelector('.more-info').dataset.other = other
-                card.querySelector('.more-info').dataset.time = time
                 return card
             },
             marketOrderCard(orderDetails = {}) {
@@ -1557,10 +1571,10 @@
             marketTransactionCard(transactionDetails = {}) {
                 const { buyer, seller, asset, quantity, unitValue, time } = transactionDetails
                 const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
-                card.querySelector('.transaction-card__quantity').textContent = `${quantity} ${asset}`
-                card.querySelector('.transaction-card__price').textContent = `₹${unitValue}`
-                card.querySelector('.transaction-card__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
-                card.querySelector('.more-info').dataset.time = time
+                card.querySelector('.completed-trade__quantity').textContent = `${quantity} ${asset}`
+                card.querySelector('.completed-trade__time').textContent = getFormattedTime(time)
+                card.querySelector('.completed-trade__price').textContent = `₹${unitValue}`
+                card.querySelector('.completed-trade__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
                 return card
@@ -1650,6 +1664,7 @@
             marketOrders() {
                 const frag = document.createDocumentFragment()
                 const ordersType = getRef('market_orders_category_selector').value
+                getRef('market_trades').innerHTML = '';
                 if (ordersType === 'open') {
                     getRef('market_orders__title').textContent = 'Market-wide orders';
                     showChild('market_orders_wrapper', 0)
@@ -1697,8 +1712,8 @@
                             frag.append(render.marketTransactionCard(transactionDetails))
                         })
                         getRef('market_trades').innerHTML = '';
-                        const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
-                        getRef('market_trades').append(marketTransactionList)
+                        // const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
+                        // getRef('market_trades').append(marketTransactionList)
                         getRef('market_trades').append(frag)
                     }).catch(err => {
                         console.log(err)
@@ -2147,8 +2162,13 @@
             } else {
                 getRef('transaction__seller_wrapper').classList.add('hide')
             }
-            getRef('transaction_time__label').textContent = target.dataset.pending === 'true' ? 'Placed on' : 'Completed on'
-            getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
+            if (target.dataset.time !== undefined) {
+                getRef('transaction_time__label').textContent = target.dataset.pending === 'true' ? 'Placed on' : 'Completed on'
+                getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
+                getRef('transaction_time').parentNode.classList.remove('hide')
+            } else {
+                getRef('transaction_time').parentNode.classList.add('hide')
+            }
         }
 
         getRef('orders_list').addEventListener('click', e => {
@@ -2487,7 +2507,6 @@
                 // save login time
                 localStorage.setItem(`${acc.floID}_last_login`, Date.now());
                 getRef("login_form").classList.add('hide')
-                getRef('user_popup_button').classList.remove('hide')
                 accountDetails = acc
                 console.debug(acc);
                 //Element display
