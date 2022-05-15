@@ -863,6 +863,7 @@ sm-checkbox {
     color: rgba(var(--text-color), 0.8);
   }
   .more-info {
+    flex-shrink: 0;
     padding: 0.3rem;
   }
 }

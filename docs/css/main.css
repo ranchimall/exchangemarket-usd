@@ -955,6 +955,7 @@ sm-checkbox {
 .completed-trade .more-info,
 .transaction-card .more-info,
 .live-order .more-info {
+  flex-shrink: 0;
   padding: 0.3rem;
 }
 
