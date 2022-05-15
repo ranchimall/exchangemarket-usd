@@ -722,7 +722,7 @@ sm-checkbox {
 }
 
 #quantity_type,
-#wallet_quantity_type {
+#portfolio_quantity_type {
   font-size: 0.8rem;
   padding-right: 0.5rem;
   border-right: thin solid rgba(var(--text-color), 0.3);
@@ -918,14 +918,14 @@ sm-checkbox {
     background-color: #e2135110;
   }
 }
-#wallet {
+#portfolio {
   display: grid;
   width: auto;
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
   align-content: flex-start;
 }
-.wallet_actions__wrapper {
+.portfolio_actions__wrapper {
   grid-column: span 3;
   gap: 0.5rem;
   margin-top: 0.5rem;
@@ -986,7 +986,7 @@ sm-checkbox {
     }
   }
 }
-#wallet_result {
+#portfolio_result {
   justify-content: center;
   text-align: center;
   &__icon {
@@ -1019,7 +1019,7 @@ sm-checkbox {
     opacity: 1;
   }
 }
-#wallet_result__cta {
+#portfolio_result__cta {
   padding: 1.5rem 1rem;
   border-radius: 0.5rem;
   background-color: rgba(var(--text-color), 0.06);
@@ -1295,7 +1295,7 @@ sm-checkbox {
   #asset_page__nav {
     grid-column: 1/-1;
   }
-  #wallet {
+  #portfolio {
     gap: 1rem 2rem;
     grid-template-columns: 20rem 24rem;
     &__header {
