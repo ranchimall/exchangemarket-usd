@@ -1744,7 +1744,7 @@
         function getChartTheme() {
             const theme = getRef('theme_toggle').value
             const textColor = window.getComputedStyle(document.body).getPropertyValue('--text-color')
-            const accentColor = window.getComputedStyle(document.body).getPropertyValue('--accent-color')
+            const accentColor = theme === 'dark' ? '#a4b3ff' : '#516beb'
             return {
                 chart: {
                     layout: {
