@@ -120,22 +120,18 @@
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
-                        <nav id="asset_page__nav" class="hide-on-desktop">
-                            <a href="#/exchange" class="button icon-only">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
-                                    width="24px" fill="#000000">
-                                    <path d="M0 0h24v24H0V0z" fill="none" />
-                                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                                </svg>
-                            </a>
-                            <strip-select id="trading_view_switcher">
-                                <strip-option value="trade" selected>Trade</strip-option>
-                                <strip-option value="chart">Chart</strip-option>
-                            </strip-select>
-                        </nav>
-                        <div id="price_chart_container" class="flex direction-column gap-0-5 hide-on-mobile">
+                        <div id="price_chart_container" class="flex direction-column gap-0-5">
                             <div id="chart_header" class="flex align-center space-between">
-                                <H4 id="chart_asset"></H4>
+                                <div class="flex align-center">
+                                    <a href="#/exchange" class="button icon-only hide-on-desktop flex align-center">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
+                                            viewBox="0 0 24 24" width="24px" fill="#000000">
+                                            <path d="M0 0h24v24H0V0z" fill="none" />
+                                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                                        </svg>
+                                    </a>
+                                    <H4 id="chart_asset"></H4>
+                                </div>
                                 <strip-select id="price_duration_selector">
                                     <strip-option value="hour" title="1 Hour price interval" selected>Hour
                                     </strip-option>
@@ -146,7 +142,16 @@
                                 <div id="price_history_chart"></div>
                             </div>
                         </div>
-                        <sm-form id="trade_form">
+                        <sm-form id="trade_form" class="hide-on-mobile">
+                            <button class="popup__header__close hide-on-desktop" style="margin-right: auto;"
+                                onclick="hideTradePanel()">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24"
+                                    height="24">
+                                    <path fill="none" d="M0 0h24v24H0z" />
+                                    <path
+                                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                                </svg>
+                            </button>
                             <div class="flex space-between align-center">
                                 <h4 id="traded_asset">Trade FLO</h4>
                                 <strip-select id="trade_type_selector" class="tab">
@@ -194,6 +199,9 @@
                                 </sm-button>
                             </div>
                         </sm-form>
+                        <div id="trade_panel_backdrop" onclick="hideTradePanel()" class="hide-on-mobile"></div>
+                        <button id="show_trade_panel" class="button button--primary hide-on-desktop cta"
+                            onclick="showTradePanel()">Buy / Sell</button>
                     </div>
                 </section>
             </div>
@@ -1778,16 +1786,44 @@
         }
 
         document.addEventListener('themechange', setChartTheme)
-
-        getRef('trading_view_switcher').addEventListener('change', e => {
-            if (e.target.value === 'trade') {
-                getRef('price_chart_container').classList.add('hide-on-mobile')
-                getRef('trade_form').classList.remove('hide-on-mobile')
-            } else {
+        function showTradePanel() {
+            getRef('trade_form').classList.remove('hide-on-mobile')
+            getRef('trade_form').animate([
+                { transform: 'translateY(100%)' },
+                { transform: 'translateY(0)' },
+            ], {
+                duration: 150,
+                easing: 'ease'
+            })
+            getRef('trade_panel_backdrop').classList.remove('hide-on-mobile')
+            getRef('trade_panel_backdrop').animate([
+                { opacity: 0 },
+                { opacity: 1 },
+            ], {
+                duration: 150,
+                easing: 'ease'
+            })
+        }
+        function hideTradePanel() {
+            getRef('trade_form').animate([
+                { transform: 'translateY(0)' },
+                { transform: 'translateY(100%)' },
+            ], {
+                duration: 150,
+                easing: 'ease'
+            }).onfinish = () => {
                 getRef('trade_form').classList.add('hide-on-mobile')
-                getRef('price_chart_container').classList.remove('hide-on-mobile')
             }
-        })
+            getRef('trade_panel_backdrop').animate([
+                { opacity: 1 },
+                { opacity: 0 },
+            ], {
+                duration: 150,
+                easing: 'ease'
+            }).onfinish = () => {
+                getRef('trade_panel_backdrop').classList.add('hide-on-mobile')
+            }
+        }
 
         function updateTooltip(asset, tradeType) {
             getRef('quantity_selector').querySelectorAll('.button').forEach(button => {

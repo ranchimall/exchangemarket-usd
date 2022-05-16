@@ -643,8 +643,8 @@ sm-checkbox {
   width: 100%;
   justify-content: center;
   overflow-y: auto;
-  padding: 0 1.5rem;
   & > * {
+    padding: 0 1.5rem;
     min-width: min(26rem, 100%);
   }
 }
@@ -738,18 +738,10 @@ sm-checkbox {
   height: 100%;
 }
 #asset_page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-#asset_page__nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 0;
-  .icon-only {
-    margin-left: -0.7rem;
-  }
 }
 #trade_form {
   height: 100%;
@@ -765,7 +757,6 @@ sm-checkbox {
     margin-top: auto;
   }
 }
-
 #my_orders,
 #market {
   width: min(46rem, 100%);
@@ -1139,9 +1130,52 @@ sm-checkbox {
       transform: translateY(50%) scale(1.2);
     }
   }
+  #asset_list_wrapper {
+    padding: 0 1.5rem;
+  }
   .listed-asset {
     border-radius: 0;
     border-bottom: solid thin rgba(var(--text-color), 0.1);
+  }
+  #exchange {
+    margin: 0;
+    padding: 0;
+  }
+  #chart_header {
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    margin-left: -0.7rem;
+  }
+  #trade_panel_backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background-color: rgba(var(--text-color), 0.16);
+    backdrop-filter: blur(0.5rem);
+    z-index: 3;
+  }
+  #show_trade_panel {
+    position: absolute;
+    border-radius: 2rem;
+    bottom: 0;
+    align-self: center;
+    margin-bottom: 1rem;
+    z-index: 5;
+  }
+  #trade_form {
+    position: fixed;
+    height: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-top: auto;
+    width: auto;
+    z-index: 10;
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    border-radius: 1rem 1rem 0 0;
+    background-color: rgba(var(--foreground-color), 1);
+    box-shadow: 0 -0.5rem 1rem rgba(0, 0, 0, 0.1);
   }
   #price_chart_container {
     flex: 1;
@@ -1210,6 +1244,10 @@ sm-checkbox {
   }
   #pages_container {
     grid-area: pages;
+    & > * {
+      margin: 0 1.5rem;
+      padding: 2rem;
+    }
   }
   .is-signed-in {
     #exchange {
@@ -1241,7 +1279,7 @@ sm-checkbox {
         position: absolute;
         width: 0.25rem;
         border-radius: 0 0.2rem 0.2rem 0;
-        height: 50%;
+        height: 2rem;
         background-color: var(--accent-color);
       }
     }
@@ -1291,9 +1329,6 @@ sm-checkbox {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(0, 1fr) 20rem;
-  }
-  #asset_page__nav {
-    grid-column: 1/-1;
   }
   #portfolio {
     gap: 1rem 2rem;
