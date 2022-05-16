@@ -501,7 +501,7 @@ sm-checkbox {
 }
 .tooltip {
   position: relative;
-  z-index: 1;
+  z-index: 20;
   cursor: pointer;
   .banner {
     position: absolute;
@@ -911,10 +911,76 @@ sm-checkbox {
 }
 #portfolio {
   display: grid;
-  width: auto;
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
   align-content: flex-start;
+  width: min(60rem, 100%);
+}
+.personal-asset-balance {
+  align-content: flex-start;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: rgba(0, 0, 0, 0.8);
+  width: 100%;
+  &:not(:last-of-type) {
+    margin-right: 0.5rem;
+  }
+  &:nth-of-type(1) {
+    background: url("bg-art2.svg") no-repeat bottom right, hsl(141, 100%, 88%);
+    background-size: contain;
+    .icon {
+      background-color: hsla(141, 100%, 70%, 0.5);
+    }
+    .button {
+      border: solid thin hsla(141, 100%, 70%, 0.5);
+    }
+  }
+  &:nth-of-type(2) {
+    background: url("back.svg") no-repeat top right, hsl(62, 100%, 83%);
+    background-size: contain;
+    .icon {
+      background-color: hsla(55, 100%, 50%, 0.5);
+    }
+  }
+  & > .flex {
+    margin-bottom: 0.3rem;
+    .icon {
+      height: 2rem;
+      width: 2rem;
+      padding: 0.4rem;
+      border-radius: 0.3rem;
+      fill: rgba(0, 0, 0, 0.8);
+      margin-right: 0.5rem;
+    }
+  }
+  .button {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding-right: 0.8rem;
+    justify-self: flex-start;
+    border-radius: 1rem;
+    background-color: rgba(var(--foreground-color), 1);
+    color: rgba(var(--text-color), 1);
+    transition: box-shadow 0.3s;
+    .icon {
+      height: 1rem;
+      background-color: transparent;
+      margin-right: 0.3rem;
+    }
+    &:hover {
+      box-shadow: 0 0.3rem 0.5rem rgba(0 0 0/ 0.16);
+    }
+  }
+}
+#personal_rupee_balance,
+#personal_flo_balance {
+  span:first-of-type {
+    font-size: 1.5rem;
+  }
+  span:last-of-type {
+    font-size: 0.9rem;
+  }
 }
 .portfolio_actions__wrapper {
   grid-column: span 3;
@@ -932,6 +998,7 @@ sm-checkbox {
 #my_assets {
   gap: 0.5rem;
   margin-top: 0.5rem;
+  padding-bottom: 1.5rem;
 }
 .balance-card {
   display: grid;
@@ -1184,6 +1251,15 @@ sm-checkbox {
   #price_chart_container {
     flex: 1;
   }
+  #portfolio_cards_wrapper {
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+  }
+  .personal-asset-balance {
+    scroll-snap-align: start;
+    width: min(16rem, 90%);
+    flex-shrink: 0;
+  }
   .hide-on-mobile {
     display: none !important;
   }
@@ -1336,7 +1412,7 @@ sm-checkbox {
   }
   #portfolio {
     gap: 1rem 2rem;
-    grid-template-columns: 20rem 24rem;
+    grid-template-columns: 1.2fr 1fr;
     &__header {
       grid-column: 1/3;
       padding-bottom: 1rem;

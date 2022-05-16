@@ -531,7 +531,7 @@ sm-checkbox {
 
 .tooltip {
   position: relative;
-  z-index: 1;
+  z-index: 20;
   cursor: pointer;
 }
 .tooltip .banner {
@@ -1006,10 +1006,77 @@ sm-checkbox {
 
 #portfolio {
   display: grid;
-  width: auto;
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
   align-content: flex-start;
+  width: min(60rem, 100%);
+}
+
+.personal-asset-balance {
+  align-content: flex-start;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: rgba(0, 0, 0, 0.8);
+  width: 100%;
+}
+.personal-asset-balance:not(:last-of-type) {
+  margin-right: 0.5rem;
+}
+.personal-asset-balance:nth-of-type(1) {
+  background: url("bg-art2.svg") no-repeat bottom right, #c2ffd7;
+  background-size: contain;
+}
+.personal-asset-balance:nth-of-type(1) .icon {
+  background-color: rgba(102, 255, 156, 0.5);
+}
+.personal-asset-balance:nth-of-type(1) .button {
+  border: solid thin rgba(102, 255, 156, 0.5);
+}
+.personal-asset-balance:nth-of-type(2) {
+  background: url("back.svg") no-repeat top right, #fcffa8;
+  background-size: contain;
+}
+.personal-asset-balance:nth-of-type(2) .icon {
+  background-color: rgba(255, 234, 0, 0.5);
+}
+.personal-asset-balance > .flex {
+  margin-bottom: 0.3rem;
+}
+.personal-asset-balance > .flex .icon {
+  height: 2rem;
+  width: 2rem;
+  padding: 0.4rem;
+  border-radius: 0.3rem;
+  fill: rgba(0, 0, 0, 0.8);
+  margin-right: 0.5rem;
+}
+.personal-asset-balance .button {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding-right: 0.8rem;
+  justify-self: flex-start;
+  border-radius: 1rem;
+  background-color: rgba(var(--foreground-color), 1);
+  color: rgba(var(--text-color), 1);
+  transition: box-shadow 0.3s;
+}
+.personal-asset-balance .button .icon {
+  height: 1rem;
+  background-color: transparent;
+  margin-right: 0.3rem;
+}
+.personal-asset-balance .button:hover {
+  box-shadow: 0 0.3rem 0.5rem rgba(0, 0, 0, 0.16);
+}
+
+#personal_rupee_balance span:first-of-type,
+#personal_flo_balance span:first-of-type {
+  font-size: 1.5rem;
+}
+#personal_rupee_balance span:last-of-type,
+#personal_flo_balance span:last-of-type {
+  font-size: 0.9rem;
 }
 
 .portfolio_actions__wrapper {
@@ -1030,6 +1097,7 @@ sm-checkbox {
 #my_assets {
   gap: 0.5rem;
   margin-top: 0.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .balance-card {
@@ -1335,6 +1403,18 @@ sm-checkbox {
     flex: 1;
   }
 
+  #portfolio_cards_wrapper {
+    overflow-x: auto;
+    -ms-scroll-snap-type: x proximity;
+        scroll-snap-type: x proximity;
+  }
+
+  .personal-asset-balance {
+    scroll-snap-align: start;
+    width: min(16rem, 90%);
+    flex-shrink: 0;
+  }
+
   .hide-on-mobile {
     display: none !important;
   }
@@ -1501,7 +1581,7 @@ sm-checkbox {
 
   #portfolio {
     gap: 1rem 2rem;
-    grid-template-columns: 20rem 24rem;
+    grid-template-columns: 1.2fr 1fr;
   }
   #portfolio__header {
     grid-column: 1/3;
