@@ -1308,6 +1308,16 @@ sm-checkbox {
   margin-bottom: 3rem;
   align-content: flex-start;
 }
+#help ul {
+  list-style: initial;
+  display: grid;
+  gap: 1rem;
+}
+#help ul li {
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+  font-size: 0.9rem;
+}
 
 @media screen and (max-width: 40rem) and (any-hover: none) {
   .cancel-order span {
