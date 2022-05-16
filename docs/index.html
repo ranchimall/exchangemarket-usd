@@ -1453,7 +1453,6 @@
         // Convert milliseconds to time left in HH:MM:SS format
         function getTimeLeft(milliseconds) {
             const diff = milliseconds - Date.now()
-            // const hours = Math.floor(diff / 3600000)
             const minutes = Math.floor((diff % 3600000) / 60000)
             const seconds = Math.floor(((diff % 3600000) % 60000) / 1000)
             return [`${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`, ((diff % 3600000) / 60000).toFixed(2)]
@@ -1709,8 +1708,6 @@
                             frag.append(render.marketTransactionCard(transactionDetails))
                         })
                         getRef('market_trades').innerHTML = '';
-                        // const marketTransactionList = getRef('market_transaction_list_template').content.cloneNode(true)
-                        // getRef('market_trades').append(marketTransactionList)
                         getRef('market_trades').append(frag)
                     }).catch(err => {
                         console.log(err)
