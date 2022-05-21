@@ -1474,7 +1474,8 @@
         mobileQuery.addEventListener('change', handleMobileChange)
 
         handleMobileChange(mobileQuery)
-        function showChild(id, index) {
+        document.addEventListener("visibilitychange", handleVisibilityChange, false);
+        function showChildElement(id, index) {
             [...getRef(id).children].forEach((child, i) => {
                 if (i === index)
                     child.classList.remove('hide')
@@ -1489,7 +1490,6 @@
                 updateRate();
             }
         }
-        document.addEventListener("visibilitychange", handleVisibilityChange, false);
     </script>
     <script>
         function buttonLoader(id, show = false) {
@@ -1579,7 +1579,7 @@
         }
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
-            return toFixed(parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType], 8)
+            return toFixed(parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType])
         }
 
         function showSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
@@ -1777,7 +1777,7 @@
                 getRef('market_trades').innerHTML = '';
                 if (ordersType === 'open') {
                     getRef('market_orders__title').textContent = 'Market-wide orders';
-                    showChild('market_orders_wrapper', 0)
+                    showChildElement('market_orders_wrapper', 0)
                     getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getBuyList().then(buyOrders => {
                         getRef('market_buy_orders').innerHTML = '';
@@ -1806,7 +1806,7 @@
                     })
                 } else {
                     getRef('market_orders__title').textContent = 'Market-wide trades';
-                    showChild('market_orders_wrapper', 1)
+                    showChildElement('market_orders_wrapper', 1)
                     getRef('market_trades').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getTradeList().then(trades => {
                         trades.forEach(transaction => {
