@@ -852,11 +852,15 @@
                 <div class="order-card__type capitalize"></div>
                 <div class="order-card__quantity"></div>
             </div>
+            <time class="order-card__time"></time>
             <div class="grid">
                 <span class="label order-card__price-type"></span>
                 <div class="order-card__price"></div>
             </div>
-            <time class="order-card__time"></time>
+            <div class="grid">
+                <span class="label order-card__amount-type"></span>
+                <div class="order-card__amount"></div>
+            </div>
             <button class="cancel-order" title="Cancel this order">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" height="24px" viewBox="0 0 24 24" width="24px">
                     <path d="M0 0h24v24H0V0z" fill="none" />
@@ -1000,7 +1004,7 @@
         const domRefs = {};
         let timerId;
         const currentYear = new Date().getFullYear();
-        const relativeTime = new RelativeTime({ style: 'narrow' });
+        const relativeTime = new RelativeTime('en', { style: 'short' });
 
         //Checks for internet connection status
         if (!navigator.onLine) {
@@ -1645,7 +1649,9 @@
                 card.querySelector('.order-card__type').textContent = type
                 card.querySelector('.order-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Valid upto' : 'Valid until'
-                card.querySelector('.order-card__price').textContent = formatAmount(price)
+                card.querySelector('.order-card__amount').textContent = formatAmount(price)
+                card.querySelector('.order-card__amount-type').textContent = type === 'buy' ? 'Locked amount' : 'Min amount'
+                card.querySelector('.order-card__price').textContent = formatAmount(price * quantity, true)
                 card.querySelector('.order-card__time').textContent = relativeTime.from(new Date(time).getTime())
                 return card
             },

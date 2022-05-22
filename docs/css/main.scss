@@ -778,8 +778,17 @@ sm-checkbox {
   user-select: none;
   align-items: center;
   gap: 0.5rem;
-  grid-template-columns: min-content repeat(3, 1fr) min-content;
+  grid-template-columns: min-content 1fr auto;
   border-radius: 0.5rem;
+  grid-template-areas: "checkbox quantity quantity time" "checkbox price amount cancel";
+  & > .grid {
+    &:nth-of-type(2) {
+      grid-area: price;
+    }
+    &:nth-of-type(3) {
+      grid-area: amount;
+    }
+  }
   &__type {
     font-size: 0.9rem;
     font-weight: 500;
@@ -801,6 +810,7 @@ sm-checkbox {
     }
   }
   sm-checkbox {
+    grid-area: checkbox;
     cursor: pointer;
     margin-right: 0.5rem;
   }
@@ -811,8 +821,16 @@ sm-checkbox {
   }
 
   &__time {
+    grid-area: time;
     font-size: 0.8rem;
     color: rgba(var(--text-color), 0.8);
+  }
+  .cancel-order {
+    grid-area: cancel;
+    color: var(--danger-color);
+    .icon {
+      fill: var(--danger-color);
+    }
   }
 }
 .cancel-order {
@@ -1373,6 +1391,10 @@ sm-checkbox {
         background-color: var(--accent-color);
       }
     }
+  }
+  .order-card {
+    grid-template-columns: auto 1fr 1fr 1fr auto;
+    grid-template-areas: "checkbox quantity price amount time cancel";
   }
 }
 @media screen and (max-width: 80rem) and (min-width: 40rem) {
