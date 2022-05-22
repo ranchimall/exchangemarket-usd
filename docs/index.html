@@ -1649,9 +1649,9 @@
                 card.querySelector('.order-card__type').textContent = type
                 card.querySelector('.order-card__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.order-card__price-type').textContent = type === 'buy' ? 'Valid upto' : 'Valid until'
-                card.querySelector('.order-card__amount').textContent = formatAmount(price)
+                card.querySelector('.order-card__price').textContent = formatAmount(price)
                 card.querySelector('.order-card__amount-type').textContent = type === 'buy' ? 'Locked amount' : 'Min amount'
-                card.querySelector('.order-card__price').textContent = formatAmount(price * quantity, true)
+                card.querySelector('.order-card__amount').textContent = formatAmount(price * quantity, true)
                 card.querySelector('.order-card__time').textContent = relativeTime.from(new Date(time).getTime())
                 return card
             },
