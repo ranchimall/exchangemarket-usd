@@ -305,25 +305,52 @@
                 </div>
             </div>
             <div id="portfolio" class="grid mobile-page hide">
-                <div id="portfolio__header" class="flex align-center space-between">
+                <div id="portfolio__header" class="grid gap-1">
                     <h4>
                         My portfolio
                     </h4>
-                    <div class="multi-state-button">
-                        <button id="portfolio_balance_refresh_button" class="button button--small"
-                            onclick="refresh(false,this);" title="Refresh">
-                            Refresh
-                        </button>
+                    <div class="flex align-center space-between">
+                        <strip-select id="portfolio_pages_selector">
+                            <strip-option value="exchange" selected>Exchange</strip-option>
+                            <strip-option value="personal">On-chain</strip-option>
+                        </strip-select>
+                        <div class="multi-state-button">
+                            <button id="portfolio_balance_refresh_button" class="button button--small"
+                                onclick="refresh(false,this);" title="Refresh">
+                                Refresh
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="grid gap-1-5">
-                    <div class="grid">
-                        <span class="label">Portfolio valuation</span>
-                        <h1 id="portfolio_value" style="font-size: 2.5rem;"></h1>
+                <div id="portfolio_pages_wrapper">
+                    <div class="grid gap-1-5">
+                        <div class="grid">
+                            <span class="label">Portfolio valuation</span>
+                            <h1 id="portfolio_value" style="font-size: 2.5rem;"></h1>
+                        </div>
+                        <div class="grid gap-0-5">
+                            <div class="flex align-center space-between">
+                                <h4>Owned assets on exchange</h4>
+                                <div class="tooltip">
+                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
+                                        viewBox="0 0 24 24" width="24px" fill="#000000">
+                                        <path d="M0 0h24v24H0V0z" fill="none" />
+                                        <path
+                                            d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                                    </svg>
+                                    <p class="banner">
+                                        Your assets on exchange remains separate until they are withdrawn to your FLO
+                                        ID.
+                                    </p>
+                                </div>
+                            </div>
+                            <p>Deposit rupee from your FLO ID to exchange to purchase assets.</p>
+                            <fieldset id="my_assets" class="grid"></fieldset>
+                        </div>
                     </div>
-                    <div class="grid gap-1">
+                    <div class="grid gap-1 hide">
                         <div class="flex align-center space-between">
-                            <h4>Assets on FLO ID</h4>
+                            <h4>Assets in <span class="my-flo-id"></span></h4>
                             <div class="tooltip">
                                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
                                     width="24px" fill="#000000">
@@ -338,7 +365,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div id="portfolio_cards_wrapper" class="flex">
+                        <div id="portfolio_cards_wrapper">
                             <div class="grid gap-0-5 personal-asset-balance">
                                 <div class="flex align-center">
                                     <svg class="icon" xmlns="http://www.w3.org/2000/svg"
@@ -391,39 +418,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="grid gap-0-5">
-                    <div class="flex align-center space-between">
-                        <h4>Owned assets on exchange</h4>
-                        <div class="tooltip">
-                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
-                                width="24px" fill="#000000">
-                                <path d="M0 0h24v24H0V0z" fill="none" />
-                                <path
-                                    d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                            </svg>
-                            <p class="banner">
-                                Your assets on exchange remains separate until they are withdrawn to your FLO ID.
-                            </p>
-                        </div>
-                    </div>
-                    <p>Deposit rupee from your FLO ID to exchange to purchase assets.</p>
-                    <div id="portfolio_actions" class="w-100" style="z-index: 5;">
-                        <p class="label">Select asset</p>
-                        <sm-select id="portfolio_asset_selector"></sm-select>
-                        <div class="flex portfolio_actions__wrapper">
-                            <button class="button" value="deposit">
-                                Deposit
-                            </button>
-                            <button class="button" value="withdraw">
-                                Withdraw
-                            </button>
-                            <button class="button" value="transfer">
-                                Transfer
-                            </button>
-                        </div>
-                    </div>
-                    <ul id="my_assets" class="grid"></ul>
                 </div>
             </div>
             <div id="help" class="mobile-page hide grid gap-2">
@@ -825,10 +819,11 @@
         </li>
     </template>
     <template id="asset_balance_card_template">
-        <li class="balance-card">
+        <label class="balance-card interact">
+            <input type="radio" name="exchange-assets">
             <div class="balance-card__icon"></div>
             <h4 class="balance-card__token"></h4>
-        </li>
+        </label>
     </template>
     <template id="net_balance_template">
         <span class="available-balance"></span>
@@ -844,6 +839,19 @@
                 <span class="available-balance"></span>
             </div>
         </div>
+    </template>
+    <template id="asset_balance_actions">
+        <fieldset class="flex portfolio_actions__wrapper">
+            <button class="button" value="deposit">
+                Deposit
+            </button>
+            <button class="button" value="withdraw">
+                Withdraw
+            </button>
+            <button class="button" value="transfer">
+                Transfer
+            </button>
+        </fieldset>
     </template>
     <template id="order_template">
         <li class="list__item order-card">
@@ -1695,10 +1703,11 @@
                 card.querySelector('.more-info').dataset.seller = seller
                 return card
             },
-            assetBalanceCard(asset) {
+            assetBalanceCard(asset, isFirst = false) {
                 const { net, locked } = allTokens[asset]
                 const card = getRef('asset_balance_card_template').content.cloneNode(true).firstElementChild
-                card.className = `balance-card ${locked ? 'is-locked' : ''}`
+                card.className = `balance-card interact ${locked ? 'is-locked' : ''}`
+                card.querySelector('input').value = asset
                 card.querySelector('.balance-card__token').textContent = asset
                 card.querySelector('.balance-card__icon').innerHTML = getIcon(asset)
                 const templateToClone = locked ? 'locked_balance_template' : 'net_balance_template';
@@ -1708,6 +1717,10 @@
                     assetBalance.querySelector('.locked-balance').textContent = asset === 'rupee' ? formatAmount(locked) : parseFloat(locked.toFixed(4))
                 }
                 card.appendChild(assetBalance)
+                if (isFirst) {
+                    card.querySelector('input').checked = true
+                    card.append(getRef('asset_balance_actions').content.cloneNode(true))
+                }
                 return card
             },
             chart(asset = 'FLO', duration = '48 weeks') {
@@ -2044,11 +2057,59 @@
             getRef('get_quantity').value = toFixed(parseFloat(e.target.value) / unitValue)
         })
 
-        getRef('portfolio_actions').addEventListener('click', e => {
+        getRef('portfolio_pages_selector').addEventListener('change', e => {
+            showChildElement('portfolio_pages_wrapper', e.target.value === 'exchange' ? 0 : 1)
+        })
+
+        getRef('my_assets').addEventListener('change', e => {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            const previousActionButton = getRef('my_assets').querySelector('.portfolio_actions__wrapper')
+            if (previousActionButton) {
+                previousActionButton.animate([
+                    {
+                        paddingTop: '1rem',
+                        height: `${previousActionButton.offsetHeight}px`,
+                        opacity: 1
+                    },
+                    {
+                        paddingTop: 0,
+                        height: 0,
+                        opacity: 0
+                    }
+                ], animOptions).onfinish = () => {
+                    previousActionButton.remove()
+                }
+            }
+            const actionButtons = getRef('asset_balance_actions').content.cloneNode(true)
+            e.target.closest('.balance-card').append(actionButtons)
+            const height = e.target.closest('.balance-card').lastElementChild.offsetHeight
+            e.target.closest('.balance-card').lastElementChild.animate([
+                {
+                    paddingTop: 0,
+                    height: 0,
+                    opacity: 0
+                },
+                {
+                    paddingTop: '1rem',
+                    height: `${height}px`,
+                    opacity: 1
+                }
+            ], animOptions)
+        })
+
+        function getPortfolioSelectedAsset() {
+            return getRef('my_assets').querySelector(':checked').value
+        }
+
+        getRef('my_assets').addEventListener('click', e => {
             if (e.target.closest('.button')) {
                 const target = e.target.closest('.button')
                 const type = target.value
-                const asset = getRef('portfolio_asset_selector').value
+                const asset = getPortfolioSelectedAsset()
 
                 getRef('portfolio_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'rupee' ? formatAmount(allTokens.rupee.net, true) : `${toFixed(allTokens[asset].net)} ${asset}`
                 getRef('portfolio_popup__cta').textContent = `${type} ${asset}`
@@ -2135,7 +2196,7 @@
             // Get latest balance and exchange rate
             if (e.target.closest('button')) {
                 const target = e.target.closest('button')
-                const asset = getRef('portfolio_asset_selector').value
+                const asset = getPortfolioSelectedAsset()
                 const fraction = parseFloat(target.value)
                 let total = toFixed(allTokens[asset].net * fraction);
                 if (asset == 'FLO' && fraction === 1 & total > 0.1) {
@@ -2145,7 +2206,7 @@
             }
         })
         getRef('portfolio_popup__cta').addEventListener('click', async e => {
-            const asset = getRef('portfolio_asset_selector').value
+            const asset = getPortfolioSelectedAsset()
             const type = e.target.getAttribute('value')
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
@@ -2556,12 +2617,6 @@
                 console.debug(rates);
                 if (init) {
                     floGlobals.exchangeRates = rates
-                    getRef('portfolio_asset_selector').append(
-                        createElement('sm-option', {
-                            textContent: floGlobals.currency,
-                            attributes: { value: floGlobals.currency },
-                        })
-                    );
                     Object.entries(rates).sort((a, b) => a[1] < b[1] ? 1 : -1).forEach(([asset, rate]) => {
                         if (!allTokens.hasOwnProperty(asset)) {
                             allTokens[asset] = {
@@ -2572,10 +2627,6 @@
                         }
                         // dynamically render listed assets if not already rendered
                         getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate)), countDown[asset]));
-                        getRef('portfolio_asset_selector').append(createElement('sm-option', {
-                            textContent: asset,
-                            attributes: { value: asset },
-                        }));
                         getRef('market_asset_rates').append(createElement('li', {
                             className: 'listed-asset grid align-center',
                             innerHTML: `
@@ -2695,8 +2746,8 @@
                 // render all assets in portfolio
                 const frag = document.createDocumentFragment();
                 let totalPortfolio = 0;
-                Object.entries(allTokens).sort((a, b) => b[1].net - a[1].net).forEach(([asset]) => {
-                    frag.append(render.assetBalanceCard(asset))
+                Object.entries(allTokens).sort((a, b) => b[1].net - a[1].net).forEach(([asset], index) => {
+                    frag.append(render.assetBalanceCard(asset, index === 0))
                     if (asset !== floGlobals.currency)
                         totalPortfolio += allTokens[asset].net * floGlobals.exchangeRates[asset]
                     else

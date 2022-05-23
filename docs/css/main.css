@@ -77,6 +77,10 @@ a.button {
   color: inherit;
 }
 
+fieldset {
+  border: none;
+}
+
 button {
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -141,6 +145,10 @@ a:-moz-any-link:focus-visible {
 
 a:any-link:focus-visible {
   outline: rgba(var(--text-color), 1) 0.1rem solid;
+}
+
+input {
+  accent-color: var(--accent-color);
 }
 
 sm-input {
@@ -1025,7 +1033,86 @@ sm-checkbox {
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
   align-content: flex-start;
-  width: min(60rem, 100%);
+  width: min(32rem, 100%);
+}
+
+.portfolio_actions__wrapper {
+  grid-column: 1/-1;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  padding-top: 1rem;
+}
+.portfolio_actions__wrapper .button {
+  color: var(--accent-color);
+  padding: 0.5rem 0.8rem;
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: rgba(var(--text-color), 0.8);
+  margin-bottom: 0.2rem;
+}
+
+#my_assets {
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-bottom: 1.5rem;
+  border: none;
+}
+
+.balance-card {
+  display: grid;
+  align-items: center;
+  gap: 0 0.5rem;
+  padding: 1rem;
+  border-radius: 0.3rem;
+  background-color: rgba(var(--text-color), 0.03);
+}
+.balance-card.is-locked {
+  grid-template-columns: auto auto 1fr auto;
+}
+.balance-card.is-locked .balance-card__icon {
+  grid-row: span 2;
+}
+.balance-card:not(.is-locked) {
+  grid-template-columns: auto auto 1fr auto auto;
+}
+.balance-card input {
+  align-self: center;
+}
+.balance-card__icon {
+  display: flex;
+  align-content: center;
+  justify-content: center;
+  margin: 0 0.5rem;
+  border-radius: 0.8rem;
+  align-self: flex-start;
+  background-color: var(--accent-color--light);
+}
+.balance-card__icon .icon {
+  height: 1.3rem;
+  width: 1.3rem;
+  fill: var(--accent-color);
+}
+.balance-card__token {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.balance-card__amount-wrapper {
+  margin-top: 0.5rem;
+  grid-column: 3/-1;
+  gap: 0.3rem 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+.balance-card__amount-wrapper > :nth-child(even) {
+  text-align: right;
+}
+
+#portfolio_cards_wrapper {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
 .personal-asset-balance {
@@ -1093,72 +1180,6 @@ sm-checkbox {
 #personal_rupee_balance span:last-of-type,
 #personal_flo_balance span:last-of-type {
   font-size: 0.9rem;
-}
-
-.portfolio_actions__wrapper {
-  grid-column: span 3;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-.portfolio_actions__wrapper .button {
-  flex: 1;
-}
-
-.label {
-  font-size: 0.8rem;
-  color: rgba(var(--text-color), 0.8);
-  margin-bottom: 0.2rem;
-}
-
-#my_assets {
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  padding-bottom: 1.5rem;
-}
-
-.balance-card {
-  display: grid;
-  align-items: center;
-  gap: 0 0.5rem;
-  border-radius: 0.5rem;
-  background-color: rgba(var(--foreground-color), 1);
-  padding: 0.5rem;
-}
-.balance-card.is-locked {
-  padding: 1rem 0.5rem;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.5rem;
-}
-.balance-card.is-locked .balance-card__icon {
-  grid-row: span 2;
-}
-.balance-card:not(.is-locked) {
-  grid-template-columns: auto 1fr auto auto;
-}
-.balance-card__icon {
-  display: flex;
-  align-content: center;
-  justify-content: center;
-  padding: 0.6rem;
-  border-radius: 0.8rem;
-  background-color: var(--accent-color--light);
-}
-.balance-card__icon .icon {
-  height: 1.3rem;
-  width: 1.3rem;
-  fill: var(--accent-color);
-}
-.balance-card__token {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.balance-card__amount-wrapper {
-  grid-column: 2/3;
-  gap: 0.3rem 1rem;
-  grid-template-columns: 1fr 1fr;
-}
-.balance-card__amount-wrapper > :nth-child(even) {
-  text-align: right;
 }
 
 #portfolio_result {
@@ -1429,18 +1450,6 @@ sm-checkbox {
     flex: 1;
   }
 
-  #portfolio_cards_wrapper {
-    overflow-x: auto;
-    -ms-scroll-snap-type: x proximity;
-        scroll-snap-type: x proximity;
-  }
-
-  .personal-asset-balance {
-    scroll-snap-align: start;
-    width: min(16rem, 90%);
-    flex-shrink: 0;
-  }
-
   .hide-on-mobile {
     display: none !important;
   }
@@ -1608,18 +1617,6 @@ sm-checkbox {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(0, 1fr) 20rem;
-  }
-
-  #portfolio {
-    gap: 1rem 2rem;
-    grid-template-columns: 1.2fr 1fr;
-  }
-  #portfolio__header {
-    grid-column: 1/3;
-    padding-bottom: 1rem;
-  }
-  #portfolio .balance-card {
-    border: solid thin rgba(var(--text-color), 0.2);
   }
 }
 @media screen and (min-width: 72rem) {
