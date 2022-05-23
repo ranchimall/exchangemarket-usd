@@ -1966,6 +1966,13 @@
             const asset = pagesData.params.asset;
             const quantity = parseFloat(getRef('get_quantity').value)
             const price = getSuggestedPrice()
+            if (tradeType === 'buy' && accountDetails.sellOrders.some(order => order.asset === asset)) {
+                hidePopup()
+                return notify('You have an open sell order for this asset. Please close it before buying.', 'error')
+            } else if (tradeType === 'sell' && accountDetails.buyOrders.some(order => order.asset === asset)) {
+                hidePopup()
+                return notify('You have an open buy order for this asset. Please close it before selling.', 'error')
+            }
             showProcess('trade_button_wrapper')
             try {
                 if (tradeType === 'buy') {
