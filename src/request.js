@@ -265,6 +265,16 @@ function WithdrawToken(req, res) {
     );
 }
 
+function GetUserTransacts(req, res) {
+    let data = req.body;
+    processRequest(res, "User Transacts", {
+            type: "get_transact",
+            timestamp: data.timestamp
+        }, data.sign, data.floID, data.pubKey,
+        () => market.getUserTransacts(data.floID)
+    );
+}
+
 function AddUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
@@ -509,6 +519,7 @@ module.exports = {
     WithdrawFLO,
     DepositToken,
     WithdrawToken,
+    GetUserTransacts,
     AddUserTag,
     RemoveUserTag,
     AddDistributor,

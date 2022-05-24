@@ -254,6 +254,18 @@ function getAccountDetails(floID) {
     });
 }
 
+function getUserTransacts(floID) {
+    return new Promise((resolve, reject) => {
+        DB.query("(SELECT 'deposit' as type, txid, floID, token, amount, status FROM InputToken WHERE floID=?)" +
+                "UNION (SELECT 'deposit' as type, txid, floID, 'FLO' as token, amount, status FROM InputFLO WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, floID, token, amount, status FROM OutputToken WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, floID, 'FLO' as token, amount, status FROM OutputFLO WHERE floID=?)",
+                [floID, floID, floID, floID])
+            .then(result => resolve(result))
+            .catch(error => reject(error))
+    })
+}
+
 function getTransactionDetails(txid) {
     return new Promise((resolve, reject) => {
         let tableName, type;
@@ -712,6 +724,7 @@ function blockchainReCheck() {
             retryWithdrawalToken();
             confirmWithdrawalFLO();
             confirmWithdrawalToken();
+            console.debug("Last Block :", lastSyncBlockHeight);
         }
     }).catch(error => console.error(error));
 }
@@ -731,6 +744,7 @@ module.exports = {
     getRateHistory,
     getBalance,
     getAccountDetails,
+    getUserTransacts,
     getTransactionDetails,
     transferToken,
     depositFLO,

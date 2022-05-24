@@ -1,4 +1,4 @@
-(function(EXPORTS) { //floTokenAPI v1.0.3a
+(function(EXPORTS) { //floTokenAPI v1.0.3b
     /* Token Operator to send/receive tokens via blockchain using API calls*/
     'use strict';
     const tokenAPI = EXPORTS;
@@ -19,6 +19,13 @@
     });
 
     if (floGlobals.currency) tokenAPI.currency = floGlobals.currency;
+
+    Object.defineProperties(floGlobals, {
+        currency: {
+            get: () => DEFAULT.currency,
+            set: currency => DEFAULT.currency = currency
+        }
+    });
 
     const fetch_api = tokenAPI.fetch = function(apicall) {
         return new Promise((resolve, reject) => {

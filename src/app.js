@@ -83,6 +83,7 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-flo', Request.WithdrawFLO);
     app.post('/deposit-token', Request.DepositToken);
     app.post('/withdraw-token', Request.WithdrawToken);
+    app.post('/get-transact', Request.GetUserTransacts);
 
     //Manage user tags (Access to trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
