@@ -468,6 +468,7 @@ strip-select {
 strip-option {
   font-weight: 500;
   font-size: 0.9rem;
+  user-select: none;
   --border-radius: 0;
   --active-option-color: rgba(var(--background-color), 1);
   --active-option-background-color: var(--accent-color);
@@ -747,6 +748,13 @@ sm-checkbox {
   display: flex;
   flex-direction: column;
   height: 100%;
+  align-items: flex-start;
+}
+#asset_page_wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
 }
 #trade_form {
   height: 100%;
@@ -1256,45 +1264,32 @@ sm-checkbox {
   #login_form {
     padding: 0 1.5rem;
   }
+  #asset_page__header {
+    display: flex;
+    padding: 1rem 1.5rem 0.5rem 0.8rem;
+  }
   #chart_header {
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-    margin-left: -0.7rem;
-  }
-  #trade_panel_backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background-color: rgba(0 0 0/ 0.3);
-    backdrop-filter: blur(0.5rem);
-    z-index: 3;
-  }
-  #show_trade_panel {
-    position: absolute;
-    border-radius: 2rem;
-    bottom: 0;
-    align-self: center;
-    margin-bottom: 1rem;
-    z-index: 5;
-    font-size: 1rem;
+    padding: 0 1.5rem 0.5rem 1.5rem;
   }
   #trade_form {
-    position: fixed;
-    height: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin-top: auto;
-    width: auto;
-    z-index: 10;
-    padding: 1.5rem 1.5rem 0 1.5rem;
-    border-radius: 1rem 1rem 0 0;
-    background-color: rgba(var(--foreground-color), 1);
-    box-shadow: 0 -0.5rem 1rem rgba(0, 0, 0, 0.1);
+    padding: 0 1.5rem;
   }
   #price_chart_container {
     flex: 1;
+  }
+  #asset_page__footer {
+    button {
+      .icon {
+        margin-right: 0.3rem;
+      }
+      &.active {
+        color: var(--accent-color);
+        background-color: rgba(var(--text-color), 0.03);
+        .icon {
+          fill: var(--accent-color);
+        }
+      }
+    }
   }
   .hide-on-mobile {
     display: none !important;
@@ -1445,7 +1440,7 @@ sm-checkbox {
   #home {
     grid-template-columns: auto 1fr;
   }
-  #asset_page {
+  #asset_page_wrapper {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(0, 1fr) 20rem;

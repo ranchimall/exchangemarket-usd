@@ -1,6 +1,6 @@
 'use strict';
 
-(function(EXPORTS) { //floExchangeAPI v1.1.2
+(function (EXPORTS) { //floExchangeAPI v1.1.2
     const exchangeAPI = EXPORTS;
 
     /*Kademlia DHT K-bucket implementation as a binary tree.*/
@@ -46,7 +46,7 @@
         this.arbiter = options.arbiter || this.arbiter
         this.metadata = Object.assign({}, options.metadata)
 
-        this.createNode = function() {
+        this.createNode = function () {
             return {
                 contacts: [],
                 dontSplit: false,
@@ -55,7 +55,7 @@
             }
         }
 
-        this.ensureInt8 = function(name, val) {
+        this.ensureInt8 = function (name, val) {
             if (!(val instanceof Uint8Array)) {
                 throw new TypeError(name + ' is not a Uint8Array')
             }
@@ -66,7 +66,7 @@
          * @param  {Uint8Array} array2
          * @return {Boolean}
          */
-        this.arrayEquals = function(array1, array2) {
+        this.arrayEquals = function (array1, array2) {
             if (array1 === array2) {
                 return true
             }
@@ -94,7 +94,7 @@
          * @param  {Object} candidate Contact being added to the k-bucket.
          * @return {Object}           Contact to updated the k-bucket with.
          */
-        this.arbiter = function(incumbent, candidate) {
+        this.arbiter = function (incumbent, candidate) {
             return incumbent.vectorClock > candidate.vectorClock ? incumbent : candidate
         }
 
@@ -107,7 +107,7 @@
          * @return {Number}              Integer The XOR distance between firstId
          *                               and secondId.
          */
-        this.distance = function(firstId, secondId) {
+        this.distance = function (firstId, secondId) {
             let distance = 0
             let i = 0
             const min = Math.min(firstId.length, secondId.length)
@@ -124,7 +124,7 @@
          *
          * @param {Object} contact the contact object to add
          */
-        this.add = function(contact) {
+        this.add = function (contact) {
             this.ensureInt8('contact.id', (contact || {}).id)
 
             let bitIndex = 0
@@ -172,7 +172,7 @@
          *                          closest contacts to return
          * @return {Array}          Array Maximum of n closest contacts to the node id
          */
-        this.closest = function(id, n = Infinity) {
+        this.closest = function (id, n = Infinity) {
             this.ensureInt8('id', id)
 
             if ((!Number.isInteger(n) && n !== Infinity) || n <= 0) {
@@ -204,7 +204,7 @@
          *
          * @return {Number} The number of contacts held in the tree
          */
-        this.count = function() {
+        this.count = function () {
             // return this.toArray().length
             let count = 0
             for (const nodes = [this.root]; nodes.length > 0;) {
@@ -225,7 +225,7 @@
          *                           to check in the id Uint8Array.
          * @return {Object}          left leaf if id at bitIndex is 0, right leaf otherwise.
          */
-        this._determineNode = function(node, id, bitIndex) {
+        this._determineNode = function (node, id, bitIndex) {
             // *NOTE* remember that id is a Uint8Array and has granularity of
             // bytes (8 bits), whereas the bitIndex is the bit index (not byte)
 
@@ -267,7 +267,7 @@
          * @param  {Uint8Array} id The ID of the contact to fetch.
          * @return {Object|Null}   The contact if available, otherwise null
          */
-        this.get = function(id) {
+        this.get = function (id) {
             this.ensureInt8('id', id)
 
             let bitIndex = 0
@@ -291,7 +291,7 @@
          * @return {Number}         Integer Index of contact with provided id if it
          *                          exists, -1 otherwise.
          */
-        this._indexOf = function(node, id) {
+        this._indexOf = function (node, id) {
             for (let i = 0; i < node.contacts.length; ++i) {
                 if (this.arrayEquals(node.contacts[i].id, id)) return i
             }
@@ -305,7 +305,7 @@
          * @param  {Uint8Array} id The ID of the contact to remove.
          * @return {Object}        The k-bucket itself.
          */
-        this.remove = function(id) {
+        this.remove = function (id) {
             this.ensureInt8('the id as parameter 1', id)
 
             let bitIndex = 0
@@ -332,7 +332,7 @@
          * @param  {Number} bitIndex the bitIndex to which byte to check in the
          *                           Uint8Array for navigating the binary tree
          */
-        this._split = function(node, bitIndex) {
+        this._split = function (node, bitIndex) {
             node.left = this.createNode()
             node.right = this.createNode()
 
@@ -360,7 +360,7 @@
          *
          * @return {Array} All of the contacts in the tree, as an array
          */
-        this.toArray = function() {
+        this.toArray = function () {
             let result = []
             for (const nodes = [this.root]; nodes.length > 0;) {
                 const node = nodes.pop()
@@ -386,7 +386,7 @@
          *                          calculation)
          * @param  {Object} contact The contact object to update.
          */
-        this._update = function(node, index, contact) {
+        this._update = function (node, index, contact) {
             // sanity check
             if (!this.arrayEquals(node.contacts[index].id, contact.id)) {
                 throw new Error('wrong index for _update')
@@ -405,7 +405,7 @@
     }
 
     const K_Bucket = exchangeAPI.K_Bucket = function K_Bucket(masterID, backupList) {
-        const decodeID = function(floID) {
+        const decodeID = function (floID) {
             let k = bitjs.Base58.decode(floID);
             k.shift();
             k.splice(-4, 4);
@@ -431,7 +431,7 @@
             get: () => Array.from(orderedList)
         });
 
-        self.closestNode = function(id, N = 1) {
+        self.closestNode = function (id, N = 1) {
             let decodedId = decodeID(id);
             let n = N || orderedList.length;
             let cNodes = _KB.closest(decodedId, n)
@@ -444,7 +444,7 @@
         self.isPrev = (source, target) => orderedList.indexOf(target) === orderedList.indexOf(source) - 1;
         self.isNext = (source, target) => orderedList.indexOf(target) === orderedList.indexOf(source) + 1;
 
-        self.prevNode = function(id, N = 1) {
+        self.prevNode = function (id, N = 1) {
             let n = N || orderedList.length;
             if (!orderedList.includes(id))
                 throw Error(`${id} is not in KB list`);
@@ -452,7 +452,7 @@
             return (N == 1 ? pNodes[0] : pNodes);
         };
 
-        self.nextNode = function(id, N = 1) {
+        self.nextNode = function (id, N = 1) {
             let n = N || orderedList.length;
             if (!orderedList.includes(id))
                 throw Error(`${id} is not in KB list`);
@@ -468,17 +468,17 @@
         return new Promise((resolve, reject) => {
             let curPos = fetch_api.curPos || 0;
             if (curPos >= nodeList.length)
-                return reject(ExchangeError(ExchangeError.NODES_OFFLINE_CODE, 'No Node online! Try again later', errorCode.NODES_OFFLINE));
+                return reject(ExchangeError(ExchangeError.NODES_OFFLINE_CODE, 'No Node online! Refresh the page or try again later', errorCode.NODES_OFFLINE));
             let url = "https://" + nodeURL[nodeList[curPos]];
             (options ? fetch(url + api, options) : fetch(url + api))
-            .then(result => resolve(result)).catch(error => {
-                console.warn(nodeList[curPos], 'is offline');
-                //try next node
-                fetch_api.curPos = curPos + 1;
-                fetch_api(api, options)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error))
-            });
+                .then(result => resolve(result)).catch(error => {
+                    console.warn(nodeList[curPos], 'is offline');
+                    //try next node
+                    fetch_api.curPos = curPos + 1;
+                    fetch_api(api, options)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                });
         })
     }
 
@@ -519,7 +519,7 @@
         INTERNAL_ERROR: '500'
     };
 
-    const parseErrorCode = exchangeAPI.parseErrorCode = function(message) {
+    const parseErrorCode = exchangeAPI.parseErrorCode = function (message) {
         let code = message.match(/^E\d{3}:/g);
         if (!code || !code.length)
             return null;
@@ -546,20 +546,20 @@
         return new Promise((resolve, reject) => {
             if (!response.ok)
                 response.text()
-                .then(result => reject(ExchangeError(response.status, result)))
-                .catch(error => reject(ExchangeError(response.status, error)));
+                    .then(result => reject(ExchangeError(response.status, result)))
+                    .catch(error => reject(ExchangeError(response.status, error)));
             else if (json_)
                 response.json()
-                .then(result => resolve(result))
-                .catch(error => reject(ExchangeError(ExchangeError.BAD_RESPONSE_CODE, error)));
+                    .then(result => resolve(result))
+                    .catch(error => reject(ExchangeError(ExchangeError.BAD_RESPONSE_CODE, error)));
             else
                 response.text()
-                .then(result => resolve(result))
-                .catch(error => reject(ExchangeError(ExchangeError.BAD_RESPONSE_CODE, error)));
+                    .then(result => resolve(result))
+                    .catch(error => reject(ExchangeError(ExchangeError.BAD_RESPONSE_CODE, error)));
         });
     }
 
-    exchangeAPI.getAccount = function(floID, proxySecret) {
+    exchangeAPI.getAccount = function (floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -574,19 +574,19 @@
             console.debug(request);
 
             fetch_api('/account', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error));
         });
     }
 
-    exchangeAPI.getBuyList = function(asset = null) {
+    exchangeAPI.getBuyList = function (asset = null) {
         return new Promise((resolve, reject) => {
             fetch_api('/list-buyorders' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
@@ -596,7 +596,7 @@
         });
     }
 
-    exchangeAPI.getSellList = function(asset = null) {
+    exchangeAPI.getSellList = function (asset = null) {
         return new Promise((resolve, reject) => {
             fetch_api('/list-sellorders' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
@@ -606,7 +606,7 @@
         });
     }
 
-    exchangeAPI.getTradeList = function(asset = null) {
+    exchangeAPI.getTradeList = function (asset = null) {
         return new Promise((resolve, reject) => {
             fetch_api('/list-trades' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
@@ -616,7 +616,7 @@
         });
     }
 
-    exchangeAPI.getRates = function(asset = null) {
+    exchangeAPI.getRates = function (asset = null) {
         return new Promise((resolve, reject) => {
             fetch_api('/get-rates' + (asset ? "?asset=" + asset : ""))
                 .then(result => responseParse(result)
@@ -626,7 +626,7 @@
         });
     }
 
-    exchangeAPI.getRateHistory = function(asset, duration = null) {
+    exchangeAPI.getRateHistory = function (asset, duration = null) {
         return new Promise((resolve, reject) => {
             fetch_api('/rate-history?asset=' + asset + (duration ? '&duration=' + duration : ""))
                 .then(result => responseParse(result)
@@ -636,7 +636,7 @@
         });
     }
 
-    exchangeAPI.getBalance = function(floID = null, token = null) {
+    exchangeAPI.getBalance = function (floID = null, token = null) {
         return new Promise((resolve, reject) => {
             if (!floID && !token)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Need atleast one argument", errorCode.MISSING_PARAMETER));
@@ -651,7 +651,7 @@
         })
     }
 
-    exchangeAPI.getTx = function(txid) {
+    exchangeAPI.getTx = function (txid) {
         return new Promise((resolve, reject) => {
             if (!txid)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'txid required', errorCode.MISSING_PARAMETER));
@@ -670,7 +670,7 @@
         return floCrypto.signData(req_str, signKey);
     }
 
-    exchangeAPI.getLoginCode = function() {
+    exchangeAPI.getLoginCode = function () {
         return new Promise((resolve, reject) => {
             fetch_api('/get-login-code')
                 .then(result => responseParse(result)
@@ -713,7 +713,7 @@
     }
     */
 
-    exchangeAPI.login = function(privKey, proxyKey, code, hash) {
+    exchangeAPI.login = function (privKey, proxyKey, code, hash) {
         return new Promise((resolve, reject) => {
             if (!code || !hash)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing", errorCode.MISSING_PARAMETER));
@@ -736,19 +736,19 @@
             console.debug(request);
 
             fetch_api("/login", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error));
         })
     }
 
-    exchangeAPI.logout = function(floID, proxySecret) {
+    exchangeAPI.logout = function (floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -763,19 +763,19 @@
             console.debug(request);
 
             fetch_api("/logout", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.buy = function(asset, quantity, max_price, floID, proxySecret) {
+    exchangeAPI.buy = function (asset, quantity, max_price, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= 0)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
@@ -800,20 +800,20 @@
             console.debug(request);
 
             fetch_api('/buy', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
 
     }
 
-    exchangeAPI.sell = function(asset, quantity, min_price, floID, proxySecret) {
+    exchangeAPI.sell = function (asset, quantity, min_price, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= 0)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
@@ -838,20 +838,20 @@
             console.debug(request);
 
             fetch_api('/sell', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
 
     }
 
-    exchangeAPI.cancelOrder = function(type, id, floID, proxySecret) {
+    exchangeAPI.cancelOrder = function (type, id, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (type !== "buy" && type !== "sell")
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid type (${type}): type should be sell (or) buy`, errorCode.INVALID_TYPE));
@@ -872,20 +872,20 @@
             console.debug(request);
 
             fetch_api('/cancel', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
     //receiver should be object eg {floID1: amount1, floID2: amount2 ...}
-    exchangeAPI.transferToken = function(receiver, token, floID, proxySecret) {
+    exchangeAPI.transferToken = function (receiver, token, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             if (typeof receiver !== 'object' || receiver === null)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid receiver: parameter is not an object", errorCode.INVALID_FLO_ID));
@@ -918,19 +918,19 @@
             console.debug(request);
 
             fetch_api('/transfer-token', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.depositFLO = function(quantity, floID, sinkID, privKey, proxySecret = null) {
+    exchangeAPI.depositFLO = function (quantity, floID, sinkID, privKey, proxySecret = null) {
         return new Promise((resolve, reject) => {
             if (typeof quantity !== "number" || quantity <= floGlobals.fee)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, `Invalid quantity (${quantity})`, errorCode.INVALID_NUMBER));
@@ -952,20 +952,20 @@
                 console.debug(request);
 
                 fetch_api('/deposit-flo', {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(request)
-                    }).then(result => responseParse(result, false)
-                        .then(result => resolve(result))
-                        .catch(error => reject(error)))
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error)))
                     .catch(error => reject(error))
             }).catch(error => reject(error))
         })
     }
 
-    exchangeAPI.withdrawFLO = function(quantity, floID, proxySecret) {
+    exchangeAPI.withdrawFLO = function (quantity, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -982,19 +982,19 @@
             console.debug(request);
 
             fetch_api('/withdraw-flo', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.depositToken = function(token, quantity, floID, sinkID, privKey, proxySecret = null) {
+    exchangeAPI.depositToken = function (token, quantity, floID, sinkID, privKey, proxySecret = null) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
@@ -1014,20 +1014,20 @@
                 console.debug(request);
 
                 fetch_api('/deposit-token', {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(request)
-                    }).then(result => responseParse(result, false)
-                        .then(result => resolve(result))
-                        .catch(error => reject(error)))
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error)))
                     .catch(error => reject(error))
             }).catch(error => reject(error))
         })
     }
 
-    exchangeAPI.withdrawToken = function(token, quantity, floID, proxySecret) {
+    exchangeAPI.withdrawToken = function (token, quantity, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -1046,19 +1046,19 @@
             console.debug(request);
 
             fetch_api('/withdraw-token', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.addUserTag = function(tag_user, tag, floID, proxySecret) {
+    exchangeAPI.addUserTag = function (tag_user, tag, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -1077,19 +1077,19 @@
             console.debug(request);
 
             fetch_api('/add-tag', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.removeUserTag = function(tag_user, tag, floID, proxySecret) {
+    exchangeAPI.removeUserTag = function (tag_user, tag, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -1108,19 +1108,19 @@
             console.debug(request);
 
             fetch_api('/remove-tag', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.addDistributor = function(distributor, asset, floID, proxySecret) {
+    exchangeAPI.addDistributor = function (distributor, asset, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -1139,19 +1139,19 @@
             console.debug(request);
 
             fetch_api('/add-distributor', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
 
-    exchangeAPI.removeDistributor = function(distributor, asset, floID, proxySecret) {
+    exchangeAPI.removeDistributor = function (distributor, asset, floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
                 floID: floID,
@@ -1170,14 +1170,14 @@
             console.debug(request);
 
             fetch_api('/remove-distributor', {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error)))
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error)))
                 .catch(error => reject(error))
         })
     }
@@ -1242,7 +1242,7 @@
         })
     }
 
-    exchangeAPI.clearAllLocalData = function() {
+    exchangeAPI.clearAllLocalData = function () {
         localStorage.removeItem('exchange-nodes');
         localStorage.removeItem('exchange-assets');
         localStorage.removeItem('exchange-tags');

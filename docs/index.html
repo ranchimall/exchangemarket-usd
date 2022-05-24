@@ -120,88 +120,111 @@
                         <ul id="listed_assets" class="user-content hide"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
-                        <div id="price_chart_container" class="flex direction-column gap-0-5">
-                            <div id="chart_header" class="flex align-center space-between">
-                                <div class="flex align-center">
-                                    <a href="#/exchange" class="button icon-only hide-on-desktop flex align-center">
-                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
-                                            viewBox="0 0 24 24" width="24px" fill="#000000">
-                                            <path d="M0 0h24v24H0V0z" fill="none" />
-                                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-                                        </svg>
-                                    </a>
-                                    <H4 id="chart_asset"></H4>
-                                </div>
-                                <strip-select id="price_duration_selector">
-                                    <strip-option value="hour" title="1 Hour price interval" selected>Hour
-                                    </strip-option>
-                                    <strip-option value="day" title="1 Day price interval">Day</strip-option>
-                                </strip-select>
-                            </div>
-                            <div id="price_chart_wrapper" class="flex" style="position: relative; flex: 1">
-                                <div id="price_history_chart"></div>
-                            </div>
-                        </div>
-                        <sm-form id="trade_form" class="hide-on-mobile">
-                            <button class="popup__header__close hide-on-desktop" style="margin-right: auto;"
-                                onclick="hideTradePanel()">
-                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24"
-                                    height="24">
-                                    <path fill="none" d="M0 0h24v24H0z" />
-                                    <path
-                                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
+                        <nav id="asset_page__header" class="hide-on-desktop">
+                            <a href="#/exchange" class="button icon-only">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                                    width="24px" fill="#000000">
+                                    <path d="M0 0h24v24H0V0z" fill="none" />
+                                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
                                 </svg>
-                            </button>
-                            <div class="flex space-between align-center">
-                                <h4 id="traded_asset">Trade FLO</h4>
-                                <strip-select id="trade_type_selector" class="tab">
-                                    <strip-option value="buy" selected>Buy</strip-option>
-                                    <strip-option value="sell">Sell</strip-option>
-                                </strip-select>
-                            </div>
-                            <div id="get_price" class="flex align-center space-between"></div>
-                            <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.00000001" required
-                                animate>
-                            </sm-input>
-                            </sm-input>
-                            <sm-input id="get_total" placeholder="Locked amount (₹)" type="number" min="0.00000001"
-                                step="0.00000001" required animate>
-                            </sm-input>
-                            <div class="grid gap-0-5">
-                                <div id="quantity_selector" class="flex align-center quantity-selector">
-                                    <span id="quantity_type">Rupee</span>
-                                    <button class="button" value="0.25"
-                                        title="Buy FLO worth 25% of total rupee">25%</button>
-                                    <button class="button" value="0.5"
-                                        title="Buy FLO worth 50% of total rupee">50%</button>
-                                    <button class="button" value="0.75"
-                                        title="Buy FLO worth 75% of total rupee">75%</button>
-                                    <button class="button" value="1"
-                                        title="Buy FLO worth 100% of total rupee">100%</button>
+                            </a>
+                        </nav>
+                        <div id="asset_page_wrapper">
+                            <div id="price_chart_container" class="flex direction-column gap-0-5 hide-on-mobile">
+                                <div id="chart_header" class="flex align-center space-between">
+                                    <H4 id="chart_asset"></H4>
+                                    <strip-select id="price_duration_selector">
+                                        <strip-option value="hour" title="1 Hour price interval" selected>Hour
+                                        </strip-option>
+                                        <strip-option value="day" title="1 Day price interval">Day</strip-option>
+                                    </strip-select>
                                 </div>
-                                <div class="flex align-center tip">
-                                    <svg class="icon margin-right-0-5" style="height: 1em; width: 1em;"
-                                        xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
-                                        height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
-                                        <rect fill="none" height="24" width="24" y="0" />
+                                <div id="price_chart_wrapper" class="flex" style="position: relative; flex: 1">
+                                    <div id="price_history_chart"></div>
+                                </div>
+                            </div>
+                            <sm-form id="trade_form">
+                                <div class="flex space-between align-center">
+                                    <h4 id="traded_asset">Trade FLO</h4>
+                                    <strip-select id="trade_type_selector" class="tab">
+                                        <strip-option value="buy" selected>Buy</strip-option>
+                                        <strip-option value="sell">Sell</strip-option>
+                                    </strip-select>
+                                </div>
+                                <div id="get_price" class="flex align-center space-between"></div>
+                                <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.00000001"
+                                    required animate>
+                                </sm-input>
+                                </sm-input>
+                                <sm-input id="get_total" placeholder="Locked amount (₹)" type="number" min="0.00000001"
+                                    step="0.00000001" required animate>
+                                </sm-input>
+                                <div class="grid gap-0-5">
+                                    <div id="quantity_selector" class="flex align-center quantity-selector">
+                                        <span id="quantity_type">Rupee</span>
+                                        <button class="button" value="0.25"
+                                            title="Buy FLO worth 25% of total rupee">25%</button>
+                                        <button class="button" value="0.5"
+                                            title="Buy FLO worth 50% of total rupee">50%</button>
+                                        <button class="button" value="0.75"
+                                            title="Buy FLO worth 75% of total rupee">75%</button>
+                                        <button class="button" value="1"
+                                            title="Buy FLO worth 100% of total rupee">100%</button>
+                                    </div>
+                                    <div class="flex align-center tip">
+                                        <svg class="icon margin-right-0-5" style="height: 1em; width: 1em;"
+                                            xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
+                                            height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
+                                            <rect fill="none" height="24" width="24" y="0" />
+                                            <path
+                                                d="M7,20h4c0,1.1-0.9,2-2,2S7,21.1,7,20z M5,19h8v-2H5V19z M16.5,9.5c0,3.82-2.66,5.86-3.77,6.5H5.27 C4.16,15.36,1.5,13.32,1.5,9.5C1.5,5.36,4.86,2,9,2S16.5,5.36,16.5,9.5z M14.5,9.5C14.5,6.47,12.03,4,9,4S3.5,6.47,3.5,9.5 c0,2.47,1.49,3.89,2.35,4.5h6.3C13.01,13.39,14.5,11.97,14.5,9.5z M21.37,7.37L20,8l1.37,0.63L22,10l0.63-1.37L24,8l-1.37-0.63L22,6 L21.37,7.37z M19,6l0.94-2.06L22,3l-2.06-0.94L19,0l-0.94,2.06L16,3l2.06,0.94L19,6z" />
+                                        </svg>
+                                        <p id="quantity_selector_tip" style="font-size: inherit;">
+                                            Buy FLO worth of the above percentage rupee
+                                        </p>
+                                    </div>
+                                </div>
+                                <div id="trade_button_wrapper"
+                                    class="stateful-button-wrapper flex align-center justify-center">
+                                    <sm-button id="trade_button" class="uppercase w-100" variant="primary"
+                                        onclick="showPopup('confirm_trade_popup')">BUY FLO
+                                    </sm-button>
+                                </div>
+                            </sm-form>
+                        </div>
+                        <nav id="asset_page__footer" class="flex w-100 hide-on-desktop">
+                            <button class="flex-1 active" value="trade">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
+                                    height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
+                                    <g>
+                                        <rect fill="none" height="24" width="24" />
+                                    </g>
+                                    <g>
                                         <path
-                                            d="M7,20h4c0,1.1-0.9,2-2,2S7,21.1,7,20z M5,19h8v-2H5V19z M16.5,9.5c0,3.82-2.66,5.86-3.77,6.5H5.27 C4.16,15.36,1.5,13.32,1.5,9.5C1.5,5.36,4.86,2,9,2S16.5,5.36,16.5,9.5z M14.5,9.5C14.5,6.47,12.03,4,9,4S3.5,6.47,3.5,9.5 c0,2.47,1.49,3.89,2.35,4.5h6.3C13.01,13.39,14.5,11.97,14.5,9.5z M21.37,7.37L20,8l1.37,0.63L22,10l0.63-1.37L24,8l-1.37-0.63L22,6 L21.37,7.37z M19,6l0.94-2.06L22,3l-2.06-0.94L19,0l-0.94,2.06L16,3l2.06,0.94L19,6z" />
-                                    </svg>
-                                    <p id="quantity_selector_tip" style="font-size: inherit;">
-                                        Buy FLO worth of the above percentage rupee
-                                    </p>
-                                </div>
-                            </div>
-                            <div id="trade_button_wrapper"
-                                class="stateful-button-wrapper flex align-center justify-center">
-                                <sm-button id="trade_button" class="uppercase w-100" variant="primary"
-                                    onclick="showPopup('confirm_trade_popup')">BUY FLO
-                                </sm-button>
-                            </div>
-                        </sm-form>
-                        <div id="trade_panel_backdrop" onclick="hideTradePanel()" class="hide-on-mobile"></div>
-                        <button id="show_trade_panel" class="button button--primary hide-on-desktop cta"
-                            onclick="showTradePanel()">Buy / Sell</button>
+                                            d="M12.22,19.85c-0.18,0.18-0.5,0.21-0.71,0c-0.18-0.18-0.21-0.5,0-0.71l3.39-3.39l-1.41-1.41l-3.39,3.39 c-0.19,0.2-0.51,0.19-0.71,0c-0.21-0.21-0.18-0.53,0-0.71l3.39-3.39l-1.41-1.41l-3.39,3.39c-0.18,0.18-0.5,0.21-0.71,0 c-0.19-0.19-0.19-0.51,0-0.71l3.39-3.39L9.24,10.1l-3.39,3.39c-0.18,0.18-0.5,0.21-0.71,0c-0.19-0.2-0.19-0.51,0-0.71L9.52,8.4 l1.87,1.86c0.95,0.95,2.59,0.94,3.54,0c0.98-0.98,0.98-2.56,0-3.54l-1.86-1.86l0.28-0.28c0.78-0.78,2.05-0.78,2.83,0l4.24,4.24 c0.78,0.78,0.78,2.05,0,2.83L12.22,19.85z M21.83,13.07c1.56-1.56,1.56-4.09,0-5.66l-4.24-4.24c-1.56-1.56-4.09-1.56-5.66,0 l-0.28,0.28l-0.28-0.28c-1.56-1.56-4.09-1.56-5.66,0L2.17,6.71c-1.42,1.42-1.55,3.63-0.4,5.19l1.45-1.45 C2.83,9.7,2.96,8.75,3.59,8.12l3.54-3.54c0.78-0.78,2.05-0.78,2.83,0l3.56,3.56c0.18,0.18,0.21,0.5,0,0.71 c-0.21,0.21-0.53,0.18-0.71,0L9.52,5.57l-5.8,5.79c-0.98,0.97-0.98,2.56,0,3.54c0.39,0.39,0.89,0.63,1.42,0.7 c0.07,0.52,0.3,1.02,0.7,1.42c0.4,0.4,0.9,0.63,1.42,0.7c0.07,0.52,0.3,1.02,0.7,1.42c0.4,0.4,0.9,0.63,1.42,0.7 c0.07,0.54,0.31,1.03,0.7,1.42c0.47,0.47,1.1,0.73,1.77,0.73c0.67,0,1.3-0.26,1.77-0.73L21.83,13.07z" />
+                                    </g>
+                                </svg>
+                                Trade
+                            </button>
+                            <button class="flex-1" value="'chart">
+                                <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24"
+                                    height="24px" viewBox="0 0 24 24" width="24px" fill="#000000">
+                                    <g>
+                                        <rect fill="none" height="24" width="24" />
+                                    </g>
+                                    <g>
+                                        <g>
+                                            <path
+                                                d="M21,8c-1.45,0-2.26,1.44-1.93,2.51l-3.55,3.56c-0.3-0.09-0.74-0.09-1.04,0l-2.55-2.55C12.27,10.45,11.46,9,10,9 c-1.45,0-2.27,1.44-1.93,2.52l-4.56,4.55C2.44,15.74,1,16.55,1,18c0,1.1,0.9,2,2,2c1.45,0,2.26-1.44,1.93-2.51l4.55-4.56 c0.3,0.09,0.74,0.09,1.04,0l2.55,2.55C12.73,16.55,13.54,18,15,18c1.45,0,2.27-1.44,1.93-2.52l3.56-3.55 C21.56,12.26,23,11.45,23,10C23,8.9,22.1,8,21,8z" />
+                                            <polygon
+                                                points="15,9 15.94,6.93 18,6 15.94,5.07 15,3 14.08,5.07 12,6 14.08,6.93" />
+                                            <polygon points="3.5,11 4,9 6,8.5 4,8 3.5,6 3,8 1,8.5 3,9" />
+                                        </g>
+                                    </g>
+                                </svg>
+                                Chart
+                            </button>
+                        </nav>
                     </div>
                 </section>
             </div>
@@ -305,25 +328,23 @@
                 </div>
             </div>
             <div id="portfolio" class="grid mobile-page hide">
-                <div id="portfolio__header" class="grid gap-1">
-                    <h4>
-                        My portfolio
-                    </h4>
-                    <div class="flex align-center space-between">
-                        <strip-select id="portfolio_pages_selector">
-                            <strip-option value="exchange" selected>Exchange</strip-option>
-                            <strip-option value="personal">On-chain</strip-option>
-                        </strip-select>
-                        <div class="multi-state-button">
-                            <button id="portfolio_balance_refresh_button" class="button button--small"
-                                onclick="refresh(false,this);" title="Refresh">
-                                Refresh
-                            </button>
-                        </div>
+                <div class="flex align-center space-between">
+                    <strip-select id="portfolio_pages_selector">
+                        <strip-option value="exchange" selected>Exchange</strip-option>
+                        <strip-option value="personal">On-chain</strip-option>
+                    </strip-select>
+                    <div class="multi-state-button">
+                        <button id="portfolio_balance_refresh_button" class="button button--small"
+                            onclick="refresh(false,this);" title="Refresh">
+                            Refresh
+                        </button>
                     </div>
                 </div>
                 <div id="portfolio_pages_wrapper">
                     <div class="grid gap-1-5">
+                        <h4>
+                            My portfolio
+                        </h4>
                         <div class="grid">
                             <span class="label">Portfolio valuation</span>
                             <h1 id="portfolio_value" style="font-size: 2.5rem;"></h1>
@@ -1487,19 +1508,47 @@
 
         handleMobileChange(mobileQuery)
         document.addEventListener("visibilitychange", handleVisibilityChange, false);
-        function showChildElement(id, index) {
-            [...getRef(id).children].forEach((child, i) => {
-                if (i === index)
-                    child.classList.remove('hide')
-                else
-                    child.classList.add('hide')
-            })
-        }
         function handleVisibilityChange() {
             if (document.visibilityState === "hidden") {
                 // code if page is hidden 
             } else {
                 updateRate();
+            }
+        }
+
+        // animations
+        const fadeIn = [
+            { opacity: 0 },
+            { opacity: 1 }
+        ]
+        const fadeOut = [
+            { opacity: 1 },
+            { opacity: 0 }
+        ]
+
+        function showChildElement(id, index, { mobileView = false, entry, exit }) {
+            const animOptions = {
+                duration: 150,
+                easing: 'ease',
+                fill: 'forwards'
+            }
+            const visibleElement = [...getRef(id).children].find(elem => !elem.classList.contains(mobileView ? 'hide-on-mobile' : 'hide'));
+            if (visibleElement === getRef(id).children[index]) return;
+            if (visibleElement) {
+                if (exit) {
+                    visibleElement.animate(exit, animOptions).onfinish = () => {
+                        visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hide')
+                        getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                        if (entry)
+                            getRef(id).children[index].animate(entry, animOptions)
+                    }
+                } else {
+                    visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hide')
+                    getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                }
+            } else {
+                getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                getRef(id).children[index].animate(entry, animOptions)
             }
         }
     </script>
@@ -1629,6 +1678,7 @@
             const d = new Date(originalTime);
             return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()) / 1000;
         }
+        let marketTradesLazyLoader
         const render = {
             listedAsset(asset, rate, countDown) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
@@ -1793,10 +1843,9 @@
             marketOrders() {
                 const frag = document.createDocumentFragment()
                 const ordersType = getRef('market_orders_category_selector').value
-                getRef('market_trades').innerHTML = '';
                 if (ordersType === 'open') {
                     getRef('market_orders__title').textContent = 'Market-wide orders';
-                    showChildElement('market_orders_wrapper', 0)
+                    showChildElement('market_orders_wrapper', 0, { entry: slideInRight, exit: slideOutRight })
                     getRef('market_buy_orders').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getBuyList().then(buyOrders => {
                         getRef('market_buy_orders').innerHTML = '';
@@ -1825,12 +1874,12 @@
                     })
                 } else {
                     getRef('market_orders__title').textContent = 'Market-wide trades';
-                    showChildElement('market_orders_wrapper', 1)
+                    showChildElement('market_orders_wrapper', 1, { entry: slideInLeft, exit: slideOutLeft })
                     getRef('market_trades').innerHTML = '<sm-spinner></sm-spinner>';
                     floExchangeAPI.getTradeList().then(trades => {
-                        trades.forEach(transaction => {
+                        const allTrades = trades.map(transaction => {
                             const { seller, buyer, asset, quantity, unitValue, tx_time } = transaction
-                            const transactionDetails = {
+                            return {
                                 buyer,
                                 seller,
                                 asset,
@@ -1838,10 +1887,13 @@
                                 unitValue,
                                 time: tx_time
                             }
-                            frag.append(render.marketTransactionCard(transactionDetails))
                         })
-                        getRef('market_trades').innerHTML = '';
-                        getRef('market_trades').append(frag)
+                        if (marketTradesLazyLoader) {
+                            marketTradesLazyLoader.update(allTrades)
+                        } else {
+                            marketTradesLazyLoader = new LazyLoader('#market_trades', allTrades, render.marketTransactionCard)
+                        }
+                        marketTradesLazyLoader.init()
                     }).catch(err => {
                         console.log(err)
                     })
@@ -1911,44 +1963,6 @@
         }
 
         document.addEventListener('themechange', setChartTheme)
-        function showTradePanel() {
-            getRef('trade_form').classList.remove('hide-on-mobile')
-            getRef('trade_form').animate([
-                { transform: 'translateY(100%)' },
-                { transform: 'translateY(0)' },
-            ], {
-                duration: 150,
-                easing: 'ease'
-            })
-            getRef('trade_panel_backdrop').classList.remove('hide-on-mobile')
-            getRef('trade_panel_backdrop').animate([
-                { opacity: 0 },
-                { opacity: 1 },
-            ], {
-                duration: 150,
-                easing: 'ease'
-            })
-        }
-        function hideTradePanel() {
-            getRef('trade_form').animate([
-                { transform: 'translateY(0)' },
-                { transform: 'translateY(100%)' },
-            ], {
-                duration: 150,
-                easing: 'ease'
-            }).onfinish = () => {
-                getRef('trade_form').classList.add('hide-on-mobile')
-            }
-            getRef('trade_panel_backdrop').animate([
-                { opacity: 1 },
-                { opacity: 0 },
-            ], {
-                duration: 150,
-                easing: 'ease'
-            }).onfinish = () => {
-                getRef('trade_panel_backdrop').classList.add('hide-on-mobile')
-            }
-        }
 
         function updateTooltip(asset, tradeType) {
             getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
@@ -1960,6 +1974,17 @@
             })
             getRef('quantity_selector_tip').textContent = `${tradeType} ${asset} worth of the above percentage`
         }
+
+        getRef('asset_page__footer').addEventListener('click', e => {
+            if (e.target.closest('button')) {
+                const button = e.target.closest('button');
+                [...getRef('asset_page__footer').children].forEach(child => {
+                    child.classList.remove('active')
+                });
+                button.classList.add('active')
+                showChildElement('asset_page_wrapper', button.value === 'trade' ? 1 : 0, { mobileView: true })
+            }
+        })
 
         let tradeType = 'buy'
         getRef('trade_type_selector').addEventListener('change', e => {
@@ -2058,7 +2083,11 @@
         })
 
         getRef('portfolio_pages_selector').addEventListener('change', e => {
-            showChildElement('portfolio_pages_wrapper', e.target.value === 'exchange' ? 0 : 1)
+            if (e.target.value === 'exchange') {
+                showChildElement('portfolio_pages_wrapper', 0, { entry: slideInRight, exit: slideOutRight })
+            } else {
+                showChildElement('portfolio_pages_wrapper', 1, { entry: slideInLeft, exit: slideOutLeft })
+            }
         })
 
         getRef('my_assets').addEventListener('change', e => {
@@ -2069,35 +2098,20 @@
             }
             const previousActionButton = getRef('my_assets').querySelector('.portfolio_actions__wrapper')
             if (previousActionButton) {
-                previousActionButton.animate([
-                    {
-                        paddingTop: '1rem',
-                        height: `${previousActionButton.offsetHeight}px`,
-                        opacity: 1
-                    },
-                    {
-                        paddingTop: 0,
-                        height: 0,
-                        opacity: 0
-                    }
-                ], animOptions).onfinish = () => {
-                    previousActionButton.remove()
-                }
+                previousActionButton.remove()
             }
             const actionButtons = getRef('asset_balance_actions').content.cloneNode(true)
             e.target.closest('.balance-card').append(actionButtons)
             const height = e.target.closest('.balance-card').lastElementChild.offsetHeight
             e.target.closest('.balance-card').lastElementChild.animate([
                 {
-                    paddingTop: 0,
-                    height: 0,
-                    opacity: 0
+                    transform: 'translateY(-0.5rem)',
+                    opacity: 0.5
                 },
                 {
-                    paddingTop: '1rem',
-                    height: `${height}px`,
+                    transform: 'translateY(0)',
                     opacity: 1
-                }
+                },
             ], animOptions)
         })
 
