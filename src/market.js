@@ -256,10 +256,10 @@ function getAccountDetails(floID) {
 
 function getUserTransacts(floID) {
     return new Promise((resolve, reject) => {
-        DB.query("(SELECT 'deposit' as type, txid, floID, token, amount, status FROM InputToken WHERE floID=?)" +
-                "UNION (SELECT 'deposit' as type, txid, floID, 'FLO' as token, amount, status FROM InputFLO WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, floID, token, amount, status FROM OutputToken WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, floID, 'FLO' as token, amount, status FROM OutputFLO WHERE floID=?)",
+        DB.query("(SELECT 'deposit' as type, txid, token, amount, status FROM InputToken WHERE floID=?)" +
+                "UNION (SELECT 'deposit' as type, txid, 'FLO' as token, amount, status FROM InputFLO WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, token, amount, status FROM OutputToken WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, 'FLO' as token, amount, status FROM OutputFLO WHERE floID=?)",
                 [floID, floID, floID, floID])
             .then(result => resolve(result))
             .catch(error => reject(error))
