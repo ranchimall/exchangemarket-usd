@@ -10,7 +10,7 @@ module.exports = {
         PERIOD_INTERVAL: 5 * 60 * 1000, //5 min,
         WAIT_TIME: 2 * 60 * 1000, //2 mins,
         LAUNCH_SELLER_TAG: "launch-seller",
-        MAXIMUM_LAUNCH_SELL_CHIPS: 250000,
+        MAXIMUM_LAUNCH_SELL_CHIPS: 100000,
         TRADE_HASH_PREFIX: "z1",
         TRANSFER_HASH_PREFIX: "z0"
     },
