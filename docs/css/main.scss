@@ -76,7 +76,9 @@ a.button {
   font-weight: 500;
   color: inherit;
 }
-
+fieldset {
+  border: none;
+}
 button {
   user-select: none;
   position: relative;
@@ -129,6 +131,9 @@ button {
 
 a:any-link:focus-visible {
   outline: rgba(var(--text-color), 1) 0.1rem solid;
+}
+input {
+  accent-color: var(--accent-color);
 }
 sm-input {
   font-size: 0.9rem;
@@ -462,7 +467,7 @@ strip-select {
 }
 strip-option {
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   --border-radius: 0;
   --active-option-color: rgba(var(--background-color), 1);
   --active-option-background-color: var(--accent-color);
@@ -501,7 +506,7 @@ sm-checkbox {
 }
 .tooltip {
   position: relative;
-  z-index: 1;
+  z-index: 8;
   cursor: pointer;
   .banner {
     position: absolute;
@@ -643,8 +648,8 @@ sm-checkbox {
   width: 100%;
   justify-content: center;
   overflow-y: auto;
-  padding: 0 1.5rem;
   & > * {
+    padding: 0 1.5rem;
     min-width: min(26rem, 100%);
   }
 }
@@ -722,7 +727,7 @@ sm-checkbox {
 }
 
 #quantity_type,
-#wallet_quantity_type {
+#portfolio_quantity_type {
   font-size: 0.8rem;
   padding-right: 0.5rem;
   border-right: thin solid rgba(var(--text-color), 0.3);
@@ -738,18 +743,10 @@ sm-checkbox {
   height: 100%;
 }
 #asset_page {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-#asset_page__nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 0;
-  .icon-only {
-    margin-left: -0.7rem;
-  }
 }
 #trade_form {
   height: 100%;
@@ -765,7 +762,6 @@ sm-checkbox {
     margin-top: auto;
   }
 }
-
 #my_orders,
 #market {
   width: min(46rem, 100%);
@@ -787,8 +783,17 @@ sm-checkbox {
   user-select: none;
   align-items: center;
   gap: 0.5rem;
-  grid-template-columns: min-content repeat(3, 1fr) min-content;
+  grid-template-columns: min-content 1fr auto;
   border-radius: 0.5rem;
+  grid-template-areas: "checkbox quantity quantity time" "checkbox price amount cancel";
+  & > .grid {
+    &:nth-of-type(2) {
+      grid-area: price;
+    }
+    &:nth-of-type(3) {
+      grid-area: amount;
+    }
+  }
   &__type {
     font-size: 0.9rem;
     font-weight: 500;
@@ -810,6 +815,7 @@ sm-checkbox {
     }
   }
   sm-checkbox {
+    grid-area: checkbox;
     cursor: pointer;
     margin-right: 0.5rem;
   }
@@ -820,8 +826,16 @@ sm-checkbox {
   }
 
   &__time {
+    grid-area: time;
     font-size: 0.8rem;
     color: rgba(var(--text-color), 0.8);
+  }
+  .cancel-order {
+    grid-area: cancel;
+    color: var(--danger-color);
+    .icon {
+      fill: var(--danger-color);
+    }
   }
 }
 .cancel-order {
@@ -918,19 +932,22 @@ sm-checkbox {
     background-color: #e2135110;
   }
 }
-#wallet {
+#portfolio {
   display: grid;
-  width: auto;
   gap: 1.5rem;
   grid-template-columns: minmax(0, 1fr);
   align-content: flex-start;
+  width: min(32rem, 100%);
 }
-.wallet_actions__wrapper {
-  grid-column: span 3;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+.portfolio_actions__wrapper {
+  grid-column: 1/-1;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  padding-top: 1rem;
   .button {
-    flex: 1;
+    color: var(--accent-color);
+    padding: 0.5rem 0.8rem;
+    flex-shrink: 0;
   }
 }
 .label {
@@ -941,31 +958,35 @@ sm-checkbox {
 #my_assets {
   gap: 0.5rem;
   margin-top: 0.5rem;
+  padding-bottom: 1.5rem;
+  border: none;
 }
 .balance-card {
   display: grid;
   align-items: center;
   gap: 0 0.5rem;
-  border-radius: 0.5rem;
-  background-color: rgba(var(--foreground-color), 1);
-  padding: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.3rem;
+  background-color: rgba(var(--text-color), 0.03);
   &.is-locked {
-    padding: 1rem 0.5rem;
-    grid-template-columns: auto 1fr auto;
-    gap: 0.5rem;
+    grid-template-columns: auto auto 1fr auto;
     .balance-card__icon {
       grid-row: span 2;
     }
   }
   &:not(.is-locked) {
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto auto 1fr auto auto;
+  }
+  input {
+    align-self: center;
   }
   &__icon {
     display: flex;
     align-content: center;
     justify-content: center;
-    padding: 0.6rem;
+    margin: 0 0.5rem;
     border-radius: 0.8rem;
+    align-self: flex-start;
     background-color: var(--accent-color--light);
     .icon {
       height: 1.3rem;
@@ -978,7 +999,8 @@ sm-checkbox {
     font-weight: 500;
   }
   &__amount-wrapper {
-    grid-column: 2/3;
+    margin-top: 0.5rem;
+    grid-column: 3/ -1;
     gap: 0.3rem 1rem;
     grid-template-columns: 1fr 1fr;
     & > :nth-child(even) {
@@ -986,7 +1008,78 @@ sm-checkbox {
     }
   }
 }
-#wallet_result {
+#portfolio_cards_wrapper {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.personal-asset-balance {
+  align-content: flex-start;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  color: rgba(0, 0, 0, 0.8);
+  width: 100%;
+  &:not(:last-of-type) {
+    margin-right: 0.5rem;
+  }
+  &:nth-of-type(1) {
+    background: url("bg-art2.svg") no-repeat bottom right, hsl(141, 100%, 88%);
+    background-size: contain;
+    .icon {
+      background-color: hsla(141, 100%, 70%, 0.5);
+    }
+    .button {
+      border: solid thin hsla(141, 100%, 70%, 0.5);
+    }
+  }
+  &:nth-of-type(2) {
+    background: url("back.svg") no-repeat top right, hsl(62, 100%, 83%);
+    background-size: contain;
+    .icon {
+      background-color: hsla(55, 100%, 50%, 0.5);
+    }
+  }
+  & > .flex {
+    margin-bottom: 0.3rem;
+    .icon {
+      height: 2rem;
+      width: 2rem;
+      padding: 0.4rem;
+      border-radius: 0.3rem;
+      fill: rgba(0, 0, 0, 0.8);
+      margin-right: 0.5rem;
+    }
+  }
+  .button {
+    display: flex;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding-right: 0.8rem;
+    justify-self: flex-start;
+    border-radius: 1rem;
+    background-color: rgba(var(--foreground-color), 1);
+    color: rgba(var(--text-color), 1);
+    transition: box-shadow 0.3s;
+    .icon {
+      height: 1rem;
+      background-color: transparent;
+      margin-right: 0.3rem;
+    }
+    &:hover {
+      box-shadow: 0 0.3rem 0.5rem rgba(0 0 0/ 0.16);
+    }
+  }
+}
+#personal_rupee_balance,
+#personal_flo_balance {
+  span:first-of-type {
+    font-size: 1.5rem;
+  }
+  span:last-of-type {
+    font-size: 0.9rem;
+  }
+}
+#portfolio_result {
   justify-content: center;
   text-align: center;
   &__icon {
@@ -1019,7 +1112,7 @@ sm-checkbox {
     opacity: 1;
   }
 }
-#wallet_result__cta {
+#portfolio_result__cta {
   padding: 1.5rem 1rem;
   border-radius: 0.5rem;
   background-color: rgba(var(--text-color), 0.06);
@@ -1108,6 +1201,16 @@ sm-checkbox {
   width: min(60ch, 100%);
   margin-bottom: 3rem;
   align-content: flex-start;
+  ul {
+    list-style: initial;
+    display: grid;
+    gap: 1rem;
+    li {
+      margin-left: 1rem;
+      padding-left: 0.5rem;
+      font-size: 0.9rem;
+    }
+  }
 }
 
 @media screen and (max-width: 40rem) and (any-hover: none) {
@@ -1139,9 +1242,56 @@ sm-checkbox {
       transform: translateY(50%) scale(1.2);
     }
   }
+  #asset_list_wrapper {
+    padding: 0 1.5rem;
+  }
   .listed-asset {
     border-radius: 0;
     border-bottom: solid thin rgba(var(--text-color), 0.1);
+  }
+  #exchange {
+    margin: 0;
+    padding: 0;
+  }
+  #login_form {
+    padding: 0 1.5rem;
+  }
+  #chart_header {
+    padding: 1rem 1.5rem 0.5rem 1.5rem;
+    margin-left: -0.7rem;
+  }
+  #trade_panel_backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background-color: rgba(0 0 0/ 0.3);
+    backdrop-filter: blur(0.5rem);
+    z-index: 3;
+  }
+  #show_trade_panel {
+    position: absolute;
+    border-radius: 2rem;
+    bottom: 0;
+    align-self: center;
+    margin-bottom: 1rem;
+    z-index: 5;
+    font-size: 1rem;
+  }
+  #trade_form {
+    position: fixed;
+    height: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-top: auto;
+    width: auto;
+    z-index: 10;
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    border-radius: 1rem 1rem 0 0;
+    background-color: rgba(var(--foreground-color), 1);
+    box-shadow: 0 -0.5rem 1rem rgba(0, 0, 0, 0.1);
   }
   #price_chart_container {
     flex: 1;
@@ -1210,6 +1360,10 @@ sm-checkbox {
   }
   #pages_container {
     grid-area: pages;
+    & > * {
+      margin: 0 1.5rem;
+      padding: 2rem;
+    }
   }
   .is-signed-in {
     #exchange {
@@ -1241,10 +1395,14 @@ sm-checkbox {
         position: absolute;
         width: 0.25rem;
         border-radius: 0 0.2rem 0.2rem 0;
-        height: 50%;
+        height: 2rem;
         background-color: var(--accent-color);
       }
     }
+  }
+  .order-card {
+    grid-template-columns: auto 1fr 1fr 1fr auto;
+    grid-template-areas: "checkbox quantity price amount time cancel";
   }
 }
 @media screen and (max-width: 80rem) and (min-width: 40rem) {
@@ -1291,20 +1449,6 @@ sm-checkbox {
     display: grid;
     gap: 1.5rem;
     grid-template-columns: minmax(0, 1fr) 20rem;
-  }
-  #asset_page__nav {
-    grid-column: 1/-1;
-  }
-  #wallet {
-    gap: 1rem 2rem;
-    grid-template-columns: 20rem 24rem;
-    &__header {
-      grid-column: 1/3;
-      padding-bottom: 1rem;
-    }
-    .balance-card {
-      border: solid thin rgba(var(--text-color), 0.2);
-    }
   }
 }
 @media screen and (min-width: 72rem) {
