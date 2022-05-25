@@ -1433,12 +1433,23 @@ sm-checkbox {
     flex: 1;
   }
 
+  #asset_page__footer button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    padding: 0.5rem 0;
+    color: rgba(var(--text-color), 0.8);
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
   #asset_page__footer button .icon {
+    height: 1.2rem;
+    margin-bottom: 0.3rem;
     margin-right: 0.3rem;
   }
   #asset_page__footer button.active {
     color: var(--accent-color);
-    background-color: rgba(var(--text-color), 0.03);
   }
   #asset_page__footer button.active .icon {
     fill: var(--accent-color);
