@@ -647,7 +647,7 @@ customElements.define('sm-input',
                 }
                 else if (name === 'type') {
                     if (this.hasAttribute('type') && this.getAttribute('type') === 'number') {
-                        this.input.setAttribute('inputmode', 'numeric');
+                        this.input.setAttribute('inputmode', 'decimal');
                     }
                 }
                 else if (name === 'helper-text') {

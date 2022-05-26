@@ -214,7 +214,7 @@ ul {
 .flex-wrap {
   flex-wrap: wrap;
 }
-.direction-column {
+.flex-direction-column {
   flex-direction: column;
 }
 
@@ -645,11 +645,14 @@ sm-checkbox {
 }
 #pages_container {
   display: flex;
+  flex-direction: column;
   flex: 1;
   width: 100%;
-  justify-content: center;
+  height: 100%;
+  align-items: center;
   overflow-y: auto;
   & > * {
+    flex: 1;
     padding: 0 1.5rem;
     min-width: min(26rem, 100%);
   }
@@ -779,6 +782,11 @@ sm-checkbox {
 }
 .orders_section__header {
   min-height: 2.8rem;
+  position: sticky;
+  top: 0;
+  background-color: rgba(var(--background-color), 1);
+  z-index: 2;
+  transition: background-color 0.3s;
 }
 
 .list__item {
@@ -1407,6 +1415,9 @@ sm-checkbox {
   .order-card {
     grid-template-columns: auto 1fr 1fr 1fr auto;
     grid-template-areas: "checkbox quantity price amount time cancel";
+  }
+  .orders_section__header {
+    background-color: rgba(var(--foreground-color), 1);
   }
 }
 @media screen and (max-width: 80rem) and (min-width: 40rem) {
