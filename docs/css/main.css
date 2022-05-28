@@ -1161,7 +1161,6 @@ sm-checkbox {
   background-color: rgba(var(--text-color), 0.03);
   border-radius: 0.3rem;
   margin-bottom: 0.5rem;
-  font-size: 0.9rem;
 }
 .history-entry:last-of-type {
   margin-bottom: 2rem;
