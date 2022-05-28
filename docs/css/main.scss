@@ -1089,6 +1089,10 @@ sm-checkbox {
     font-size: 0.8rem;
     color: rgba(var(--text-color), 0.8);
   }
+  &__txid {
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
 }
 #portfolio_cards_wrapper {
   display: grid;
