@@ -821,20 +821,7 @@
             </button>
             <h4>Transaction details</h4>
         </header>
-        <div class="grid gap-1-5">
-            <div id="transaction__buyer_wrapper" class="grid">
-                <h5 class="label capitalize">Buyer</h5>
-                <sm-copy id="transaction__buyer"></sm-copy>
-            </div>
-            <div id="transaction__seller_wrapper" class="grid">
-                <h5 class="label capitalize">Seller</h5>
-                <sm-copy id="transaction__seller"></sm-copy>
-            </div>
-            <div class="grid">
-                <h5 id="transaction_time__label" class="label">Completed</h5>
-                <time style="font-size: 0.9rem;" id="transaction_time"></time>
-            </div>
-        </div>
+        <div id="transaction_details" class="grid gap-1-5"></div>
     </sm-popup>
 
     <!-- templates -->
@@ -1051,6 +1038,7 @@
             <a class="history-entry__txid button" target="_blank">See on blockchain</a>
         </li>
     </template>
+    <script src="//unpkg.com/uhtml"></script>
     <script>
 
         /**
@@ -1064,6 +1052,7 @@
     </script>
     <script id="ui_utils">
         // Global variables
+        const { html, render: renderElem } = uhtml;
         const domRefs = {};
         let timerId;
         const currentYear = new Date().getFullYear();
@@ -1712,7 +1701,9 @@
         }
 
         function showSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
-            getRef('get_price').innerHTML = `
+            renderElem(
+                getRef('get_price'),
+                html`
                 <div class="grid">
                     <div style="font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem;">Current price</div>
                     <h3>${formatAmount(floGlobals.exchangeRates[asset])}</h3>
@@ -1725,12 +1716,12 @@
                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                     <p class="banner">
                         ${tradeType === 'buy' ?
-                    `<b>Valid upto</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_BUY * 100}%</b> higher than current price.` :
-                    `<b>Valid until</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_SELL * 100}%</b> lower than current price.`
-                } System will always try to execute your order at the <b>nearest price possible to current price</b>.
+                        html`<b>Valid upto</b> is the max price upto which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_BUY * 100}%</b> higher than current price.` :
+                        html`<b>Valid until</b> is the min price until which your order can be executed, which is <b>${DEFAULT_TRADE_PRICE_DEVIATION_SELL * 100}%</b> lower than current price.`
+                    } System will always try to execute your order at the <b>nearest price possible to current price</b>.
                     </p>
-                </div>
-            `
+                </div>`
+            )
         }
 
         const chartDimensions = {
@@ -1979,7 +1970,7 @@
                 entry.querySelector('.history-entry__status').textContent = status === 'SUCCESS' ? 'Success' : 'Pending'
                 entry.querySelector('.history-entry__time').textContent = floGlobals.allTxs.hasOwnProperty(txid) ? getFormattedTime(floGlobals.allTxs[txid].time * 1000) : ''
                 entry.querySelector('.history-entry__txid').href = `https://flosight.duckdns.org/tx/${txid}`
-                return entry
+                return entry;
             }
         }
 
@@ -2460,25 +2451,23 @@
         function showMoreDetails(e) {
             const target = e.target.closest('.more-info')
             showPopup('transaction_info_popup')
-            if (target.dataset.buyer !== 'undefined') {
-                getRef('transaction__buyer_wrapper').classList.remove('hide')
-                getRef('transaction__buyer').value = target.dataset.buyer
-            } else {
-                getRef('transaction__buyer_wrapper').classList.add('hide')
-            }
-            if (target.dataset.seller !== 'undefined') {
-                getRef('transaction__seller_wrapper').classList.remove('hide')
-                getRef('transaction__seller').value = target.dataset.seller
-            } else {
-                getRef('transaction__seller_wrapper').classList.add('hide')
-            }
-            if (target.dataset.time !== undefined) {
-                getRef('transaction_time__label').textContent = target.dataset.pending === 'true' ? 'Placed on' : 'Completed on'
-                getRef('transaction_time').textContent = getFormattedTime(target.dataset.time)
-                getRef('transaction_time').parentNode.classList.remove('hide')
-            } else {
-                getRef('transaction_time').parentNode.classList.add('hide')
-            }
+            renderElem(getRef('transaction_details'), html`
+            ${target.dataset.buyer !== 'undefined' ? html`<div class="grid">
+                    <h5 class="label capitalize">Buyer</h5>
+                    <sm-copy value="${target.dataset.buyer}"></sm-copy>
+                </div> `: ''
+                }
+            ${target.dataset.seller !== 'undefined' ? html`<div class="grid">
+                    <h5 class="label capitalize">Seller</h5>
+                    <sm-copy value="${target.dataset.seller}"></sm-copy>
+                </div> `: ''
+                }
+            ${target.dataset.time !== undefined ? html`<div class="grid">
+                <h5 class="label">${target.dataset.pending === 'true' ? 'Placed on' : 'Completed on'}</h5>
+                <time style="font-size: 0.9rem;">${getFormattedTime(target.dataset.time)}</time>
+            </div>`: ''
+                }
+            `)
         }
 
         getRef('orders_list').addEventListener('click', e => {
@@ -2711,8 +2700,8 @@
         function updateRate(init = false) {
             floExchangeAPI.getRates().then(({ rates, countDown }) => {
                 console.debug(rates);
+                floGlobals.exchangeRates = rates
                 if (init) {
-                    floGlobals.exchangeRates = rates
                     Object.entries(rates).sort((a, b) => a[1] < b[1] ? 1 : -1).forEach(([asset, rate]) => {
                         if (!allTokens.hasOwnProperty(asset)) {
                             allTokens[asset] = {
@@ -2732,13 +2721,13 @@
                             `
                         }))
                     })
+
                 } else {
                     // update rates in UI
                     for (const asset in rates) {
-                        const rate = rates[asset]
                         const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
                         if (listedAsset) {
-                            listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rate))
+                            listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rates[asset]))
                             if (floGlobals.countDowns.intervals.hasOwnProperty(asset)) {
                                 clearInterval(floGlobals.countDowns.intervals[asset]);
                             }

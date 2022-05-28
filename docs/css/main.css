@@ -1615,6 +1615,7 @@ sm-checkbox {
 
   .is-signed-in #exchange {
     display: flex;
+    width: 100%;
   }
   .is-signed-in #exchange_wrapper {
     display: grid;
