@@ -70,6 +70,8 @@ a:focus-visible {
 }
 
 a.button {
+  display: flex;
+  align-items: center;
   padding: 0.4rem 0.6rem;
   border-radius: 0.3rem;
   font-size: 0.9rem;
@@ -205,6 +207,13 @@ ul {
   -ms-hyphens: auto;
   -webkit-hyphens: auto;
   hyphens: auto;
+}
+
+.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .full-bleed {
@@ -542,6 +551,7 @@ sm-checkbox {
 }
 
 .tooltip {
+  display: flex;
   position: relative;
   z-index: 8;
   cursor: pointer;
@@ -549,6 +559,7 @@ sm-checkbox {
 .tooltip .banner {
   position: absolute;
   right: 0;
+  top: 100%;
   width: min(20rem, 100vw - 1rem);
   display: none;
   font-size: 0.9rem;
@@ -1131,6 +1142,62 @@ sm-checkbox {
   text-align: right;
 }
 
+#history {
+  padding-top: 0 !important;
+  width: min(36rem, 100%);
+}
+#history .sticky {
+  margin-left: -0.7rem;
+  padding: 1rem 0;
+  background-color: rgba(var(--background-color), 1);
+}
+
+.history-entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(var(--text-color), 0.03);
+  border-radius: 0.3rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+.history-entry:last-of-type {
+  margin-bottom: 2rem;
+}
+.history-entry > :nth-child(2) {
+  text-align: right;
+}
+.history-entry__status {
+  justify-self: flex-start;
+  font-size: 0.75rem;
+  background-color: rgba(var(--text-color), 0.06);
+  padding: 0.3rem 0.5rem;
+  border-radius: 1rem;
+  letter-spacing: 0.05em;
+  margin-left: 0.5rem;
+}
+.history-entry .history-entry__amount-wrapper {
+  font-weight: 500;
+}
+.history-entry[data-type=deposit] .history-entry__amount {
+  color: var(--green);
+}
+.history-entry[data-type=deposit] .history-entry__amount::before {
+  content: "+ ";
+}
+.history-entry[data-type=withdraw] .history-entry__amount {
+  color: var(--danger-color);
+}
+.history-entry[data-type=withdraw] .history-entry__amount::before {
+  content: "- ";
+}
+.history-entry__time {
+  font-size: 0.8rem;
+  color: rgba(var(--text-color), 0.8);
+}
+
 #portfolio_cards_wrapper {
   display: grid;
   gap: 0.5rem;
@@ -1589,6 +1656,10 @@ sm-checkbox {
   }
 
   .orders_section__header {
+    background-color: rgba(var(--foreground-color), 1);
+  }
+
+  #history .sticky {
     background-color: rgba(var(--foreground-color), 1);
   }
 }

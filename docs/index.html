@@ -352,17 +352,21 @@
                         <div class="grid gap-0-5">
                             <div class="flex align-center space-between">
                                 <h4>Owned assets on exchange</h4>
-                                <div class="tooltip">
-                                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
-                                        viewBox="0 0 24 24" width="24px" fill="#000000">
-                                        <path d="M0 0h24v24H0V0z" fill="none" />
-                                        <path
-                                            d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                                    </svg>
-                                    <p class="banner">
-                                        Your assets on exchange remains separate until they are withdrawn to your FLO
-                                        ID.
-                                    </p>
+                                <div class="flex align-center gap-0-5">
+                                    <a href="#/history" class="button">History</a>
+                                    <div class="tooltip">
+                                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
+                                            viewBox="0 0 24 24" width="24px" fill="#000000">
+                                            <path d="M0 0h24v24H0V0z" fill="none" />
+                                            <path
+                                                d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                                        </svg>
+                                        <p class="banner">
+                                            Your assets on exchange remains separate until they are withdrawn to your
+                                            FLO
+                                            ID.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             <p>Deposit rupee from your FLO ID to exchange to purchase assets.</p>
@@ -439,6 +443,22 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div id="history" class="mobile-page hide">
+                <div class="flex align-center sticky top-0">
+                    <a href="#/portfolio" class="button icon-only">
+                        <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                            width="24px" fill="#000000">
+                            <path d="M0 0h24v24H0z" fill="none" />
+                            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                        </svg>
+                    </a>
+                    <h1>History</h1>
+                </div>
+                <ul id="exchange_history" class="observe-empty-state"></ul>
+                <div class="empty-state">
+                    <p>No exchange transactions</p>
                 </div>
             </div>
             <div id="help" class="mobile-page hide grid gap-2">
@@ -1017,6 +1037,20 @@
             </div>
         </div>
     </template>
+    <template id="history_entry">
+        <li class="history-entry">
+            <div class="flex align-center">
+                <span class="history-entry__type capitalize"></span>
+                <span class="history-entry__status"></span>
+            </div>
+            <b class="history-entry__amount-wrapper">
+                <span class="history-entry__amount"></span>
+                <span class="history-entry__token"></span>
+            </b>
+            <time class="history-entry__time"></time>
+            <a class="history-entry__txid button" target="_blank">See on blockchain</a>
+        </li>
+    </template>
     <script>
 
         /**
@@ -1382,13 +1416,47 @@
                         break;
                     case 'portfolio':
                         break;
+                    case 'history':
+                        getRef('exchange_history').innerHTML = `
+                        <div class="flex" style="padding: 1.5rem; justify-content: center;">
+                            <sm-spinner></sm-spinner>
+                        </div>
+                        `
+                        // load all blockchain txs
+                        floBlockchainAPI.readAllTxs(accountDetails.floID).then(async transactions => {
+                            floGlobals.allTxs = {}
+                            transactions.forEach(({ txid, time }) => { floGlobals.allTxs[txid] = { time } })
+                            floExchangeAPI.getUserTransacts(accountDetails.floID, await proxy.secret).then(transactions => {
+                                transactions = transactions.sort((a, b) => floGlobals.allTxs[b.txid].time - floGlobals.allTxs[a.txid].time)
+                                if (historyLazyLoader) {
+                                    historyLazyLoader.update(transactions)
+                                } else {
+                                    historyLazyLoader = new LazyLoader('#exchange_history', transactions, render.historyEntry)
+                                }
+                                historyLazyLoader.init()
+                            }).catch(err => {
+                                console.error(err)
+                            })
+                        }).catch(err => {
+                            console.error(err)
+                        })
+                        break;
                 }
+            }
+            if (pageId !== 'history') {
+                if (historyLazyLoader)
+                    historyLazyLoader.clear()
             }
             if (pagesData.lastPage !== pageId) {
                 document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide'))
                 getRef(pageId).classList.remove('hide')
                 document.querySelectorAll('.main_navbar__item').forEach(elem => elem.classList.remove('main_navbar__item--active'))
-                document.querySelector(`.main_navbar__item[href="#/${pageId}"]`).classList.add('main_navbar__item--active')
+                if (document.querySelector(`.main_navbar__item[href="#/${pageId}"]`)) {
+                    document.querySelector(`.main_navbar__item[href="#/${pageId}"]`).classList.add('main_navbar__item--active')
+                    getRef('main_header').classList.remove('hide-on-mobile')
+                } else {
+                    getRef('main_header').classList.add('hide-on-mobile')
+                }
                 getRef('pages_container').style.overflowY = "hidden";
                 getRef(pageId).animate([
                     {
@@ -1679,6 +1747,7 @@
             return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds()) / 1000;
         }
         let marketTradesLazyLoader
+        let historyLazyLoader
         const render = {
             listedAsset(asset, rate, countDown) {
                 const clone = getRef('listed_asset_template').content.cloneNode(true).firstElementChild
@@ -1898,6 +1967,19 @@
                         console.log(err)
                     })
                 }
+            },
+            historyEntry(details) {
+                const { amount, status, token, txid, type } = details
+                const entry = getRef('history_entry').content.cloneNode(true).firstElementChild
+                entry.dataset.status = status
+                entry.dataset.type = type
+                entry.querySelector('.history-entry__token').textContent = token
+                entry.querySelector('.history-entry__type').textContent = type
+                entry.querySelector('.history-entry__amount').textContent = amount
+                entry.querySelector('.history-entry__status').textContent = status === 'SUCCESS' ? 'Success' : 'Pending'
+                entry.querySelector('.history-entry__time').textContent = floGlobals.allTxs.hasOwnProperty(txid) ? getFormattedTime(floGlobals.allTxs[txid].time * 1000) : ''
+                entry.querySelector('.history-entry__txid').href = `https://flosight.duckdns.org/tx/${txid}`
+                return entry
             }
         }
 
@@ -2718,8 +2800,6 @@
             floExchangeAPI.getAccount(proxy.userID, await proxy.secret).then(async acc => {
                 document.body.classList.add('is-signed-in');
                 getRef('market_asset_rates').parentNode.remove()
-                // save login time
-                localStorage.setItem(`${acc.floID}_last_login`, Date.now());
                 getRef("login_form").classList.add('hide')
                 accountDetails = acc
                 console.debug(acc);
