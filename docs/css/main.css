@@ -76,7 +76,7 @@ a.button {
   border-radius: 0.3rem;
   font-size: 0.9rem;
   font-weight: 500;
-  color: inherit;
+  color: var(--accent-color);
 }
 
 fieldset {
@@ -111,6 +111,7 @@ button:not(:disabled) {
 }
 
 .button {
+  color: var(--accent-color);
   background-color: rgba(var(--text-color), 0.06);
 }
 .button--primary, .button--danger {

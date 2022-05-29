@@ -351,9 +351,9 @@
                         </div>
                         <div class="grid gap-0-5">
                             <div class="flex align-center space-between">
-                                <h4>Owned assets on exchange</h4>
+                                <h4>Asset balance</h4>
                                 <div class="flex align-center gap-0-5">
-                                    <a href="#/history" class="button">History</a>
+                                    <a href="#/history" class="button">See history</a>
                                     <div class="tooltip">
                                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px"
                                             viewBox="0 0 24 24" width="24px" fill="#000000">
@@ -2595,6 +2595,7 @@
             }
         })
         document.addEventListener('popupclosed', e => {
+            zIndex--
             switch (e.target.id) {
                 case 'portfolio_popup':
                     hideWalletResult()
