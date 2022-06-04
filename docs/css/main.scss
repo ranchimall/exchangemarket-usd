@@ -22,6 +22,7 @@ body {
   --background-color: 241, 243, 248;
   --danger-color: rgb(255, 75, 75);
   --green: #1cad59;
+  --yellow: #bd7200;
   scrollbar-width: thin;
   scrollbar-gutter: stable;
   color: rgba(var(--text-color), 1);
@@ -36,6 +37,7 @@ body[data-theme="dark"] {
   --background-color: 21, 22, 22;
   --danger-color: rgb(255, 106, 106);
   --green: #00e676;
+  --yellow: #ffeb3b;
   sm-popup::part(popup) {
     background-color: rgba(var(--foreground-color), 1);
   }
@@ -965,17 +967,6 @@ sm-checkbox {
   align-content: flex-start;
   width: min(32rem, 100%);
 }
-.portfolio_actions__wrapper {
-  grid-column: 1/-1;
-  justify-content: flex-end;
-  gap: 0.3rem;
-  padding-top: 1rem;
-  .button {
-    color: var(--accent-color);
-    padding: 0.5rem 0.8rem;
-    flex-shrink: 0;
-  }
-}
 .label {
   font-size: 0.8rem;
   color: rgba(var(--text-color), 0.8);
@@ -992,19 +983,27 @@ sm-checkbox {
   align-items: center;
   gap: 0 0.5rem;
   padding: 1rem;
+  padding-left: 0.6rem;
   border-radius: 0.3rem;
+  color: inherit;
   background-color: rgba(var(--text-color), 0.03);
   &.is-locked {
-    grid-template-columns: auto auto 1fr auto;
+    grid-template-columns: auto 1fr auto;
     .balance-card__icon {
       grid-row: span 2;
     }
+    .balance-card__right-arrow {
+      grid-area: 1/3/3/4;
+    }
+    .balance-card__amount-wrapper {
+      grid-area: 2/2/3/3;
+    }
   }
   &:not(.is-locked) {
-    grid-template-columns: auto auto 1fr auto auto;
-  }
-  input {
-    align-self: center;
+    grid-template-columns: auto 1fr auto auto;
+    .balance-card__right-arrow {
+      grid-area: 1/4/2/5;
+    }
   }
   &__icon {
     display: flex;
@@ -1033,6 +1032,12 @@ sm-checkbox {
       text-align: right;
     }
   }
+  &__right-arrow {
+    background-color: rgba(var(--text-color), 0.1);
+    border-radius: 1rem;
+    padding: 0.1rem;
+    fill: var(--accent-color);
+  }
 }
 #history {
   padding-top: 0 !important;
@@ -1043,35 +1048,49 @@ sm-checkbox {
     background-color: rgba(var(--background-color), 1);
   }
 }
+#exchange_history {
+  margin-top: 0.5rem;
+}
 .history-entry {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem 1rem;
   align-items: center;
-  padding: 1rem;
-  background-color: rgba(var(--text-color), 0.03);
-  border-radius: 0.3rem;
-  margin-bottom: 0.5rem;
-  &:last-of-type {
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
+  &[data-status="SUCCESS"] {
+    .history-entry__status {
+      .icon {
+        fill: var(--green);
+      }
+    }
   }
-  & > :nth-child(2) {
-    text-align: right;
+  &[data-status="PENDING"],
+  &[data-status="WAITING_CONFIRMATION"] {
+    .history-entry__status {
+      .icon {
+        fill: var(--yellow);
+      }
+    }
   }
   &__status {
-    justify-self: flex-start;
-    font-size: 0.75rem;
-    background-color: rgba(var(--text-color), 0.06);
-    padding: 0.3rem 0.5rem;
-    border-radius: 1rem;
-    letter-spacing: 0.05em;
-    margin-left: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    grid-row: 1/3;
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: rgba(var(--text-color), 0.03);
+    border-radius: 2rem;
   }
-  .history-entry__amount-wrapper {
+  &__token-action {
     font-weight: 500;
   }
+  &__amount {
+    font-weight: 500;
+    text-align: right;
+  }
   &[data-type="deposit"] {
-    .history-entry__amount {
+    .history-entry__amount:not(:empty) {
       color: var(--green);
       &::before {
         content: "+ ";
@@ -1079,8 +1098,7 @@ sm-checkbox {
     }
   }
   &[data-type="withdraw"] {
-    .history-entry__amount {
-      color: var(--danger-color);
+    .history-entry__amount:not(:empty) {
       &::before {
         content: "- ";
       }
@@ -1094,6 +1112,19 @@ sm-checkbox {
     font-weight: 500;
     font-size: 0.9rem;
   }
+}
+#portfolio_asset_page {
+  .sticky {
+    margin-top: -1.5rem;
+    margin-left: -0.7rem;
+    padding: 1rem 0;
+    background-color: rgba(var(--background-color), 1);
+  }
+}
+#portfolio_asset__actions {
+}
+#portfolio_asset__history {
+  margin-top: 1rem;
 }
 #portfolio_cards_wrapper {
   display: grid;
@@ -1315,7 +1346,7 @@ sm-checkbox {
     align-self: center;
   }
   #main_header {
-    padding: 1.5rem;
+    // padding: 1.5rem;
   }
   #user_popup_button {
     width: 100%;
@@ -1491,7 +1522,8 @@ sm-checkbox {
   .orders_section__header {
     background-color: rgba(var(--foreground-color), 1);
   }
-  #history {
+  #history,
+  #portfolio_asset_page {
     .sticky {
       background-color: rgba(var(--foreground-color), 1);
     }
