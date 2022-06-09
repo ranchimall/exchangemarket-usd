@@ -1207,6 +1207,7 @@ sm-checkbox {
 .history-entry__txid {
   font-weight: 500;
   font-size: 0.9rem;
+  text-align: right;
 }
 
 #portfolio_asset_page .sticky {
