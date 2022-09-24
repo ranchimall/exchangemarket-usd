@@ -114,6 +114,14 @@ module.exports = function App(secret, DB) {
         set: (assets) => Request.assetList = assets
     });
 
+    Object.defineProperty(self, "chest", {
+        set: (chest) => Request.chest = chest
+    });
+
+    Object.defineProperty(self, "collectAndCall", {
+        set: (fn) => Request.collectAndCall = fn
+    });
+
     //Start (or) Stop servers
     self.start = (port) => new Promise(resolve => {
         server = app.listen(port, () => {

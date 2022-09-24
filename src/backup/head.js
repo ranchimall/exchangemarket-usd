@@ -20,6 +20,30 @@ const SLAVE_MODE = 0,
 
 const sinkList = {};
 
+app.chest = {
+    get list() {
+        return Object.keys(sinkList);
+    },
+    get activeList() {
+        let result = [];
+        for (let id in sinkList)
+            if (sinkList[id])
+                result.push(id);
+        return result;
+    },
+    includes(id) {
+        return (id in sinkList);
+    },
+    isActive(id) {
+        return (id in sinkList && sinkList[id] !== null);
+    },
+    get pick() {
+        let sinks = Object.keys(sinkList),
+            i = floCrypto.randInt(0, sinks.length);
+        return sinks[i];
+    }
+};
+
 //Shares
 function generateShares(sinkKey) {
     let nextNodes = nodeKBucket.nextNode(global.myFloID, null),
@@ -261,7 +285,7 @@ function slaveConnect(floID, pubKey, ws, sinks) {
     /*
     if (shares_pending === null || //The 1st backup is connected
         Object.keys(connectedSlaves).length < Math.pow(SHARE_THRESHOLD, 2) * Object.keys(shares_pending).length) //re-calib shares for better 
-        sendSharesToNodes(global.sinkID, generateShares(global.sinkPrivKey))
+        sendSharesToNodes(sinkID, generateShares(sinkPrivKey))
     */
 }
 

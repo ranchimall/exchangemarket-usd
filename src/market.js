@@ -1,6 +1,7 @@
 'use strict';
 
 const coupling = require('./coupling');
+const blockchain = require('./blockchain');
 
 const {
     PERIOD_INTERVAL,
@@ -379,9 +380,6 @@ function confirmDepositFLO() {
 
 confirmDepositFLO.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
-        let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
-        if (!receiver)
-            return reject([false, 'sinkID not loaded']);
         floBlockchainAPI.getTx(txid).then(tx => {
             let vin_sender = tx.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
@@ -392,9 +390,9 @@ confirmDepositFLO.checkTx = function(sender, txid) {
                 return reject([false, "Transaction not included in any block yet"]);
             if (!tx.confirmations)
                 return reject([false, "Transaction not confirmed yet"]);
-            let amount = tx.vout.reduce((a, v) => v.scriptPubKey.addresses[0] === receiver ? a + v.value : a, 0);
+            let amount = tx.vout.reduce((a, v) => blockchain.chest.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
             if (amount == 0)
-                return reject([true, "Transaction receiver is not market ID"]);
+                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestList loading from other nodes)
             else
                 resolve(amount);
         }).catch(error => reject([false, error]))
@@ -438,20 +436,8 @@ function withdrawFLO(floID, amount) {
             let txQueries = [];
             txQueries.push(updateBalance.consume(floID, "FLO", amount));
             DB.transaction(txQueries).then(result => {
-                //Send FLO to user via blockchain API
-                floBlockchainAPI.sendTx(global.sinkID, floID, amount, global.sinkPrivKey, '(withdrawal from market)').then(txid => {
-                    if (!txid)
-                        throw Error("Transaction not successful");
-                    //Transaction was successful, Add in DB
-                    DB.query("INSERT INTO OutputFLO (floID, amount, txid, status) VALUES (?, ?, ?, ?)", [floID, amount, txid, "WAITING_CONFIRMATION"])
-                        .then(_ => null).catch(error => console.error(error))
-                        .finally(_ => resolve("Withdrawal was successful"));
-                }).catch(error => {
-                    console.error(error);
-                    DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
-                        .then(_ => null).catch(error => console.error(error))
-                        .finally(_ => resolve("Withdrawal request is in process"));
-                });
+                blockchain.sendFLO(floID, amount);
+                resolve("Withdrawal request is in process");
             }).catch(error => reject(error));
         }).catch(error => reject(error));
     });
@@ -459,15 +445,7 @@ function withdrawFLO(floID, amount) {
 
 function retryWithdrawalFLO() {
     DB.query("SELECT id, floID, amount FROM OutputFLO WHERE status=?", ["PENDING"]).then(results => {
-        results.forEach(req => {
-            floBlockchainAPI.sendTx(global.sinkID, req.floID, req.amount, global.sinkPrivKey, 'Withdraw FLO Coins from Market').then(txid => {
-                if (!txid)
-                    throw Error("Transaction not successful");
-                //Transaction was successful, Add in DB
-                DB.query("UPDATE OutputFLO SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, req.id])
-                    .then(_ => null).catch(error => console.error(error));
-            }).catch(error => console.error(error));
-        })
+        results.forEach(req => blockchain.resendFLO(req.floID, req.amount))
     }).catch(error => reject(error));
 }
 
@@ -537,9 +515,6 @@ function confirmDepositToken() {
 
 confirmDepositToken.checkTx = function(sender, txid) {
     return new Promise((resolve, reject) => {
-        let receiver = global.sinkID; //receiver should be market's floID (ie, sinkID)
-        if (!receiver)
-            return reject([false, 'sinkID not loaded']);
         floTokenAPI.getTx(txid).then(tx => {
             if (tx.parsedFloData.type !== "transfer")
                 return reject([true, "Transaction type not 'transfer'"]);
@@ -552,9 +527,9 @@ confirmDepositToken.checkTx = function(sender, txid) {
             let vin_sender = tx.transactionDetails.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
                 return reject([true, "Transaction not sent by the sender"]);
-            let amount_flo = tx.transactionDetails.vout.reduce((a, v) => v.scriptPubKey.addresses[0] === receiver ? a + v.value : a, 0);
+            let amount_flo = tx.transactionDetails.vout.reduce((a, v) => blockchain.chest.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
             if (amount_flo == 0)
-                return reject([true, "Transaction receiver is not market ID"]);
+                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestList loading from other nodes)
             else
                 resolve([token_name, amount_token, amount_flo]);
         }).catch(error => reject([false, error]))
@@ -577,19 +552,9 @@ function withdrawToken(floID, token, amount) {
                 txQueries.push(updateBalance.consume(floID, "FLO", required_flo));
                 txQueries.push(updateBalance.consume(floID, token, amount));
                 DB.transaction(txQueries).then(result => {
-                    //Send FLO to user via blockchain API
-                    floTokenAPI.sendToken(global.sinkPrivKey, amount, floID, '(withdrawal from market)', token).then(txid => {
-                        if (!txid) throw Error("Transaction not successful");
-                        //Transaction was successful, Add in DB
-                        DB.query("INSERT INTO OutputToken (floID, token, amount, txid, status) VALUES (?, ?, ?, ?, ?)", [floID, token, amount, txid, "WAITING_CONFIRMATION"])
-                            .then(_ => null).catch(error => console.error(error))
-                            .finally(_ => resolve("Withdrawal was successful"));
-                    }).catch(error => {
-                        console.error(error);
-                        DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
-                            .then(_ => null).catch(error => console.error(error))
-                            .finally(_ => resolve("Withdrawal request is in process"));
-                    });
+                    //Send Token to user via token API
+                    blockchain.sendToken(floID, token, amount);
+                    resolve("Withdrawal request is in process");
                 }).catch(error => reject(error));
             }).catch(error => reject(error));
         }).catch(error => reject(error));
@@ -598,15 +563,7 @@ function withdrawToken(floID, token, amount) {
 
 function retryWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount FROM OutputToken WHERE status=?", ["PENDING"]).then(results => {
-        results.forEach(req => {
-            floTokenAPI.sendToken(global.sinkPrivKey, req.amount, req.floID, '(withdrawal from market)', req.token).then(txid => {
-                if (!txid)
-                    throw Error("Transaction not successful");
-                //Transaction was successful, Add in DB
-                DB.query("UPDATE OutputToken SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, req.id])
-                    .then(_ => null).catch(error => console.error(error));
-            }).catch(error => console.error(error));
-        });
+        results.forEach(req => blockchain.resendToken(req.floID, req.token, req.amount));
     }).catch(error => reject(error));
 }
 
@@ -712,7 +669,7 @@ function blockchainReCheck() {
         clearTimeout(blockchainReCheck.timeout);
         delete blockchainReCheck.timeout;
     }
-    if (!global.sinkID)
+    if (!blockchain.chest.list.length)
         return blockchainReCheck.timeout = setTimeout(blockchainReCheck, WAIT_TIME);
 
     floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
@@ -737,6 +694,12 @@ module.exports = {
     },
     get priceCountDown() {
         return coupling.price.lastTimes;
+    },
+    get chest() {
+        return blockchain.chest;
+    },
+    set chest(c) {
+        blockchain.chest = c;
     },
     addBuyOrder,
     addSellOrder,
@@ -765,5 +728,8 @@ module.exports = {
     },
     get assetList() {
         return assetList
-    }
+    },
+    set collectAndCall(fn) {
+        blockchain.collectAndCall = fn;
+    },
 };
