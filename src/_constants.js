@@ -27,7 +27,6 @@ module.exports = {
     backup: {
         SHARE_THRESHOLD: 50 / 100, //50%
         HASH_N_ROW: 100,
-        SINK_KEY_INDICATOR: '$$$',
         BACKUP_INTERVAL: 5 * 60 * 1000, //5 min
         BACKUP_SYNC_TIMEOUT: 10 * 60 * 1000, //10 mins
         CHECKSUM_INTERVAL: 100, //times of BACKUP_INTERVAL

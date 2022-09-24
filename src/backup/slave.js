@@ -4,7 +4,6 @@ const {
     BACKUP_INTERVAL,
     BACKUP_SYNC_TIMEOUT,
     CHECKSUM_INTERVAL,
-    SINK_KEY_INDICATOR,
     HASH_N_ROW
 } = require("../_constants")["backup"];
 
@@ -20,19 +19,25 @@ function startSlaveProcess(ws, init) {
     //set masterWS
     ws.on('message', processDataFromMaster);
     masterWS = ws;
-    //inform master
-    let message = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
-        req_time: Date.now(),
-        type: "SLAVE_CONNECT"
-    }
-    message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
-    ws.send(JSON.stringify(message));
-    //start sync
-    if (init)
-        requestInstance.open();
-    intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
+    let sinks_stored = [];
+    DB.query("SELECT floID FROM sinkShares").then(result => {
+        sinks_stored = result.map(r => r.floID);
+    }).catch(error => console.error(error)).finally(_ => {
+        //inform master
+        let message = {
+            floID: global.myFloID,
+            pubKey: global.myPubKey,
+            sinks: sinks_stored,
+            req_time: Date.now(),
+            type: "SLAVE_CONNECT"
+        }
+        message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
+        ws.send(JSON.stringify(message));
+        //start sync
+        if (init)
+            requestInstance.open();
+        intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
+    })
 }
 
 function stopSlaveProcess() {
@@ -131,7 +136,7 @@ function processDataFromMaster(message) {
                 storeSinkShare(message.sinkID, message.keyShare);
                 break;
             case "SEND_SHARE":
-                sendSinkShare(message.pubKey);
+                sendSinkShare(message.sinkID, message.pubKey);
                 break;
             case "REQUEST_ERROR":
                 console.log(message.error);
@@ -144,23 +149,23 @@ function processDataFromMaster(message) {
     }
 }
 
-function storeSinkShare(sinkID, keyShare) {
-    let encryptedShare = Crypto.AES.encrypt(floCrypto.decryptData(keyShare, global.myPrivKey), global.myPrivKey);
+function storeSinkShare(sinkID, keyShare, decrypt = true) {
+    if (decrypt)
+        keyShare = floCrypto.decryptData(keyShare, global.myPrivKey)
+    let encryptedShare = Crypto.AES.encrypt(keyShare, global.myPrivKey);
     console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
     DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?", [sinkID, encryptedShare, encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }
 
-function sendSinkShare(pubKey) {
-    DB.query("SELECT floID, share FROM sinkShares ORDER BY time_stored DESC LIMIT 1").then(result => {
+function sendSinkShare(sinkID, pubKey) {
+    DB.query("SELECT share FROM sinkShares WHERE floID=?", [sinkID]).then(result => {
         if (!result.length)
-            return console.warn("No key-shares in DB!");
+            return console.warn(`key-shares for ${sinkID} not found in DB!`);
         let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
-        if (share.startsWith(SINK_KEY_INDICATOR))
-            console.warn("Key is stored instead of share!");
         let response = {
             type: "SINK_SHARE",
-            sinkID: result[0].floID,
+            sinkID: sinkID,
             share: floCrypto.encryptData(share, pubKey),
             floID: global.myFloID,
             pubKey: global.myPubKey,
@@ -425,5 +430,6 @@ module.exports = {
     },
     start: startSlaveProcess,
     stop: stopSlaveProcess,
+    storeShare: storeSinkShare,
     syncRequest: ws => requestInstance.open(ws)
 }
