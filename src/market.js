@@ -390,9 +390,9 @@ confirmDepositFLO.checkTx = function(sender, txid) {
                 return reject([false, "Transaction not included in any block yet"]);
             if (!tx.confirmations)
                 return reject([false, "Transaction not confirmed yet"]);
-            let amount = tx.vout.reduce((a, v) => blockchain.chest.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
+            let amount = tx.vout.reduce((a, v) => blockchain.chests.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
             if (amount == 0)
-                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestList loading from other nodes)
+                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestsList loading from other nodes)
             else
                 resolve(amount);
         }).catch(error => reject([false, error]))
@@ -436,7 +436,7 @@ function withdrawFLO(floID, amount) {
             let txQueries = [];
             txQueries.push(updateBalance.consume(floID, "FLO", amount));
             DB.transaction(txQueries).then(result => {
-                blockchain.sendFLO(floID, amount);
+                blockchain.sendFLO.init(floID, amount);
                 resolve("Withdrawal request is in process");
             }).catch(error => reject(error));
         }).catch(error => reject(error));
@@ -445,7 +445,7 @@ function withdrawFLO(floID, amount) {
 
 function retryWithdrawalFLO() {
     DB.query("SELECT id, floID, amount FROM OutputFLO WHERE status=?", ["PENDING"]).then(results => {
-        results.forEach(req => blockchain.resendFLO(req.floID, req.amount))
+        results.forEach(req => blockchain.sendFLO.retry(req.floID, req.amount, req.id))
     }).catch(error => reject(error));
 }
 
@@ -527,9 +527,9 @@ confirmDepositToken.checkTx = function(sender, txid) {
             let vin_sender = tx.transactionDetails.vin.filter(v => v.addr === sender)
             if (!vin_sender.length)
                 return reject([true, "Transaction not sent by the sender"]);
-            let amount_flo = tx.transactionDetails.vout.reduce((a, v) => blockchain.chest.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
+            let amount_flo = tx.transactionDetails.vout.reduce((a, v) => blockchain.chests.includes(v.scriptPubKey.addresses[0]) ? a + v.value : a, 0);
             if (amount_flo == 0)
-                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestList loading from other nodes)
+                return reject([true, "Transaction receiver is not market ID"]); //Maybe reject as false? (to compensate delay in chestsList loading from other nodes)
             else
                 resolve([token_name, amount_token, amount_flo]);
         }).catch(error => reject([false, error]))
@@ -553,7 +553,7 @@ function withdrawToken(floID, token, amount) {
                 txQueries.push(updateBalance.consume(floID, token, amount));
                 DB.transaction(txQueries).then(result => {
                     //Send Token to user via token API
-                    blockchain.sendToken(floID, token, amount);
+                    blockchain.sendToken.init(floID, token, amount);
                     resolve("Withdrawal request is in process");
                 }).catch(error => reject(error));
             }).catch(error => reject(error));
@@ -563,7 +563,7 @@ function withdrawToken(floID, token, amount) {
 
 function retryWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount FROM OutputToken WHERE status=?", ["PENDING"]).then(results => {
-        results.forEach(req => blockchain.resendToken(req.floID, req.token, req.amount));
+        results.forEach(req => blockchain.sendToken.retry(req.floID, req.token, req.amount, req.id));
     }).catch(error => reject(error));
 }
 
@@ -669,7 +669,7 @@ function blockchainReCheck() {
         clearTimeout(blockchainReCheck.timeout);
         delete blockchainReCheck.timeout;
     }
-    if (!blockchain.chest.list.length)
+    if (!blockchain.chests.list.length)
         return blockchainReCheck.timeout = setTimeout(blockchainReCheck, WAIT_TIME);
 
     floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
@@ -695,11 +695,11 @@ module.exports = {
     get priceCountDown() {
         return coupling.price.lastTimes;
     },
-    get chest() {
-        return blockchain.chest;
+    get chests() {
+        return blockchain.chests;
     },
-    set chest(c) {
-        blockchain.chest = c;
+    set chests(c) {
+        blockchain.chests = c;
     },
     addBuyOrder,
     addSellOrder,

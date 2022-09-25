@@ -128,7 +128,7 @@ function Account(req, res) {
         timestamp: data.timestamp
     }, data.sign, data.floID, data.pubKey).then(req_str => {
         market.getAccountDetails(data.floID).then(result => {
-            result.sinkID = market.chest.pick;
+            result.sinkID = market.chests.pick;
             if (trustedIDs.includes(data.floID))
                 result.subAdmin = true;
             res.send(result);
@@ -530,8 +530,8 @@ module.exports = {
     set assetList(assets) {
         market.assetList = assets;
     },
-    set chest(c) {
-        market.chest = c;
+    set chests(c) {
+        market.chests = c;
     },
     set collectAndCall(fn) {
         market.collectAndCall = fn;

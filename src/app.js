@@ -114,8 +114,8 @@ module.exports = function App(secret, DB) {
         set: (assets) => Request.assetList = assets
     });
 
-    Object.defineProperty(self, "chest", {
-        set: (chest) => Request.chest = chest
+    Object.defineProperty(self, "chests", {
+        set: (chests) => Request.chests = chests
     });
 
     Object.defineProperty(self, "collectAndCall", {

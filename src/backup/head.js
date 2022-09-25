@@ -20,7 +20,7 @@ const SLAVE_MODE = 0,
 
 const sinkList = {};
 
-app.chest = {
+app.chests = {
     get list() {
         return Object.keys(sinkList);
     },
@@ -125,23 +125,32 @@ function transferMoneyToNewSink(oldSinkID, oldSinkKey, newSink) {
 }
 */
 
-function collectAndCall(sinkID, callback) {
+function collectAndCall(sinkID, callback, timeout = null) {
     if (!(callback instanceof Function))
         throw Error("callback should be a function");
-    if (sinkID in shares_collected) //if there is already a collect for sinkID, then just add the callback to queue
-        return shares_collected[sinkID].callbacks.push(callback);
-
-    shares_collected[sinkID] = {
-        callbacks: [callback],
-        shares: {}
-    };
-    for (let floID in connectedSlaves)
-        requestShare(connectedSlaves[floID], sinkID);
-    DB.query("SELECT share FROM sinkShares WHERE floID=?", [sinkID]).then(result => {
-        if (result.length)
-            collectShares(myFloID, sinkID, Crypto.AES.decrypt(result[0].share, global.myPrivKey))
-    }).catch(error => console.error(error))
+    if (!(sinkID in shares_collected)) { //if not already collecting shares for sinkID, then initiate collection
+        shares_collected[sinkID] = {
+            callbacks: [],
+            shares: {}
+        };
+        for (let floID in connectedSlaves)
+            requestShare(connectedSlaves[floID], sinkID);
+        DB.query("SELECT share FROM sinkShares WHERE floID=?", [sinkID]).then(result => {
+            if (result.length)
+                collectShares(myFloID, sinkID, Crypto.AES.decrypt(result[0].share, global.myPrivKey))
+        }).catch(error => console.error(error))
+    }
+    shares_collected[sinkID].callbacks.push(callback);
+    if (timeout)
+        setTimeout(() => {
+            if (sinkID in shares_collected) {
+                let i = shares_collected[sinkID].callbacks.indexOf(callback);
+                delete shares_collected[sinkID].callbacks[i]; //deleting will empty the index, but space will be there so that order of other indexes are not affected
+            }
+        }, timeout);
 }
+
+collectAndCall.isAlive = (sinkID, callbackRef) => (sinkID in shares_collected && shares_collected[sinkID].callbacks.indexOf(callbackRef) != -1);
 
 function collectShares(floID, sinkID, share) {
     if (_mode !== MASTER_MODE)
@@ -153,7 +162,7 @@ function collectShares(floID, sinkID, share) {
         let sinkKey = floCrypto.retrieveShamirSecret([].concat(...Object.values(shares_collected[sinkID].shares)));
         if (floCrypto.verifyPrivKey(sinkKey, sinkID)) {
             console.log("Shares collected successfully for", sinkID);
-            shares_collected[sinkID].callbacks.map(fn => fn(sinkKey));
+            shares_collected[sinkID].callbacks.forEach(fn => fn instanceof Function ? fn(sinkKey) : null);
             delete shares_collected[sinkID];
         }
     } catch {
