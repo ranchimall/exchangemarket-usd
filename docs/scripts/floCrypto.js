@@ -1,4 +1,4 @@
-(function(EXPORTS) { //floCrypto v2.3.0a
+(function(EXPORTS) { //floCrypto v2.3.3d
     /* FLO Crypto Operators */
     'use strict';
     const floCrypto = EXPORTS;
@@ -7,6 +7,7 @@
     const ecparams = EllipticCurve.getSECCurveByName("secp256k1");
     const ascii_alternatives = `‘ '\n’ '\n“ "\n” "\n– --\n— ---\n≥ >=\n≤ <=\n≠ !=\n× *\n÷ /\n← <-\n→ ->\n↔ <->\n⇒ =>\n⇐ <=\n⇔ <=>`;
     const exponent1 = () => p.add(BigInteger.ONE).divide(BigInteger("4"));
+    coinjs.compressed = true; //defaulting coinjs compressed to true;
 
     function calculateY(x) {
         let exp = exponent1();
@@ -80,7 +81,7 @@
     floCrypto.randInt = function(min, max) {
         min = Math.ceil(min);
         max = Math.floor(max);
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+        return Math.floor(securedMathRandom() * (max - min + 1)) + min;
     }
 
     //generate a random String within length (options : alphaNumeric chars only)
@@ -89,7 +90,7 @@
         var characters = alphaNumeric ? 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' :
             'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_+-./*?@#&$<>=[]{}():';
         for (var i = 0; i < length; i++)
-            result += characters.charAt(Math.floor(Math.random() * characters.length));
+            result += characters.charAt(Math.floor(securedMathRandom() * characters.length));
         return result;
     }
 
@@ -121,12 +122,8 @@
     //Sign data using private-key
     floCrypto.signData = function(data, privateKeyHex) {
         var key = new Bitcoin.ECKey(privateKeyHex);
-        key.setCompressed(true);
-        var privateKeyArr = key.getBitcoinPrivateKeyByteArray();
-        var privateKey = BigInteger.fromByteArrayUnsigned(privateKeyArr);
         var messageHash = Crypto.SHA256(data);
-        var messageHashBigInteger = new BigInteger(messageHash);
-        var messageSign = Bitcoin.ECDSA.sign(messageHashBigInteger, key.priv);
+        var messageSign = Bitcoin.ECDSA.sign(messageHash, key.priv);
         var sighex = Crypto.util.bytesToHex(messageSign);
         return sighex;
     }
@@ -134,11 +131,9 @@
     //Verify signatue of the data using public-key
     floCrypto.verifySign = function(data, signatureHex, publicKeyHex) {
         var msgHash = Crypto.SHA256(data);
-        var messageHashBigInteger = new BigInteger(msgHash);
         var sigBytes = Crypto.util.hexToBytes(signatureHex);
-        var signature = Bitcoin.ECDSA.parseSig(sigBytes);
         var publicKeyPoint = ecparams.getCurve().decodePointHex(publicKeyHex);
-        var verify = Bitcoin.ECDSA.verifyRaw(messageHashBigInteger, signature.r, signature.s, publicKeyPoint);
+        var verify = Bitcoin.ECDSA.verify(msgHash, sigBytes, publicKeyPoint);
         return verify;
     }
 
@@ -153,8 +148,23 @@
         }
     }
 
-    Object.defineProperty(floCrypto, 'newID', {
-        get: () => generateNewID()
+    Object.defineProperties(floCrypto, {
+        newID: {
+            get: () => generateNewID()
+        },
+        tmpID: {
+            get: () => {
+                let bytes = Crypto.util.randomBytes(20);
+                bytes.unshift(bitjs.pub);
+                var hash = Crypto.SHA256(Crypto.SHA256(bytes, {
+                    asBytes: true
+                }), {
+                    asBytes: true
+                });
+                var checksum = hash.slice(0, 4);
+                return bitjs.Base58.encode(bytes.concat(checksum));
+            }
+        }
     });
 
     //Returns public-key from private-key
@@ -182,6 +192,25 @@
         }
     }
 
+    floCrypto.getAddress = function(privateKeyHex, strict = false) {
+        if (!privateKeyHex)
+            return;
+        var key = new Bitcoin.ECKey(privateKeyHex);
+        if (key.priv == null)
+            return null;
+        key.setCompressed(true);
+        let pubKey = key.getPubKeyHex(),
+            version = bitjs.Base58.decode(privateKeyHex)[0];
+        switch (version) {
+            case coinjs.priv: //BTC
+                return coinjs.bech32Address(pubKey).address;
+            case bitjs.priv: //FLO
+                return bitjs.pubkey2address(pubKey);
+            default:
+                return strict ? false : bitjs.pubkey2address(pubKey); //default to FLO address (if strict=false)
+        }
+    }
+
     //Verify the private-key for the given public-key or flo-ID
     floCrypto.verifyPrivKey = function(privateKeyHex, pubKey_floID, isfloID = true) {
         if (!privateKeyHex || !pubKey_floID)
@@ -202,15 +231,109 @@
         }
     }
 
-    //Check if the given Address is valid or not
-    floCrypto.validateFloID = floCrypto.validateAddr = function(inpAddr) {
-        if (!inpAddr)
+    //Check if the given flo-id is valid or not
+    floCrypto.validateFloID = function(floID) {
+        if (!floID)
             return false;
         try {
-            let addr = new Bitcoin.Address(inpAddr);
+            let addr = new Bitcoin.Address(floID);
             return true;
         } catch {
             return false;
+        }
+    }
+
+    //Check if the given address (any blockchain) is valid or not
+    floCrypto.validateAddr = function(address, std = true, bech = true) {
+        let raw = decodeAddress(address);
+        if (!raw)
+            return false;
+        if (typeof raw.version !== 'undefined') { //legacy or segwit
+            if (std == false)
+                return false;
+            else if (std === true || (!Array.isArray(std) && std === raw.version) || (Array.isArray(std) && std.includes(raw.version)))
+                return true;
+            else
+                return false;
+        } else if (typeof raw.bech_version !== 'undefined') { //bech32
+            if (bech === false)
+                return false;
+            else if (bech === true || (!Array.isArray(bech) && bech === raw.bech_version) || (Array.isArray(bech) && bech.includes(raw.bech_version)))
+                return true;
+            else
+                return false;
+        } else //unknown
+            return false;
+    }
+
+    //Check the public-key for the address (any blockchain)
+    floCrypto.verifyPubKey = function(pubKeyHex, address) {
+        let raw = decodeAddress(address),
+            pub_hash = Crypto.util.bytesToHex(ripemd160(Crypto.SHA256(Crypto.util.hexToBytes(pubKeyHex), {
+                asBytes: true
+            })));
+        return raw ? pub_hash === raw.hex : false;
+    }
+
+    //Convert the given address (any blockchain) to equivalent floID
+    floCrypto.toFloID = function(address) {
+        if (!address)
+            return;
+        let raw = decodeAddress(address);
+        if (!raw)
+            return;
+        raw.bytes.unshift(bitjs.pub);
+        let hash = Crypto.SHA256(Crypto.SHA256(raw.bytes, {
+            asBytes: true
+        }), {
+            asBytes: true
+        });
+        return bitjs.Base58.encode(raw.bytes.concat(hash.slice(0, 4)));
+    }
+
+    //Checks if the given addresses (any blockchain) are same (w.r.t keys)
+    floCrypto.isSameAddr = function(addr1, addr2) {
+        if (!addr1 || !addr2)
+            return;
+        let raw1 = decodeAddress(addr1),
+            raw2 = decodeAddress(addr2);
+        if (!raw1 || !raw2)
+            return false;
+        else
+            return raw1.hex === raw2.hex;
+    }
+
+    const decodeAddress = floCrypto.decodeAddr = function(address) {
+        if (!address)
+            return;
+        else if (address.length == 33 || address.length == 34) { //legacy encoding
+            let decode = bitjs.Base58.decode(address);
+            let bytes = decode.slice(0, decode.length - 4);
+            let checksum = decode.slice(decode.length - 4),
+                hash = Crypto.SHA256(Crypto.SHA256(bytes, {
+                    asBytes: true
+                }), {
+                    asBytes: true
+                });
+            return (hash[0] != checksum[0] || hash[1] != checksum[1] || hash[2] != checksum[2] || hash[3] != checksum[3]) ? null : {
+                version: bytes.shift(),
+                hex: Crypto.util.bytesToHex(bytes),
+                bytes
+            }
+        } else if (address.length == 42) { //bech encoding
+            let decode = coinjs.bech32_decode(address);
+            if (decode) {
+                let bytes = decode.data;
+                let bech_version = bytes.shift();
+                bytes = coinjs.bech32_convert(bytes, 5, 8, false);
+                return {
+                    bech_version,
+                    hrp: decode.hrp,
+                    hex: Crypto.util.bytesToHex(bytes),
+                    bytes
+                }
+            } else
+                return null;
         }
     }
 
