@@ -1,4 +1,4 @@
-(function(EXPORTS) { //btcOperator v1.0.10
+(function(EXPORTS) { //btcOperator v1.0.10a
     /* BTC Crypto and API Operator */
     const btcOperator = EXPORTS;
 
@@ -31,16 +31,16 @@
         })
     }
 
-    const broadcast = btcOperator.broadcast = rawtx => new Promise((resolve, reject) => {
+    const broadcastTx = btcOperator.broadcastTx = rawTxHex => new Promise((resolve, reject) => {
         $.ajax({
             type: "POST",
             url: URL + "send_tx/BTC/",
             data: {
-                "tx_hex": rawtx
+                "tx_hex": rawTxHex
             },
             dataType: "json",
             error: e => reject(e.responseJSON),
-            success: r => r.status === "success" ? resolve(r.data) : reject(r)
+            success: r => r.status === "success" ? resolve(r.data.txid) : reject(r)
         })
     });
 
@@ -485,8 +485,8 @@
                 new Set(wif_keys).forEach(key => console.debug("Signing key:", key, tx.sign(key, 1 /*sighashtype*/ ))); //Sign the tx using private key WIF
                 console.debug("Signed:", tx.serialize());
                 debugger;
-                broadcast(tx.serialize())
-                    .then(result => resolve(result))
+                broadcastTx(tx.serialize())
+                    .then(txid => resolve(txid))
                     .catch(error => reject(error));
             }).catch(error => reject(error));
         })

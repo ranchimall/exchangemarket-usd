@@ -3,14 +3,28 @@
 var collectAndCall; //container for collectAndCall function from backup module
 var chests; //container for blockchain ids (where assets are stored)
 
+const WITHDRAWAL_MESSAGE = "(withdrawal from market)";
+
 const balance_locked = {},
     balance_cache = {},
     callbackCollection = {
-        FLO: {},
+        Coin: {},
         token: {}
     };
 
-function getSinkID(amount, asset = "FLO", sinkList = null) {
+function getBalance(sinkID, asset) {
+    switch (asset) {
+        case "FLO":
+            return floBlockchainAPI.getBalance(sinkID);
+        case "BTC":
+            let btc_id = btcOperator.convert.legacy2bech(sinkID);
+            return btcOperator.getBalance(btc_id);
+        default:
+            return floTokenAPI.getBalance(sinkID, asset);
+    }
+}
+
+function getSinkID(amount, asset, sinkList = null) {
     return new Promise((resolve, reject) => {
         if (!sinkList)
             sinkList = chests.list.map(s => [s, s in balance_cache ? balance_cache[s][asset] || 0 : 0]) //TODO: improve sorting
@@ -18,7 +32,7 @@ function getSinkID(amount, asset = "FLO", sinkList = null) {
         if (!sinkList.length)
             return reject(`Insufficient balance in chests for asset(${asset})`);
         let sinkID = sinkList.shift();
-        (asset === "FLO" ? floBlockchainAPI.getBalance(sinkID) : floTokenAPI.getBalance(sinkID, asset)).then(balance => {
+        getBalance(sinkID, asset).then(balance => {
             if (!(sinkID in balance_cache))
                 balance_cache[sinkID] = {};
             balance_cache[sinkID][asset] = balance;
@@ -37,47 +51,55 @@ function getSinkID(amount, asset = "FLO", sinkList = null) {
     })
 }
 
-function sendFLO(floID, amount, id) {
-    getSinkID(amount).then(sinkID => {
+function sendTx(floID, coin, amount, sinkID, sinkKey) {
+    switch (coin) {
+        case "FLO":
+            return floBlockchainAPI.sendTx(sinkID, floID, amount, sinkKey, WITHDRAWAL_MESSAGE);
+        case "BTC":
+    }
+}
+
+function sendCoin(floID, coin, amount, id) {
+    getSinkID(amount, coin).then(sinkID => {
         let callback = (sinkKey) => {
-            //Send FLO to user via blockchain API
-            floBlockchainAPI.sendTx(sinkID, floID, amount, sinkKey, '(withdrawal from market)').then(txid => {
+            //Send Coin to user via blockchain API
+            sendTx(floID, coin, amount, sinkID, sinkKey).then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
-                DB.query("UPDATE OutputFLO SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, id])
+                DB.query("UPDATE OutputCoin SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, id])
                     .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error)).finally(_ => {
-                delete callbackCollection.FLO[id];
-                balance_locked[sinkID].FLO -= amount;
+                delete callbackCollection.Coin[id];
+                balance_locked[sinkID][coin] -= amount;
             });
         }
         collectAndCall(sinkID, callback);
-        callbackCollection.FLO[id] = callback;
+        callbackCollection.Coin[id] = callback;
         if (!(sinkID in balance_locked))
             balance_locked[sinkID] = {};
-        balance_locked[sinkID].FLO = (balance_locked[sinkID].FLO || 0) + amount;
+        balance_locked[sinkID][coin] = (balance_locked[sinkID][coin] || 0) + amount;
     }).catch(error => console.error(error))
 }
 
-function sendFLO_init(floID, amount) {
-    DB.query("INSERT INTO OutputFLO (floID, amount, status) VALUES (?, ?, ?)", [floID, amount, "PENDING"])
-        .then(result => sendFLO(floID, amount, result.insertId))
+function sendCoin_init(floID, coin, amount) {
+    DB.query("INSERT INTO OutputCoin (floID, coin, amount, status) VALUES (?, ?, ?, ?)", [floID, coin, amount, "PENDING"])
+        .then(result => sendCoin(floID, coin, amount, result.insertId))
         .catch(error => console.error(error))
 }
 
-function sendFLO_retry(floID, amount, id) {
-    if (id in callbackCollection.FLO)
+function sendCoin_retry(floID, coin, amount, id) {
+    if (id in callbackCollection.Coin)
         console.debug("A callback is already pending for this FLO transfer");
     else
-        sendFLO(floID, amount, id);
+        sendCoin(floID, coin, amount, id);
 }
 
 function sendToken(floID, token, amount, id) {
     getSinkID(amount, token).then(sinkID => {
         let callback = (sinkKey) => {
             //Send Token to user via token API
-            floTokenAPI.sendToken(sinkKey, amount, floID, '(withdrawal from market)', token).then(txid => {
+            floTokenAPI.sendToken(sinkKey, amount, floID, WITHDRAWAL_MESSAGE, token).then(txid => {
                 if (!txid)
                     throw Error("Transaction not successful");
                 //Transaction was successful, Add in DB
@@ -96,7 +118,7 @@ function sendToken(floID, token, amount, id) {
     }).catch(error => console.error(error))
 }
 
-function sendToken_init() {
+function sendToken_init(floID, token, amount) {
     DB.query("INSERT INTO OutputToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, amount, "PENDING"])
         .then(result => sendToken(floID, amount, result.insertId))
         .catch(error => console.error(error))
@@ -119,9 +141,9 @@ module.exports = {
     set chests(c) {
         chests = c;
     },
-    sendFLO: {
-        init: sendFLO_init,
-        retry: sendFLO_retry
+    sendCoin: {
+        init: sendCoin_init,
+        retry: sendCoin_retry
     },
     sendToken: {
         init: sendToken_init,
