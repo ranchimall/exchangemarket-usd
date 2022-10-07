@@ -30,5 +30,9 @@ module.exports = {
         BACKUP_INTERVAL: 5 * 60 * 1000, //5 min
         BACKUP_SYNC_TIMEOUT: 10 * 60 * 1000, //10 mins
         CHECKSUM_INTERVAL: 100, //times of BACKUP_INTERVAL
+    },
+    sql: {
+        CONVERT_MODE_GET: 1,
+        CONVERT_MODE_PUT: 0,
     }
 }

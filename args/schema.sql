@@ -114,7 +114,7 @@ CREATE TABLE BuyOrder (
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
-CREATE TABLE InputCoin (
+CREATE TABLE DepositCoin (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE InputCoin (
     PRIMARY KEY(id)
 );
 
-CREATE TABLE OutputCoin (
+CREATE TABLE WithdrawCoin (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE OutputCoin (
     PRIMARY KEY(id)
 );
 
-CREATE TABLE InputToken (
+CREATE TABLE DepositToken (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
@@ -144,7 +144,7 @@ CREATE TABLE InputToken (
     PRIMARY KEY(id)
 );
 
-CREATE TABLE OutputToken (
+CREATE TABLE WithdrawToken (
     id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128),
     floID CHAR(34) NOT NULL,
@@ -210,6 +210,21 @@ CREATE TABLE AuditTrade(
     buyer_new_cash DECIMAL(16, 8) NOT NULL,
     PRIMARY KEY(id),
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
+);
+
+/* External Service */
+
+CREATE TABLE DirectConvert(
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    amount DECIMAL(16, 8),
+    coin VARCHAR(8) NOT NULL,
+    quantity DECIMAL(16, 8),
+    mode BIT NOT NULL,
+    in_txid VARCHAR(128),
+    out_txid VARCHAR(128),
+    locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL,
 );
 
 /* Backup Feature (Tables & Triggers) */
@@ -279,33 +294,40 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUP
 CREATE TRIGGER BuyOrder_D AFTER DELETE ON BuyOrder
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER InputCoin_I AFTER INSERT ON InputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER InputCoin_U AFTER UPDATE ON InputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER InputCoin_D AFTER DELETE ON InputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER DepositCoin_I AFTER INSERT ON DepositCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DepositCoin_U AFTER UPDATE ON DepositCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DepositCoin_D AFTER DELETE ON DepositCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER OutputCoin_I AFTER INSERT ON OutputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER OutputCoin_U AFTER UPDATE ON OutputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER OutputCoin_D AFTER DELETE ON OutputCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawCoin_I AFTER INSERT ON WithdrawCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawCoin_U AFTER UPDATE ON WithdrawCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawCoin_D AFTER DELETE ON WithdrawCoin
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER InputToken_I AFTER INSERT ON InputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER InputToken_U AFTER UPDATE ON InputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER InputToken_D AFTER DELETE ON InputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('InputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER DepositToken_I AFTER INSERT ON DepositToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DepositToken_U AFTER UPDATE ON DepositToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DepositToken_D AFTER DELETE ON DepositToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER OutputToken_I AFTER INSERT ON OutputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER OutputToken_U AFTER UPDATE ON OutputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER OutputToken_D AFTER DELETE ON OutputToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('OutputToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawToken_I AFTER INSERT ON WithdrawToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawToken_U AFTER UPDATE ON WithdrawToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER WithdrawToken_D AFTER DELETE ON WithdrawToken
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER DirectConvert_I AFTER INSERT ON DirectConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DirectConvert_U AFTER UPDATE ON DirectConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER DirectConvert_D AFTER DELETE ON DirectConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER UserTag_I AFTER INSERT ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;

@@ -13,7 +13,7 @@ const {
 
 const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
 
-const updateBalance = coupling.updateBalance;
+const updateBalance = background.updateBalance = coupling.updateBalance;
 
 var DB, assetList; //container for database and allowed assets
 
@@ -256,10 +256,10 @@ function getAccountDetails(floID) {
 
 function getUserTransacts(floID) {
     return new Promise((resolve, reject) => {
-        DB.query("(SELECT 'deposit' as type, txid, token, amount, status FROM InputToken WHERE floID=?)" +
-                "UNION (SELECT 'deposit' as type, txid, coin as token, amount, status FROM InputCoin WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, token, amount, status FROM OutputToken WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, coin as token, amount, status FROM OutputCoin WHERE floID=?)",
+        DB.query("(SELECT 'deposit' as type, txid, token, amount, status FROM DepositToken WHERE floID=?)" +
+                "UNION (SELECT 'deposit' as type, txid, coin as token, amount, status FROM DepositCoin WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, token, amount, status FROM WithdrawToken WHERE floID=?)" +
+                "UNION (SELECT 'withdraw' as type, txid, coin as token, amount, status FROM WithdrawCoin WHERE floID=?)",
                 [floID, floID, floID, floID])
             .then(result => resolve(result))
             .catch(error => reject(error))
@@ -338,7 +338,7 @@ function transferToken(sender, receivers, token) {
 
 function depositFLO(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM InputCoin WHERE txid=? AND floID=? AND coin=?", [txid, floID, "FLO"]).then(result => {
+        DB.query("SELECT status FROM DepositCoin WHERE txid=? AND floID=? AND coin=?", [txid, floID, "FLO"]).then(result => {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
@@ -349,7 +349,7 @@ function depositFLO(floID, txid) {
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add coins"));
                 }
             } else
-                DB.query("INSERT INTO InputCoin(txid, floID, coin, status) VALUES (?, ?, ?, ?)", [txid, floID, "FLO", "PENDING"])
+                DB.query("INSERT INTO DepositCoin(txid, floID, coin, status) VALUES (?, ?, ?, ?)", [txid, floID, "FLO", "PENDING"])
                 .then(result => resolve("Deposit request in process"))
                 .catch(error => reject(error));
         }).catch(error => reject(error))
@@ -375,7 +375,7 @@ function withdrawFLO(floID, amount) {
 
 function depositToken(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM InputToken WHERE txid=? AND floID=?", [txid, floID]).then(result => {
+        DB.query("SELECT status FROM DepositToken WHERE txid=? AND floID=?", [txid, floID]).then(result => {
             if (result.length) {
                 switch (result[0].status) {
                     case "PENDING":
@@ -386,7 +386,7 @@ function depositToken(floID, txid) {
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add tokens"));
                 }
             } else
-                DB.query("INSERT INTO InputToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
+                DB.query("INSERT INTO DepositToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
                 .then(result => resolve("Deposit request in process"))
                 .catch(error => reject(error));
         }).catch(error => reject(error))
@@ -472,19 +472,17 @@ function checkDistributor(floID, asset) {
     })
 }
 
-function periodicProcess() {
-    blockchainReCheck();
-}
+//Periodic Process
 
-periodicProcess.start = function() {
-    periodicProcess.stop();
+function periodicProcess_start() {
+    periodicProcess_stop();
     periodicProcess();
     assetList.forEach(asset => coupling.initiate(asset, true));
     coupling.price.storeHistory.start();
     periodicProcess.instance = setInterval(periodicProcess, PERIOD_INTERVAL);
-};
+}
 
-periodicProcess.stop = function() {
+function periodicProcess_stop() {
     if (periodicProcess.instance !== undefined) {
         clearInterval(periodicProcess.instance);
         delete periodicProcess.instance;
@@ -495,13 +493,13 @@ periodicProcess.stop = function() {
 
 var lastSyncBlockHeight = 0;
 
-function blockchainReCheck() {
-    if (blockchainReCheck.timeout !== undefined) {
-        clearTimeout(blockchainReCheck.timeout);
-        delete blockchainReCheck.timeout;
+function periodicProcess() {
+    if (periodicProcess.timeout !== undefined) {
+        clearTimeout(periodicProcess.timeout);
+        delete periodicProcess.timeout;
     }
     if (!blockchain.chests.list.length)
-        return blockchainReCheck.timeout = setTimeout(blockchainReCheck, WAIT_TIME);
+        return periodicProcess.timeout = setTimeout(periodicProcess, WAIT_TIME);
 
     floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
         if (lastSyncBlockHeight < result.blocks[0].height) {
@@ -513,6 +511,9 @@ function blockchainReCheck() {
             background.confirmWithdrawalFLO();
             background.confirmWithdrawalBTC();
             background.confirmWithdrawalToken();
+            background.verifyConvert();
+            background.retryConvert();
+            background.confirmConvert();
             console.debug("Last Block :", lastSyncBlockHeight);
         }
     }).catch(error => console.error(error));
@@ -550,7 +551,10 @@ module.exports = {
     removeTag,
     addDistributor,
     removeDistributor,
-    periodicProcess,
+    periodicProcess: {
+        start: periodicProcess_start,
+        stop: periodicProcess_stop
+    },
     set DB(db) {
         DB = db;
         coupling.DB = db;
