@@ -1,6 +1,7 @@
 'use strict';
 
 const market = require("./market");
+const conversion = require('./conversion');
 
 const {
     SIGN_EXPIRE_TIME,
@@ -11,14 +12,14 @@ const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
 
 var DB, trustedIDs, secret; //container for database
 
-global.INVALID = function(ecode, message) {
+global.INVALID = function (ecode, message) {
     if (!(this instanceof INVALID))
         return new INVALID(ecode, message);
     this.message = message;
     this.ecode = ecode;
 }
 INVALID.e_code = 400;
-INVALID.prototype.toString = function() {
+INVALID.prototype.toString = function () {
     return "E" + this.ecode + ": " + this.message;
 }
 INVALID.str = (ecode, message) => INVALID(ecode, message).toString();
@@ -29,7 +30,7 @@ global.INTERNAL = function INTERNAL(message) {
     this.message = message;
 }
 INTERNAL.e_code = 500;
-INTERNAL.prototype.toString = function() {
+INTERNAL.prototype.toString = function () {
     return "E" + eCode.INTERNAL_ERROR + ": " + this.message;
 }
 INTERNAL.str = (ecode, message) => INTERNAL(ecode, message).toString();
@@ -96,7 +97,7 @@ function logRequest(floID, req_str, sign, proxy = false) {
         .then(_ => null).catch(error => console.error(error));
 }
 
-function processRequest(res, rText, validateObj, sign, floID, pubKey, marketFn) {
+function processRequest(res, floID, pubKey, sign, rText, validateObj, marketFn) {
     validateRequest(validateObj, sign, floID, pubKey).then(req_str => {
         marketFn().then(result => {
             logRequest(floID, req_str, sign, !pubKey);
@@ -150,185 +151,175 @@ function Login(req, res) {
     else if (!data.pubKey)
         res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else
-        processRequest(res, "Login", {
-                type: "login",
-                random: data.code,
-                proxyKey: data.proxyKey,
-                timestamp: data.timestamp
-            }, data.sign, data.floID, data.pubKey,
-            () => market.login(data.floID, data.proxyKey)
-        );
+        processRequest(res, data.floID, data.pubKey, data.sign, "Login", {
+            type: "login",
+            random: data.code,
+            proxyKey: data.proxyKey,
+            timestamp: data.timestamp
+        }, () => market.login(data.floID, data.proxyKey));
 }
 
 function Logout(req, res) {
     let data = req.body;
-    processRequest(res, "Logout", {
-            type: "logout",
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.logout(data.floID)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Logout", {
+        type: "logout",
+        timestamp: data.timestamp
+    }, () => market.logout(data.floID));
 }
 
 function PlaceSellOrder(req, res) {
     let data = req.body;
-    processRequest(res, "Sell order placement", {
-            type: "sell_order",
-            asset: data.asset,
-            quantity: data.quantity,
-            min_price: data.min_price,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Sell order placement", {
+        type: "sell_order",
+        asset: data.asset,
+        quantity: data.quantity,
+        min_price: data.min_price,
+        timestamp: data.timestamp
+    }, () => market.addSellOrder(data.floID, data.asset, data.quantity, data.min_price));
 }
 
 function PlaceBuyOrder(req, res) {
     let data = req.body;
-    processRequest(res, "Buy order placement", {
-            type: "buy_order",
-            asset: data.asset,
-            quantity: data.quantity,
-            max_price: data.max_price,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Buy order placement", {
+        type: "buy_order",
+        asset: data.asset,
+        quantity: data.quantity,
+        max_price: data.max_price,
+        timestamp: data.timestamp
+    }, () => market.addBuyOrder(data.floID, data.asset, data.quantity, data.max_price));
 }
 
 function CancelOrder(req, res) {
     let data = req.body;
-    processRequest(res, "Order cancellation", {
-            type: "cancel_order",
-            order: data.orderType,
-            id: data.orderID,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.cancelOrder(data.orderType, data.orderID, data.floID)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Order cancellation", {
+        type: "cancel_order",
+        order: data.orderType,
+        id: data.orderID,
+        timestamp: data.timestamp
+    }, () => market.cancelOrder(data.orderType, data.orderID, data.floID));
 }
 
 function TransferToken(req, res) {
     let data = req.body;
-    processRequest(res, "Token Transfer", {
-            type: "transfer_token",
-            receiver: JSON.stringify(data.receiver),
-            token: data.token,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.transferToken(data.floID, data.receiver, data.token)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Token Transfer", {
+        type: "transfer_token",
+        receiver: JSON.stringify(data.receiver),
+        token: data.token,
+        timestamp: data.timestamp
+    }, () => market.transferToken(data.floID, data.receiver, data.token));
 }
 
 function DepositFLO(req, res) {
     let data = req.body;
-    processRequest(res, "Deposit FLO", {
-            type: "deposit_flo",
-            txid: data.txid,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.depositFLO(data.floID, data.txid)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Deposit FLO", {
+        type: "deposit_flo",
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => market.depositFLO(data.floID, data.txid));
 }
 
 function WithdrawFLO(req, res) {
     let data = req.body;
-    processRequest(res, "Withdraw FLO", {
-            type: "withdraw_flo",
-            amount: data.amount,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.withdrawFLO(data.floID, data.amount)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Withdraw FLO", {
+        type: "withdraw_flo",
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, () => market.withdrawFLO(data.floID, data.amount));
 }
 
 function DepositToken(req, res) {
     let data = req.body;
-    processRequest(res, "Deposit Token", {
-            type: "deposit_token",
-            txid: data.txid,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.depositToken(data.floID, data.txid)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Deposit Token", {
+        type: "deposit_token",
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => market.depositToken(data.floID, data.txid));
 }
 
 function WithdrawToken(req, res) {
     let data = req.body;
-    processRequest(res, "Withdraw Token", {
-            type: "withdraw_token",
-            token: data.token,
-            amount: data.amount,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.withdrawToken(data.floID, data.token, data.amount)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "Withdraw Token", {
+        type: "withdraw_token",
+        token: data.token,
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, () => market.withdrawToken(data.floID, data.token, data.amount));
 }
 
 function GetUserTransacts(req, res) {
     let data = req.body;
-    processRequest(res, "User Transacts", {
-            type: "get_transact",
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.getUserTransacts(data.floID)
-    );
+    processRequest(res, data.floID, data.pubKey, data.sign, "User Transacts", {
+        type: "get_transact",
+        timestamp: data.timestamp
+    }, () => market.getUserTransacts(data.floID));
 }
 
 function AddUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
-    else processRequest(res, "Add user-tag", {
-            type: "add_tag",
-            user: data.user,
-            tag: data.tag,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.addTag(data.user, data.tag)
-    );
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Add user-tag", {
+        type: "add_tag",
+        user: data.user,
+        tag: data.tag,
+        timestamp: data.timestamp
+    }, () => market.addTag(data.user, data.tag));
 }
 
 function RemoveUserTag(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
-    else processRequest(res, "Remove user-tag", {
-            type: "remove_tag",
-            user: data.user,
-            tag: data.tag,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.removeTag(data.user, data.tag)
-    );
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Remove user-tag", {
+        type: "remove_tag",
+        user: data.user,
+        tag: data.tag,
+        timestamp: data.timestamp
+    }, () => market.removeTag(data.user, data.tag));
 }
 
 function AddDistributor(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
-    else processRequest(res, "Add distributor", {
-            type: "add_distributor",
-            distributor: data.distributor,
-            asset: data.asset,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.addDistributor(data.distributor, data.asset)
-    );
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Add distributor", {
+        type: "add_distributor",
+        distributor: data.distributor,
+        asset: data.asset,
+        timestamp: data.timestamp
+    }, () => market.addDistributor(data.distributor, data.asset));
 }
 
 function RemoveDistributor(req, res) {
     let data = req.body;
     if (!trustedIDs.includes(data.floID))
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
-    else processRequest(res, "Remove distributor", {
-            type: "remove_distributor",
-            distributor: data.distributor,
-            asset: data.asset,
-            timestamp: data.timestamp
-        }, data.sign, data.floID, data.pubKey,
-        () => market.removeDistributor(data.distributor, data.asset)
-    );
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Remove distributor", {
+        type: "remove_distributor",
+        distributor: data.distributor,
+        asset: data.asset,
+        timestamp: data.timestamp
+    }, () => market.removeDistributor(data.distributor, data.asset));
+}
+
+function ConvertTo(req, res) {
+    let data = req.body;
+    processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
+        type: "convert_to",
+        coin: data.coin,
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => conversion.convertToCoin(data.floID, data.txid, data.coin));
+}
+
+function ConvertFrom(req, res) {
+    let data = req.body;
+    processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
+        type: "convert_from",
+        coin: data.coin,
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => conversion.convertFromCoin(data.floID, data.txid, data.coin));
 }
 
 /* Public Requests */
@@ -364,11 +355,11 @@ function ListSellOrders(req, res) {
                 " GROUP BY SellOrder.id" +
                 " ORDER BY MAX(TagList.sellPriority) DESC, MIN(SellChips.locktime) ASC, SellOrder.time_placed ASC" +
                 " LIMIT 100", [asset || null])
-            .then(result => res.send(result))
-            .catch(error => {
-                console.error(error);
-                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
-            });
+                .then(result => res.send(result))
+                .catch(error => {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
+                });
     }
 
 }
@@ -390,11 +381,11 @@ function ListBuyOrders(req, res) {
                 " GROUP BY BuyOrder.id" +
                 " ORDER BY MAX(TagList.buyPriority) DESC, BuyOrder.time_placed ASC" +
                 " LIMIT 100", [floGlobals.currency, asset || null])
-            .then(result => res.send(result))
-            .catch(error => {
-                console.error(error);
-                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
-            });
+                .then(result => res.send(result))
+                .catch(error => {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
+                });
     }
 }
 
@@ -409,11 +400,11 @@ function ListTradeTransactions(req, res) {
             DB.query("SELECT * FROM TradeTransactions" +
                 (asset ? " WHERE asset = ?" : "") +
                 " ORDER BY tx_time DESC LIMIT 1000", [asset || null])
-            .then(result => res.send(result))
-            .catch(error => {
-                console.error(error);
-                res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
-            });
+                .then(result => res.send(result))
+                .catch(error => {
+                    console.error(error);
+                    res.status(INTERNAL.e_code).send(INTERNAL.str("Try again later!"));
+                });
     }
 }
 
@@ -524,6 +515,8 @@ module.exports = {
     RemoveUserTag,
     AddDistributor,
     RemoveDistributor,
+    ConvertTo,
+    ConvertFrom,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },

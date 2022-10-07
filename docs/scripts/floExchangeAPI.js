@@ -1233,6 +1233,80 @@
         })
     }
 
+    exchangeAPI.convertToBTC = function (amount, floID, sinkID, privKey, proxySecret = null) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            floTokenAPI.sendToken(privKey, amount, sinkID, '(convert to BTC)', floGlobals.currency).then(txid => {
+                let request = {
+                    floID: floID,
+                    txid: txid,
+                    coin: "BTC",
+                    timestamp: Date.now()
+                };
+                if (!proxySecret) //Direct signing (without proxy)
+                    request.pubKey = floCrypto.getPubKeyHex(privKey);
+                request.sign = signRequest({
+                    type: "convert_to",
+                    coin: request.coin,
+                    txid: txid,
+                    timestamp: request.timestamp
+                }, proxySecret || privKey);
+                console.debug(request);
+
+                fetch_api('/convert-to', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => {
+                    responseParse(result, false)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.convertFromBTC = function (quantity, floID, sinkID, privKey, proxySecret = null) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            let btc_id = btcOperator.convert.legacy2bech(floID),
+                btc_sink = btcOperator.convert.legacy2bech(sinkID);
+            btcOperator.sendTx(btc_id, privKey, btc_sink, quantity, null).then(txid => {
+                let request = {
+                    floID: floID,
+                    txid: txid,
+                    coin: "BTC",
+                    timestamp: Date.now()
+                };
+                if (!proxySecret) //Direct signing (without proxy)
+                    request.pubKey = floCrypto.getPubKeyHex(privKey);
+                request.sign = signRequest({
+                    type: "convert_from",
+                    coin: request.coin,
+                    txid: txid,
+                    timestamp: request.timestamp
+                }, proxySecret || privKey);
+                console.debug(request);
+
+                fetch_api('/convert-from', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => {
+                    responseParse(result, false)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
     exchangeAPI.init = function refreshDataFromBlockchain(adminID = floGlobals.adminID, appName = floGlobals.application) {
         return new Promise((resolve, reject) => {
             let nodes, assets, tags, lastTx;

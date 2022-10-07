@@ -85,6 +85,10 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-token', Request.WithdrawToken);
     app.post('/get-transact', Request.GetUserTransacts);
 
+    //convert from or to coin
+    app.post('/convert-to', Request.ConvertTo);
+    app.post('/convert-from', Request.ConvertFrom);
+
     //Manage user tags (Access to trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
     app.post('/remove-tag', Request.RemoveUserTag);

@@ -106,47 +106,6 @@ function loadRate(asset) {
     })
 }
 
-/*
-function fetchRates() {
-    return new Promise((resolve, reject) => {
-        fetchRates.FLO_USD().then(FLO_rate => {
-            fetchRates.USD_INR().then(INR_rate => {
-                let FLO_INR_rate = FLO_rate * INR_rate;
-                console.debug('Rates:', FLO_rate, INR_rate, FLO_INR_rate);
-                storeHistory(FLO_INR_rate);
-                resolve(FLO_INR_rate);
-            }).catch(error => reject(error))
-        }).catch(error => reject(error))
-    });
-}
-
-fetchRates.FLO_USD = function() {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.coinlore.net/api/ticker/?id=67').then(response => {
-            if (response.ok) {
-                response.json()
-                    .then(result => resolve(result[0].price_usd))
-                    .catch(error => reject(error));
-            } else
-                reject(response.status);
-        }).catch(error => reject(error));
-    });
-}
-
-fetchRates.USD_INR = function() {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.exchangerate-api.com/v4/latest/usd').then(response => {
-            if (response.ok) {
-                response.json()
-                    .then(result => resolve(result.rates['INR']))
-                    .catch(error => reject(error));
-            } else
-                reject(response.status);
-        }).catch(error => reject(error));
-    });
-}
-*/
-
 function getRates(asset, updatePrice = false) {
     return new Promise((resolve, reject) => {
         loadRate(asset).then(_ => {
