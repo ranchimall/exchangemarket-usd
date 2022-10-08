@@ -83,7 +83,7 @@ const requestInstance = {
     checksum_count_down: 0
 };
 
-requestInstance.open = function(ws = null) {
+requestInstance.open = function (ws = null) {
     const self = this;
     //Check if there is an active request 
     if (self.request) {
@@ -109,7 +109,7 @@ requestInstance.open = function(ws = null) {
     }).catch(error => console.error(error))
 }
 
-requestInstance.close = function() {
+requestInstance.close = function () {
     const self = this;
     if (self.onetime)
         self.ws.close();
@@ -252,8 +252,8 @@ function storeBackupData(cache_promises, checksum_ref) {
                                                     resolve(true);
                                                 else
                                                     verifyChecksum(checksum_ref)
-                                                    .then(result => resolve(result))
-                                                    .catch(error => reject(error))
+                                                        .then(result => resolve(result))
+                                                        .catch(error => reject(error))
                                             });
                                         })
                                     })
@@ -276,7 +276,7 @@ function storeBackupData(cache_promises, checksum_ref) {
 
 }
 
-storeBackupData.commit = function(data, result) {
+storeBackupData.commit = function (data, result) {
     let promises = [];
     for (let i = 0; i < data.length; i++)
         switch (result[i].status) {
@@ -319,16 +319,15 @@ function updateTableData(table, data) {
     return new Promise((resolve, reject) => {
         if (!data.length)
             return resolve(null);
-        let cols = Object.keys(data[0]),
-            _mark = "(" + Array(cols.length).fill('?') + ")";
-        let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
-        let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)}` +
+        let cols = Object.keys(data[0]);
+        let values = data.map(r => cols.map(c => validateValue(r[c])));
+        let statement = `INSERT INTO ${table} (${cols}) VALUES ?` +
             " ON DUPLICATE KEY UPDATE " + cols.map(c => `${c}=VALUES(${c})`).join();
-        DB.query(statement, values).then(_ => resolve(true)).catch(error => reject(error));
+        DB.query(statement, [values]).then(_ => resolve(true)).catch(error => reject(error));
     })
 }
 
-const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? global.convertDateToString(val) : val;
+const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? new Date(val) : val;
 
 function verifyChecksum(checksum_ref) {
     return new Promise((resolve, reject) => {
@@ -399,7 +398,7 @@ function verifyHash(hashes) {
                     //Data to be deleted (incorrect data will be added by resync)
                     let id_end = result[t].value[1].map(i => i * HASH_N_ROW); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
                     Promise.allSettled(id_end.map(i =>
-                            DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
+                        DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
                         .then(_ => null);
                 } else
                     console.error(result[t].reason);

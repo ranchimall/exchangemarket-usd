@@ -325,7 +325,7 @@ function transferToken(sender, receivers, token) {
                     }));
                     txQueries.push([
                         "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid) VALUE (?, ?, ?, ?, ?, ?)",
-                        [sender, JSON.stringify(receivers), token, totalAmount, global.convertDateToString(time), hash]
+                        [sender, JSON.stringify(receivers), token, totalAmount, new Date(time), hash]
                     ]);
                     DB.transaction(txQueries)
                         .then(result => resolve(hash))

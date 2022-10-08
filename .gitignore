@@ -4,3 +4,4 @@
 /args/param.json
 /args/keys*.json
 *test*
+*.tmp*

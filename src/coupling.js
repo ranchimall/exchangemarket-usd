@@ -195,7 +195,7 @@ function processOrders(seller_best, buyer_best, asset, cur_rate, quantity) {
     }));
     txQueries.push([
         "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [seller_best.floID, buyer_best.floID, asset, quantity, cur_rate, global.convertDateToString(time), hash]
+        [seller_best.floID, buyer_best.floID, asset, quantity, cur_rate, new Date(time), hash]
     ]);
 
     return txQueries;
