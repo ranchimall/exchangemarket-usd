@@ -1,17 +1,21 @@
-const _sql = require('./_constants').sql;
+const _sql = require('../_constants').sql;
+const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
+
 const allowedConversion = ["BTC"];
 
-function getRate() {
+var DB; //container for database
+
+function BTC_INR() {
     return new Promise((resolve, reject) => {
-        getRate.BTC_USD().then(BTC_rate => {
-            getRate.USD_INR().then(INR_rate => {
-                resolve(BTC_rate * INR_rate);
+        BTC_USD().then(btc_usd => {
+            USD_INR().then(usd_inr => {
+                resolve(btc_usd * usd_inr);
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
 }
 
-getRate.BTC_USD = function () {
+function BTC_USD() {
     return new Promise((resolve, reject) => {
         fetch('https://api.coinlore.net/api/ticker/?id=90').then(response => {
             if (response.ok) {
@@ -24,7 +28,7 @@ getRate.BTC_USD = function () {
     });
 }
 
-getRate.USD_INR = function () {
+function USD_INR() {
     return new Promise((resolve, reject) => {
         fetch('https://api.exchangerate-api.com/v4/latest/usd').then(response => {
             if (response.ok) {
@@ -53,20 +57,29 @@ function convertToCoin(floID, txid, coin) {
 }
 
 function convertFromCoin(floID, txid, coin) {
-    if (!allowedConversion.includes(coin))
-        return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
-    DB.query("SELECT status FROM DirectConvert WHERE in_txid=? AND floID=? mode=?", [txid, floID, _sql.CONVERT_MODE_PUT]).then(result => {
-        if (result.length)
-            return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-        else
-            DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, status) VALUES (?, ?, ?, ?, ?)", [floID, txid, _sql.CONVERT_MODE_PUT, coin, "PENDING"])
-                .then(result => resolve("Conversion request in process"))
-                .catch(error => reject(error));
-    }).catch(error => reject(error))
+    return new Promise((resolve, reject) => {
+        if (!allowedConversion.includes(coin))
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
+        DB.query("SELECT status FROM DirectConvert WHERE in_txid=? AND floID=? mode=?", [txid, floID, _sql.CONVERT_MODE_PUT]).then(result => {
+            if (result.length)
+                return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
+            else
+                DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, status) VALUES (?, ?, ?, ?, ?)", [floID, txid, _sql.CONVERT_MODE_PUT, coin, "PENDING"])
+                    .then(result => resolve("Conversion request in process"))
+                    .catch(error => reject(error));
+        }).catch(error => reject(error))
+    })
 }
 
 module.exports = {
-    getRate,
+    getRate: {
+        BTC_USD,
+        USD_INR,
+        BTC_INR
+    },
     convertToCoin,
-    convertFromCoin
+    convertFromCoin,
+    set DB(db) {
+        DB = db;
+    }
 }

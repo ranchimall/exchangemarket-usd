@@ -1,6 +1,6 @@
 'use strict';
 const blockchain = require('./blockchain');
-const conversion = require('./conversion');
+const conversion_rates = require('./services/conversion').getRate;
 
 const {
     LAUNCH_SELLER_TAG,
@@ -219,7 +219,7 @@ function verifyConvert() {
         results.forEach(req => {
             if (mode == _sql.CONVERT_MODE_GET) {
                 verifyTx.token(req.floID, req.in_txid, true).then(({ amount }) => {
-                    conversion.getRate().then(rate => {
+                    conversion_rates.BTC_INR().then(rate => {
                         blockchain.convertToCoin.init(req.floID, "BTC", amount, amount / rate, req.id)
                     }).catch(error => console.error(error))
                 }).catch(error => {
@@ -230,7 +230,7 @@ function verifyConvert() {
                 });
             } else if (mode == _sql.CONVERT_MODE_PUT) {
                 verifyTx.BTC(req.floID, req.in_txid).then(quantity => {
-                    conversion.getRate().then(rate => {
+                    conversion_rates.BTC_INR().then(rate => {
                         blockchain.convertFromCoin.init(req.floID, quantity * rate, quantity, req.id)
                     }).catch(error => console.error(error))
                 }).catch(error => {

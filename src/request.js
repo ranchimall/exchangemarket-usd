@@ -1,7 +1,7 @@
 'use strict';
 
 const market = require("./market");
-const conversion = require('./conversion');
+const conversion = require('./services/conversion');
 
 const {
     SIGN_EXPIRE_TIME,
