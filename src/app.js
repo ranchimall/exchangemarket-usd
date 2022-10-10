@@ -35,7 +35,7 @@ module.exports = function App(secret, DB) {
     }));
     */
 
-    app.use(function(req, res, next) {
+    app.use(function (req, res, next) {
         res.setHeader('Access-Control-Allow-Origin', "*");
         // Request methods you wish to allow
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
@@ -91,6 +91,7 @@ module.exports = function App(secret, DB) {
 
     //close blockchain-bond
     app.post('/close-blockchain-bonds', Request.CloseBlockchainBond);
+    app.post('/close-bobs-fund-investment', Request.CloseBobsFund);
 
     //Manage user tags (Access to trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);

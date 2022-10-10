@@ -247,6 +247,45 @@ CREATE TABLE CloseBondTransact(
     FOREIGN KEY (bond_id) REFERENCES BlockchainBonds(bond_id)
 );
 
+CREATE TABLE BobsFund(
+    fund_id VARCHAR(128) NOT NULL,
+    begin_date DATE NOT NULL,
+    btc_base DECIMAL(16, 2) NOT NULL,
+    usd_base DECIMAL(16, 2) NOT NULL,
+    fee DECIMAL(6, 5) NOT NULL,
+    duration VARCHAR(10) NOT NULL,
+    tapout_window VARCHAR(10),
+    tapout_interval VARCHAR(40),
+    PRIMARY KEY(fund_id)
+);
+
+CREATE TABLE BobsFundInvestments(
+    fund_id VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    amount_in DECIMAL(16, 2) NOT NULL,
+    close_id VARCHAR(128),
+    amount_out DECIMAL(16, 2),
+    PRIMARY KEY(fund_id, floID),
+    FOREIGN KEY (fund_id) REFERENCES BobsFund(fund_id)
+);
+
+CREATE TABLE CloseFundTransact(
+    id INT NOT NULL AUTO_INCREMENT,
+    fund_id VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    amount DECIMAL(16, 2) NOT NULL,
+    end_date DATE NOT NULL,
+    ref_sign VARCHAR(180) NOT NULL,
+    btc_net DECIMAL(16, 2) NOT NULL,
+    usd_net DECIMAL(16, 2) NOT NULL,
+    txid VARCHAR(128),
+    close_id VARCHAR(128),
+    status VARCHAR(50) NOT NULL,
+    KEY(id),
+    PRIMARY KEY(fund_id, floID),
+    FOREIGN KEY (fund_id) REFERENCES BobsFund(fund_id)
+);
+
 CREATE TABLE DirectConvert(
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
