@@ -2,18 +2,20 @@
 
 var collectAndCall; //container for collectAndCall function from backup module
 var chests; //container for blockchain ids (where assets are stored)
+var DB; //container for database
 
-const WITHDRAWAL_MESSAGE = "(withdrawal from market)",
-    TYPE_TOKEN = "TOKEN",
+const TYPE_TOKEN = "TOKEN",
     TYPE_COIN = "COIN",
-    TYPE_CONVERT = "CONVERT";
+    TYPE_CONVERT = "CONVERT",
+    TYPE_BOND = "BOND";
 
 const balance_locked = {},
     balance_cache = {},
     callbackCollection = {
         [TYPE_COIN]: {},
         [TYPE_TOKEN]: {},
-        [TYPE_CONVERT]: {}
+        [TYPE_CONVERT]: {},
+        [TYPE_BOND]: {}
     };
 
 function getBalance(sinkID, asset) {
@@ -55,43 +57,43 @@ function getSinkID(quantity, asset, sinkList = null) {
     })
 }
 
-function sendTx(floID, asset, quantity, sinkID, sinkKey) {
+const WITHDRAWAL_MESSAGE = {
+    [TYPE_COIN]: "(withdrawal from market)",
+    [TYPE_TOKEN]: "(withdrawal from market)",
+    [TYPE_CONVERT]: "(convert coin)",
+    [TYPE_BOND]: "(bond closing)"
+}
+
+function sendTx(floID, asset, quantity, sinkID, sinkKey, message) {
     switch (asset) {
         case "FLO":
-            return floBlockchainAPI.sendTx(sinkID, floID, quantity, sinkKey, WITHDRAWAL_MESSAGE);
+            return floBlockchainAPI.sendTx(sinkID, floID, quantity, sinkKey, message);
         case "BTC":
             let btc_sinkID = btcOperator.convert.legacy2bech(sinkID),
                 btc_receiver = btcOperator.convert.legacy2bech(floID);
             return btcOperator.sendTx(btc_sinkID, sinkKey, btc_receiver, quantity, null);
         default:
-            return floTokenAPI.sendToken(sinkKey, quantity, floID, WITHDRAWAL_MESSAGE, asset);
+            return floTokenAPI.sendToken(sinkKey, quantity, floID, message, asset);
     }
 }
 
-const tableUpdate = {
-    [TYPE_COIN]: (id, txid) => {
-        DB.query("UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, id])
-            .then(_ => null).catch(error => console.error(error))
-    },
-    [TYPE_TOKEN]: (id, txid) => {
-        DB.query("UPDATE WithdrawToken SET status=?, txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, id])
-            .then(_ => null).catch(error => console.error(error))
-    },
-    [TYPE_CONVERT]: (id, txid) => {
-        DB.query("UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?", ["WAITING_CONFIRMATION", txid, id])
-            .then(_ => null).catch(error => console.error(error));
-    }
+const updateSyntax = {
+    [TYPE_COIN]: "UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?",
+    [TYPE_TOKEN]: "UPDATE WithdrawToken SET status=?, txid=? WHERE id=?",
+    [TYPE_CONVERT]: "UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?",
+    [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?"
 };
 
 function sendAsset(floID, asset, quantity, type, id) {
     getSinkID(quantity, asset).then(sinkID => {
         let callback = (sinkKey) => {
             //Send asset to user via API
-            sendTx(floID, asset, quantity, sinkID, sinkKey).then(txid => {
+            sendTx(floID, asset, quantity, sinkID, sinkKey, WITHDRAWAL_MESSAGE[type]).then(txid => {
                 if (!txid)
                     console.error("Transaction not successful");
                 else //Transaction was successful, Add in DB
-                    tableUpdate[type](id, txid);
+                    DB.query(updateSyntax[type], ["WAITING_CONFIRMATION", txid, id])
+                        .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error)).finally(_ => {
                 delete callbackCollection[type][id];
                 balance_locked[sinkID][asset] -= quantity;
@@ -114,8 +116,7 @@ function sendCoin_init(floID, coin, quantity) {
 function sendCoin_retry(floID, coin, quantity, id) {
     if (id in callbackCollection[TYPE_COIN])
         console.debug("A callback is already pending for this Coin transfer");
-    else
-        sendAsset(floID, coin, quantity, TYPE_COIN, id);
+    else sendAsset(floID, coin, quantity, TYPE_COIN, id);
 }
 
 function sendToken_init(floID, token, quantity) {
@@ -127,8 +128,7 @@ function sendToken_init(floID, token, quantity) {
 function sendToken_retry(floID, token, quantity, id) {
     if (id in callbackCollection[TYPE_TOKEN])
         console.debug("A callback is already pending for this Token transfer");
-    else
-        sendAsset(floID, token, quantity, TYPE_TOKEN, id);
+    else sendAsset(floID, token, quantity, TYPE_TOKEN, id);
 }
 
 function convertToCoin_init(floID, coin, currency_amount, coin_quantity, id) {
@@ -139,9 +139,8 @@ function convertToCoin_init(floID, coin, currency_amount, coin_quantity, id) {
 
 function convertToCoin_retry(floID, coin, coin_quantity, id) {
     if (id in callbackCollection[TYPE_CONVERT])
-        console.debug("A callback is already pending for this Coin Convert");
-    else
-        sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id);
+        console.debug("A callback is already pending for this Coin convert");
+    else sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id);
 }
 
 function convertFromCoin_init(floID, currency_amount, coin_quantity, id) {
@@ -153,8 +152,13 @@ function convertFromCoin_init(floID, currency_amount, coin_quantity, id) {
 function convertFromCoin_retry(floID, current_amount, id) {
     if (id in callbackCollection[TYPE_CONVERT])
         console.debug("A callback is already pending for this Coin Convert");
-    else
-        sendAsset(floID, floGlobals.currency, current_amount, TYPE_CONVERT, id);
+    else sendAsset(floID, floGlobals.currency, current_amount, TYPE_CONVERT, id);
+}
+
+function bondTransact_retry(floID, amount, id) {
+    if (id in callbackCollection[TYPE_BOND])
+        console.debug("A callback is already pending for this Bond closing");
+    else sendAsset(floID, floGlobals.currency, amount, TYPE_BOND, id);
 }
 
 module.exports = {
@@ -182,5 +186,11 @@ module.exports = {
     convertFromCoin: {
         init: convertFromCoin_init,
         retry: convertFromCoin_retry
+    },
+    bondTransact: {
+        retry: bondTransact_retry
+    },
+    set DB(db) {
+        DB = db;
     }
 }

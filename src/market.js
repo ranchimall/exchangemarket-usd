@@ -2,6 +2,7 @@
 
 const coupling = require('./coupling');
 const background = require('./background');
+
 const blockchain = background.blockchain;
 
 const {
@@ -504,16 +505,7 @@ function periodicProcess() {
     floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
         if (lastSyncBlockHeight < result.blocks[0].height) {
             lastSyncBlockHeight = result.blocks[0].height;
-            background.confirmDepositFLO();
-            background.confirmDepositToken();
-            background.retryWithdrawalCoin();
-            background.retryWithdrawalToken();
-            background.confirmWithdrawalFLO();
-            background.confirmWithdrawalBTC();
-            background.confirmWithdrawalToken();
-            background.verifyConvert();
-            background.retryConvert();
-            background.confirmConvert();
+            background.process();
             console.debug("Last Block :", lastSyncBlockHeight);
         }
     }).catch(error => console.error(error));
@@ -558,6 +550,7 @@ module.exports = {
     set DB(db) {
         DB = db;
         coupling.DB = db;
+        blockchain.DB = db;
     },
     set assetList(assets) {
         assetList = assets;

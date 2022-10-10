@@ -214,6 +214,39 @@ CREATE TABLE AuditTrade(
 
 /* External Service */
 
+CREATE TABLE BlockchainBonds(
+    bond_id VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    amount_in DECIMAL(16, 2) NOT NULL,
+    begin_date DATE NOT NULL,
+    btc_base DECIMAL(16, 2) NOT NULL,
+    usd_base DECIMAL(16, 2) NOT NULL,
+    gain_cut DECIMAL(6, 5) NOT NULL,
+    min_ipa DECIMAL(6, 5) NOT NULL,
+    max_period VARCHAR(10) NOT NULL,
+    lockin_period VARCHAR(10) NOT NULL,
+    close_id VARCHAR(128),
+    amount_out DECIMAL(16, 2),
+    PRIMARY KEY(bond_id)
+);
+
+CREATE TABLE CloseBondTransact(
+    id INT NOT NULL AUTO_INCREMENT,
+    bond_id VARCHAR(128) NOT NULL,
+    floID CHAR(34) NOT NULL,
+    amount DECIMAL(16, 2) NOT NULL,
+    end_date DATE NOT NULL,
+    ref_sign VARCHAR(180) NOT NULL,
+    btc_net DECIMAL(16, 2) NOT NULL,
+    usd_net DECIMAL(16, 2) NOT NULL,
+    txid VARCHAR(128),
+    close_id VARCHAR(128),
+    status VARCHAR(50) NOT NULL,
+    KEY(id),
+    PRIMARY KEY(bond_id),
+    FOREIGN KEY (bond_id) REFERENCES BlockchainBonds(bond_id)
+);
+
 CREATE TABLE DirectConvert(
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
@@ -225,6 +258,7 @@ CREATE TABLE DirectConvert(
     out_txid VARCHAR(128),
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id)
 );
 
 /* Backup Feature (Tables & Triggers) */
