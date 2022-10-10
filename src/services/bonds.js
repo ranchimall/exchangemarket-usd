@@ -1,11 +1,13 @@
 'use strict';
 
-const eCode = require('../eCode_test')// require('../../docs/scripts/floExchangeAPI').errorCode;
+const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const getRate = require('./conversion').getRate;
 
 var DB; //container for database
 
 const blockchainBond = (function () {
+    const productStr = "Product: RanchiMall Bitcoin Bond";
+
     const magnitude = m => {
         switch (m) {
             case "thousand": return 1000;
@@ -83,7 +85,7 @@ const blockchainBond = (function () {
 
     function stringify_main(BTC_base, start_date, guaranteed_interest, guarantee_period, gain_cut, amount, USD_base, lockin_period, floID) {
         return [
-            `Product: RanchiMall Bitcoin Bond`,
+            `${productStr}`,
             `Base value: ${BTC_base} USD`,
             `Date of bond start: ${start_date}`,
             `Guaranteed interest: ${guaranteed_interest}% per annum simple for ${guarantee_period}`,
@@ -123,10 +125,9 @@ const blockchainBond = (function () {
         return details;
     }
 
-
     function stringify_end(bond_id, end_date, BTC_net, USD_net, amount, ref_sign, payment_ref) {
         return [
-            `Product: RanchiMall Bitcoin Bond`,
+            `${productStr}`,
             `Bond: ${bond_id}`,
             `End value: ${BTC_net} USD`,
             `Date of bond end: ${end_date}`,
@@ -143,7 +144,7 @@ const blockchainBond = (function () {
             d = d.split(': ');
             switch (d[0].toLowerCase()) {
                 case "bond":
-                    details["bondID"] = d[1];
+                    details["bondID"] = d[1]; break;
                 case "end value":
                     details["BTC_net"] = parseNumber(d[1].slice(0, -4)); break;
                 case "date of bond end":
@@ -160,6 +161,7 @@ const blockchainBond = (function () {
     }
 
     return {
+        productStr,
         dateAdder,
         dateFormat,
         calcNetValue,
@@ -177,8 +179,7 @@ const blockchainBond = (function () {
 
 blockchainBond.config = {
     adminID: "FBBstZ2GretgQqDP55yt8iVd4KNZkdvEzH",
-    application: "BlockchainBonds",
-    productStr: "Product: RanchiMall Bitcoin Bond",
+    application: "BlockchainBonds"
 }
 
 function refreshBlockchainData(nodeList = []) {
@@ -189,7 +190,7 @@ function refreshBlockchainData(nodeList = []) {
                 ignoreOld: lastTx,
                 senders: [nodeList].concat(blockchainBond.config.adminID), //sentOnly: true,
                 tx: true,
-                filter: d => d.startsWith(blockchainBond.config.productStr)
+                filter: d => d.startsWith(blockchainBond.productStr)
             }).then(result => {
                 let promises = [];
                 result.data.forEach(d => {
@@ -201,7 +202,6 @@ function refreshBlockchainData(nodeList = []) {
                         let details = blockchainBond.parse.end(d.data);
                         if (details.bondID && details.amountFinal)
                             promises.push(DB.query("UPDATE BlockchainBonds SET close_id=? amount_out=? WHERE bond_id=?", [d.txid, details.amountFinal, details.bondID]));
-
                     }
                 });
                 promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?, ?) ON DUPLICATE KEY UPDATE num=?", [blockchainBond.config.adminID, result.totalTxs, result.totalTxs]));
@@ -235,7 +235,7 @@ function closeBond(bond_id, floID, ref) {
                     getRate.USD_INR().then(usd_rate => {
                         let end_date = new Date(),
                             net_value = blockchainBond.calcNetValue(bond.btc_base, btc_rate, bond.begin_date, bond.min_ipa, bond.max_period, bond.gain_cut, bond.amount_in, bond.usd_base, usd_rate);
-                        DB.query("INSERT INTO CloseBondTransact(bond_id, amount, end_date, btc_net, usd_net, ref_sign, status) VALUE ?", [[bond_id, net_value, end_date, btc_rate, usd_rate, ref, "PENDING"]])
+                        DB.query("INSERT INTO CloseBondTransact(bond_id, floID, amount, end_date, btc_net, usd_net, ref_sign, status) VALUE ?", [[bond_id, floID, net_value, end_date, btc_rate, usd_rate, ref, "PENDING"]])
                             .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": end_date }))
                             .catch(error => reject(error))
                     }).catch(error => reject(error))
