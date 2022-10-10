@@ -1307,6 +1307,37 @@
         })
     }
 
+    exchangeAPI.closeBlockchainBond = function (bond_id, floID, privKey) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            let request = {
+                floID: floID,
+                bond_id: bond_id,
+                timestamp: Date.now()
+            };
+            request.pubKey = floCrypto.getPubKeyHex(privKey);
+            request.sign = signRequest({
+                type: "close_blockchain_bond",
+                bond_id: data.bond_id,
+                timestamp: data.timestamp
+            }, privKey);
+            console.debug(request);
+
+            fetch_api('/close-blockchain-bonds', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => {
+                responseParse(result)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
     exchangeAPI.init = function refreshDataFromBlockchain(adminID = floGlobals.adminID, appName = floGlobals.application) {
         return new Promise((resolve, reject) => {
             let nodes, assets, tags, lastTx;

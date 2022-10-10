@@ -2,6 +2,7 @@
 
 const market = require("./market");
 const conversion = require('./services/conversion');
+const blokchain_bonds = require("./services/bonds");
 
 const {
     SIGN_EXPIRE_TIME,
@@ -322,6 +323,18 @@ function ConvertFrom(req, res) {
     }, () => conversion.convertFromCoin(data.floID, data.txid, data.coin));
 }
 
+function CloseBlockchainBond(req, res) {
+    let data = req.body;
+    if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else
+        processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
+            type: "close_blockchain_bond",
+            bond_id: data.bond_id,
+            timestamp: data.timestamp
+        }, () => blokchain_bonds.closeBond(data.bond_id, data.floID, `${data.timestamp}.${data.sign}`));
+}
+
 /* Public Requests */
 
 function GetLoginCode(req, res) {
@@ -517,6 +530,7 @@ module.exports = {
     RemoveDistributor,
     ConvertTo,
     ConvertFrom,
+    CloseBlockchainBond,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },
@@ -532,6 +546,8 @@ module.exports = {
     set DB(db) {
         DB = db;
         market.DB = db;
+        conversion.DB;
+        blokchain_bonds.DB;
     },
     set secret(s) {
         secret = s;

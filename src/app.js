@@ -89,6 +89,9 @@ module.exports = function App(secret, DB) {
     app.post('/convert-to', Request.ConvertTo);
     app.post('/convert-from', Request.ConvertFrom);
 
+    //close blockchain-bond
+    app.post('/close-blockchain-bonds', Request.CloseBlockchainBond);
+
     //Manage user tags (Access to trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
     app.post('/remove-tag', Request.RemoveUserTag);
