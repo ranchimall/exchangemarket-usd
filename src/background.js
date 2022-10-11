@@ -2,6 +2,7 @@
 const blockchain = require('./blockchain');
 const conversion_rates = require('./services/conversion').getRate;
 const bond_util = require('./services/bonds').util;
+const fund_util = require('./services/bobs-fund').util;
 
 const {
     LAUNCH_SELLER_TAG,
@@ -186,6 +187,8 @@ function confirmWithdrawalToken() {
     DB.query("SELECT id, floID, token, amount, txid FROM WithdrawToken WHERE status=?", ["WAITING_CONFIRMATION"]).then(results => {
         results.forEach(r => {
             floTokenAPI.getTx(r.txid).then(tx => {
+                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                    return;
                 DB.query("UPDATE WithdrawToken SET status=? WHERE id=?", ["SUCCESS", r.id])
                     .then(result => console.debug("Token withdrawed:", r.floID, r.token, r.amount))
                     .catch(error => console.error(error));
@@ -270,6 +273,8 @@ function confirmConvert() {
                 }).catch(error => console.error(error));
             else if (mode == _sql.CONVERT_MODE_PUT)
                 floTokenAPI.getTx(r.out_txid).then(tx => {
+                    if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                        return;
                     DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["SUCCESS", r.id])
                         .then(result => console.debug(`${r.floID} converted ${r.quantity} BTC to ${amount}`))
                         .catch(error => console.error(error));
@@ -288,6 +293,8 @@ function confirmBondClosing() {
     DB.query("SELECT * FROM CloseBondTransact WHERE status=?", ["WAITING_CONFIRMATION"]).then(result => {
         results.forEach(r => {
             floTokenAPI.getTx(r.txid).then(tx => {
+                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                    return;
                 let closeBondString = bond_util.stringify.end(r.bond_id, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeBondString, global.myPrivKey, bond_util.config.adminID).then(txid => {
                     DB.query("UPDATE CloseBondTransact SET status=?, close_id=? WHERE id=?", ["SUCCESS", txid, r.id])
@@ -296,7 +303,30 @@ function confirmBondClosing() {
                 }).catch(error => console.error(error))
             }).catch(error => console.error(error));
         })
-    }).catch(error => reject(error))
+    }).catch(error => console.error(error))
+}
+
+function retryFundClosing() {
+    DB.query("SELECT id, floID, amount FROM CloseFundTransact WHERE status=?", ["PENDING"]).then(results => {
+        results.forEach(r => blockchain.fundTransact.retry(r.floID, r.amount, r.id))
+    }).catch(error => console.error(error))
+}
+
+function confirmFundClosing() {
+    DB.query("SELECT * FROM CloseFundTransact WHERE status=?", ["WAITING_CONFIRMATION"]).then(result => {
+        results.forEach(r => {
+            floTokenAPI.getTx(r.txid).then(tx => {
+                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                    return;
+                let closeFundString = fund_util.stringify.end(r.fund_id, r.floID, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
+                floBlockchainAPI.writeData(global.myFloID, closeFundString, global.myPrivKey, fund_util.config.adminID).then(txid => {
+                    DB.query("UPDATE CloseFundTransact SET status=?, close_id=? WHERE id=?", ["SUCCESS", txid, r.id])
+                        .then(result => console.debug("Fund investment closed:", r.fund_id))
+                        .catch(error => console.error(error));
+                }).catch(error => console.error(error))
+            }).catch(error => console.error(error));
+        })
+    }).catch(error => console.error(error))
 }
 
 function processAll() {
@@ -312,6 +342,8 @@ function processAll() {
     confirmConvert();
     retryBondClosing();
     confirmBondClosing();
+    retryFundClosing();
+    confirmFundClosing();
 }
 
 module.exports = {

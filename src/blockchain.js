@@ -7,7 +7,8 @@ var DB; //container for database
 const TYPE_TOKEN = "TOKEN",
     TYPE_COIN = "COIN",
     TYPE_CONVERT = "CONVERT",
-    TYPE_BOND = "BOND";
+    TYPE_BOND = "BOND",
+    TYPE_FUND = "BOB-FUND";
 
 const balance_locked = {},
     balance_cache = {},
@@ -15,7 +16,8 @@ const balance_locked = {},
         [TYPE_COIN]: {},
         [TYPE_TOKEN]: {},
         [TYPE_CONVERT]: {},
-        [TYPE_BOND]: {}
+        [TYPE_BOND]: {},
+        [TYPE_FUND]: {}
     };
 
 function getBalance(sinkID, asset) {
@@ -61,7 +63,8 @@ const WITHDRAWAL_MESSAGE = {
     [TYPE_COIN]: "(withdrawal from market)",
     [TYPE_TOKEN]: "(withdrawal from market)",
     [TYPE_CONVERT]: "(convert coin)",
-    [TYPE_BOND]: "(bond closing)"
+    [TYPE_BOND]: "(bond closing)",
+    [TYPE_FUND]: "(fund investment closing)"
 }
 
 function sendTx(floID, asset, quantity, sinkID, sinkKey, message) {
@@ -81,7 +84,8 @@ const updateSyntax = {
     [TYPE_COIN]: "UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?",
     [TYPE_TOKEN]: "UPDATE WithdrawToken SET status=?, txid=? WHERE id=?",
     [TYPE_CONVERT]: "UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?",
-    [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?"
+    [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?",
+    [TYPE_FUND]: "UPDATE CloseFundTransact SET status=?, txid=? WHERE id=?"
 };
 
 function sendAsset(floID, asset, quantity, type, id) {
@@ -161,6 +165,12 @@ function bondTransact_retry(floID, amount, id) {
     else sendAsset(floID, floGlobals.currency, amount, TYPE_BOND, id);
 }
 
+function fundTransact_retry(floID, amount, id) {
+    if (id in callbackCollection[TYPE_FUND])
+        console.debug("A callback is already pending for this Fund investment closing");
+    else sendAsset(floID, floGlobals.currency, amount, TYPE_FUND, id);
+}
+
 module.exports = {
     set collectAndCall(fn) {
         collectAndCall = fn;
@@ -189,6 +199,9 @@ module.exports = {
     },
     bondTransact: {
         retry: bondTransact_retry
+    },
+    fundTransact: {
+        retry: fundTransact_retry
     },
     set DB(db) {
         DB = db;
