@@ -217,8 +217,10 @@ function refreshBlockchainData(nodeList = []) {
                         let fund_id = d.data.match(/continue: [a-z0-9]{64}\|/);
                         if (!fund_id) {
                             fund_id = d.txid;
-                            promises.push(DB.query("INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration, tapout_window, tapout_interval) VALUES ? ON DUPLICATE KEY UPDATE fund_id=fund_id",
-                                [[[fund_id, fund.start_date, fund.BTC_base, fund.USD_base, fund.fee, fund.duration, fund.topoutWindow, fund.tapoutInterval]]]));
+                            let values = [fund_id, fund.start_date, fund.BTC_base, fund.USD_base, fund.fee, fund.duration];
+                            if (fund.tapoutInterval)
+                                values.push(fund.topoutWindow, fund.tapoutInterval.join(','));
+                            promises.push(DB.query(`INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration ${fund.tapoutInterval ? ", tapout_window, tapout_interval" : ""}) VALUES ? ON DUPLICATE KEY UPDATE fund_id=fund_id`, [[values]]));
                         } else
                             fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
                         let investments = fund.amounts.map(i => [fund_id, i[0], i[1]]);
@@ -257,16 +259,27 @@ function closeFund(fund_id, floID, ref) {
                     let investment = result[0];
                     if (investment.close_id)
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, `Fund investment already closed (${investment.close_id})`));
-                    /*  TODO: tapout and lockin period check
-                        if (Date.now() < bobsFund.dateAdder(fund.begin_date, fund.duration).getTime())
-                        return reject(INVALID(eCode.INSUFFICIENT_PERIOD, 'Fund still in lock-in period'));
-                    */
+                    let cur_date = new Date();
+                    if (cur_date < bobsFund.dateAdder(fund.begin_date, fund.duration)) {
+                        let flag = false;
+                        if (fund.tapout_window && fund.tapout_interval) {
+                            let tapout_intervals = fund.tapout_interval.split(",");
+                            for (let ti of tapout_intervals) {
+                                let t_start = bobsFund.dateAdder(fund.begin_date, ti),
+                                    t_end = bobsFund.dateAdder(t_start, fund.tapout_window);
+                                if (t_start < cur_date && cur_date < t_end) {
+                                    flag = true; break;
+                                }
+                            }
+                        }
+                        if (!flag)
+                            return reject(INVALID(eCode.INSUFFICIENT_PERIOD, 'Fund still in lock-in period'));
+                    }
                     getRate.BTC_USD().then(btc_rate => {
                         getRate.USD_INR().then(usd_rate => {
-                            let end_date = new Date(),
-                                net_value = bobsFund.calcNetValue(fund.btc_base, btc_rate, fund.usd_base, usd_rate, investment.amount_in, fund.fee)
-                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, status) VALUE ?", [[fund_id, floID, net_value, end_date, btc_rate, usd_rate, ref, "PENDING"]])
-                                .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": end_date }))
+                            let net_value = bobsFund.calcNetValue(fund.btc_base, btc_rate, fund.usd_base, usd_rate, investment.amount_in, fund.fee)
+                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, status) VALUE ?", [[fund_id, floID, net_value, cur_date, btc_rate, usd_rate, ref, "PENDING"]])
+                                .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": cur_date }))
                                 .catch(error => reject(error))
                         }).catch(error => reject(error))
                     }).catch(error => reject(error))
