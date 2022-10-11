@@ -130,6 +130,9 @@ module.exports = function App(secret, DB) {
         set: (fn) => Request.collectAndCall = fn
     });
 
+    //Refresh data (from blockchain)
+    self.refreshData = (nodeList) => Request.refreshData(nodeList);
+
     //Start (or) Stop servers
     self.start = (port) => new Promise(resolve => {
         server = app.listen(port, () => {

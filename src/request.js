@@ -2,7 +2,7 @@
 
 const market = require("./market");
 const conversion = require('./services/conversion');
-const blokchain_bonds = require("./services/bonds");
+const blockchain_bonds = require("./services/bonds");
 const bobs_fund = require("./services/bobs-fund");
 
 const {
@@ -333,7 +333,7 @@ function CloseBlockchainBond(req, res) {
             type: "close_blockchain_bond",
             bond_id: data.bond_id,
             timestamp: data.timestamp
-        }, () => blokchain_bonds.closeBond(data.bond_id, data.floID, `${data.timestamp}.${data.sign}`));
+        }, () => blockchain_bonds.closeBond(data.bond_id, data.floID, `${data.timestamp}.${data.sign}`));
 }
 
 function CloseBobsFund(req, res) {
@@ -560,11 +560,16 @@ module.exports = {
     set DB(db) {
         DB = db;
         market.DB = db;
-        conversion.DB;
-        blokchain_bonds.DB;
+        conversion.DB = db;
+        blockchain_bonds.DB = db;
+        bobs_fund.DB = db;
     },
     set secret(s) {
         secret = s;
+    },
+    refreshData(nodeList) {
+        blockchain_bonds.refresh(nodeList);
+        bobs_fund.refresh(nodeList)
     },
     pause() {
         serving = false;

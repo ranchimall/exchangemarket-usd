@@ -373,6 +373,9 @@ module.exports = {
         nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
         nodeList = nodeKBucket.order;
     },
+    get nodeList() {
+        return nodeList;
+    },
     set assetList(assets) {
         tokenList = assets.filter(a => a.toUpperCase() !== "FLO");
     },

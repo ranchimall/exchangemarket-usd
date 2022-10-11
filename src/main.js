@@ -20,9 +20,10 @@ var DB, app;
 function refreshData(startup = false) {
     return new Promise((resolve, reject) => {
         refreshDataFromBlockchain().then(result => {
-            loadDataFromDB(result, startup)
-                .then(_ => resolve("Data refresh successful"))
-                .catch(error => reject(error))
+            loadDataFromDB(result, startup).then(_ => {
+                app.refreshData(backup.nodeList);
+                resolve("Data refresh successful")
+            }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
 }
@@ -87,7 +88,7 @@ function refreshDataFromBlockchain() {
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
-                        console.warn("Some data might not have been saved in database correctly");
+                        console.warn("Some blockchain data might not have been saved in database correctly");
                     resolve({
                         nodes: nodes_change,
                         assets: assets_change,
@@ -114,7 +115,7 @@ function loadDataFromDB(changes, startup) {
     })
 }
 
-loadDataFromDB.nodeList = function() {
+loadDataFromDB.nodeList = function () {
     return new Promise((resolve, reject) => {
         DB.query("SELECT floID, uri FROM NodeList").then(result => {
             let nodes = {}
@@ -127,7 +128,7 @@ loadDataFromDB.nodeList = function() {
     })
 }
 
-loadDataFromDB.assetList = function() {
+loadDataFromDB.assetList = function () {
     return new Promise((resolve, reject) => {
         DB.query("SELECT asset FROM AssetList").then(result => {
             let assets = [];
@@ -141,7 +142,7 @@ loadDataFromDB.assetList = function() {
     })
 }
 
-loadDataFromDB.trustedIDs = function() {
+loadDataFromDB.trustedIDs = function () {
     return new Promise((resolve, reject) => {
         DB.query("SELECT * FROM TrustedList").then(result => {
             let trustedIDs = [];
