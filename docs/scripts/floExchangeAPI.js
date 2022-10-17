@@ -514,6 +514,7 @@
         INSUFFICIENT_SELLCHIP: '203',
         GREATER_SELLCHIP_BASE: '204',
         INSUFFICIENT_PERIOD: '206',
+        INSUFFICIENT_FUND: '207',
 
         //OTHERS
         NODES_OFFLINE: '404',
@@ -1243,6 +1244,7 @@
                     floID: floID,
                     txid: txid,
                     coin: "BTC",
+                    amount: amount,
                     timestamp: Date.now()
                 };
                 if (!proxySecret) //Direct signing (without proxy)
@@ -1250,6 +1252,7 @@
                 request.sign = signRequest({
                     type: "convert_to",
                     coin: request.coin,
+                    amount: amount,
                     txid: txid,
                     timestamp: request.timestamp
                 }, proxySecret || privKey);
@@ -1276,11 +1279,13 @@
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
             let btc_id = btcOperator.convert.legacy2bech(floID),
                 btc_sink = btcOperator.convert.legacy2bech(sinkID);
-            btcOperator.sendTx(btc_id, privKey, btc_sink, quantity, null).then(txid => {
+            btcOperator.createSignedTx(btc_id, privKey, btc_sink, quantity, null).then(result => {
                 let request = {
                     floID: floID,
-                    txid: txid,
+                    txid: btcOperator.transactionID(result.transaction),
+                    tx_hex: result.transaction.serialize(),
                     coin: "BTC",
+                    quantity: quantity,
                     timestamp: Date.now()
                 };
                 if (!proxySecret) //Direct signing (without proxy)
@@ -1288,12 +1293,87 @@
                 request.sign = signRequest({
                     type: "convert_from",
                     coin: request.coin,
-                    txid: txid,
+                    quantity: quantity,
+                    txid: data.txid,
                     timestamp: request.timestamp
                 }, proxySecret || privKey);
                 console.debug(request);
 
                 fetch_api('/convert-from', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => {
+                    responseParse(result, false)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.addConvertFundCurrency = function (amount, floID, sinkID, privKey) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            if (floID !== floGlobals.adminID)
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+            floTokenAPI.sendToken(privKey, amount, sinkID, '(add convert fund)', floGlobals.currency).then(txid => {
+                let request = {
+                    floID: floID,
+                    txid: txid,
+                    coin: "BTC",
+                    timestamp: Date.now()
+                };
+                request.sign = signRequest({
+                    type: "add_convert_currency_fund",
+                    coin: request.coin,
+                    txid: txid,
+                    timestamp: request.timestamp
+                }, privKey);
+                console.debug(request);
+
+                fetch_api('/add-convert-currency-fund', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                }).then(result => {
+                    responseParse(result, false)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.addConvertFundBTC = function (quantity, floID, sinkID, privKey) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            if (floID !== floGlobals.adminID)
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+            let btc_id = btcOperator.convert.legacy2bech(floID),
+                btc_sink = btcOperator.convert.legacy2bech(sinkID);
+            btcOperator.sendTx(btc_id, privKey, btc_sink, quantity, null).then(txid => {
+                let request = {
+                    floID: floID,
+                    txid: txid,
+                    coin: "BTC",
+                    timestamp: Date.now()
+                };
+                request.sign = signRequest({
+                    type: "add_convert_coin_fund",
+                    coin: request.coin,
+                    txid: data.txid,
+                    timestamp: request.timestamp
+                }, proxySecret || privKey);
+                console.debug(request);
+
+                fetch_api('/add-convert-coin-fund', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'

@@ -88,6 +88,8 @@ module.exports = function App(secret, DB) {
     //convert from or to coin
     app.post('/convert-to', Request.ConvertTo);
     app.post('/convert-from', Request.ConvertFrom);
+    app.post('/add-convert-coin-fund', Request.AddConvertCoinFund);
+    app.post('/add-convert-currency-fund', Request.AddConvertCurrencyFund);
 
     //close blockchain-bond
     app.post('/close-blockchain-bonds', Request.CloseBlockchainBond);

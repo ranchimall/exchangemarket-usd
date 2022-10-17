@@ -300,6 +300,17 @@ CREATE TABLE DirectConvert(
     PRIMARY KEY(id)
 );
 
+CREATE TABLE RefundTransact(
+    id INT NOT NULL AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    amount DECIMAL(16, 8),
+    in_txid VARCHAR(128),
+    out_txid VARCHAR(128),
+    locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id)
+)
+
 /* Backup Feature (Tables & Triggers) */
 
 CREATE TABLE _backup (

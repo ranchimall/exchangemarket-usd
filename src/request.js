@@ -309,9 +309,10 @@ function ConvertTo(req, res) {
     processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
         type: "convert_to",
         coin: data.coin,
+        amount: data.amount,
         txid: data.txid,
         timestamp: data.timestamp
-    }, () => conversion.convertToCoin(data.floID, data.txid, data.coin));
+    }, () => conversion.convertToCoin(data.floID, data.txid, data.coin, data.amount));
 }
 
 function ConvertFrom(req, res) {
@@ -319,9 +320,38 @@ function ConvertFrom(req, res) {
     processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
         type: "convert_from",
         coin: data.coin,
+        quantity: data.quantity,
         txid: data.txid,
         timestamp: data.timestamp
-    }, () => conversion.convertFromCoin(data.floID, data.txid, data.coin));
+    }, () => conversion.convertFromCoin(data.floID, data.txid, data.tx_hex, data.coin, data.quantity));
+}
+
+function AddConvertCoinFund(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
+        type: "add_convert_coin_fund",
+        coin: data.coin,
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => conversion.addFund.coin(data.floID, data.txid, data.coin));
+}
+
+function AddConvertCurrencyFund(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
+        type: "add_convert_currency_fund",
+        coin: data.coin,
+        txid: data.txid,
+        timestamp: data.timestamp
+    }, () => conversion.addFund.currency(data.floID, data.txid, data.coin));
 }
 
 function CloseBlockchainBond(req, res) {
@@ -543,6 +573,8 @@ module.exports = {
     RemoveDistributor,
     ConvertTo,
     ConvertFrom,
+    AddConvertCoinFund,
+    AddConvertCurrencyFund,
     CloseBlockchainBond,
     CloseBobsFund,
     set trustedIDs(ids) {

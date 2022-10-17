@@ -220,12 +220,14 @@ verifyTx.BTC = function (sender, txid) {
 }
 
 function verifyConvert() {
-    DB.query("SELECT id, floID, mode, in_txid FROM DirectConvert WHERE status=? AND coin=?", ["PENDING", "BTC"]).then(results => {
+    DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE status=? AND coin=?", ["PENDING", "BTC"]).then(results => {
         results.forEach(r => {
             if (mode == _sql.CONVERT_MODE_GET) {
                 verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
+                    if (r.amount !== amount)
+                        throw ([true, "Transaction amount mismatched in blockchain"]);
                     conversion_rates.BTC_INR().then(rate => {
-                        blockchain.convertToCoin.init(r.floID, "BTC", amount, amount / rate, r.id)
+                        blockchain.convertToCoin.init(r.floID, "BTC", amount / rate, r.id)
                     }).catch(error => console.error(error))
                 }).catch(error => {
                     console.error(error);
@@ -235,8 +237,10 @@ function verifyConvert() {
                 });
             } else if (mode == _sql.CONVERT_MODE_PUT) {
                 verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
+                    if (r.quantity !== quantity)
+                        throw ([true, "Transaction quantity mismatched in blockchain"]);
                     conversion_rates.BTC_INR().then(rate => {
-                        blockchain.convertFromCoin.init(r.floID, quantity * rate, quantity, r.id)
+                        blockchain.convertFromCoin.init(r.floID, quantity * rate, r.id)
                     }).catch(error => console.error(error))
                 }).catch(error => {
                     console.error(error);
@@ -281,6 +285,67 @@ function confirmConvert() {
                 }).catch(error => console.error(error));
         })
     }).catch(error => console.error(error));
+}
+
+function convert_depositFund() {
+    DB.query("SELECT id, floID, mode, in_txid FROM DirectConvert WHERE status=? AND coin=?", ["DEPOSIT_PENDING", "BTC"]).then(results => {
+        results.forEach(r => {
+            if (mode == _sql.CONVERT_MODE_GET) {
+                verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
+                    DB.query("UPDATE DirectConvert SET status=?, amount=? WHERE id=?", ["DEPOSIT_SUCCESS", amount, r.id])
+                        .then(_ => null).catch(error => console.error(error));
+                }).catch(error => {
+                    console.error(error);
+                    if (error[0])
+                        DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["REJECTED", r.id])
+                            .then(_ => null).catch(error => console.error(error));
+                });
+            } else if (mode == _sql.CONVERT_MODE_PUT) {
+                verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
+                    DB.query("UPDATE DirectConvert SET status=?, quantity=? WHERE id=?", ["DEPOSIT_SUCCESS", quantity, r.id])
+                        .then(_ => null).catch(error => console.error(error));
+                }).catch(error => {
+                    console.error(error);
+                    if (error[0])
+                        DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["REJECTED", r.id])
+                            .then(_ => null).catch(error => console.error(error));
+                });
+            }
+        })
+    }).catch(error => console.error(error))
+}
+
+function verifyRefund() {
+    DB.query("SELECT id, floID, in_txid FROM RefundTransact WHERE status=?", ["PENDING"]).then(results => {
+        verifyTx.token(r.floID, r.in_txid, true)
+            .then(({ amount }) => blockchain.refundTransact.init(r.floID, amount, r.id))
+            .catch(error => {
+                console.error(error);
+                if (error[0])
+                    DB.query("UPDATE RefundTransact SET status=? WHERE id=?", ["REJECTED", r.id])
+                        .then(_ => null).catch(error => console.error(error));
+            });
+    }).catch(error => console.error(error))
+}
+
+function retryRefund() {
+    DB.query("SELECT id, floID, amount FROM RefundTransact WHERE status=?", ["PROCESSING"]).then(results => {
+        results.forEach(r => blockchain.refundTransact.retry(r.floID, r.amount, r.id))
+    }).catch(error => console.error(error))
+}
+
+function confirmRefund() {
+    DB.query("SELECT * FROM RefundTransact WHERE status=?", ["WAITING_CONFIRMATION"]).then(result => {
+        results.forEach(r => {
+            floTokenAPI.getTx(r.txid).then(tx => {
+                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                    return;
+                DB.query("UPDATE RefundTransact SET status=? WHERE id=?", ["SUCCESS", r.id])
+                    .then(result => console.debug(`Refunded ${r.amount} to ${r.floID}`))
+                    .catch(error => console.error(error));
+            }).catch(error => console.error(error));
+        })
+    }).catch(error => console.error(error))
 }
 
 function retryBondClosing() {
@@ -340,10 +405,14 @@ function processAll() {
     verifyConvert();
     retryConvert();
     confirmConvert();
+    convert_depositFund();
     retryBondClosing();
     confirmBondClosing();
     retryFundClosing();
     confirmFundClosing();
+    verifyRefund();
+    retryRefund();
+    confirmRefund();
 }
 
 module.exports = {

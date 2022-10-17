@@ -24,6 +24,9 @@ module.exports = {
         TOP_RANGE: 10 / 100, //top 10%
         REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, //1 hr
     },
+    convert: {
+        MIN_FUND: 0.3 // 30%
+    },
     backup: {
         SHARE_THRESHOLD: 50 / 100, //50%
         HASH_N_ROW: 100,

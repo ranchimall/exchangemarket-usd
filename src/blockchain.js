@@ -7,6 +7,7 @@ var DB; //container for database
 const TYPE_TOKEN = "TOKEN",
     TYPE_COIN = "COIN",
     TYPE_CONVERT = "CONVERT",
+    TYPE_REFUND = "REFUND",
     TYPE_BOND = "BOND",
     TYPE_FUND = "BOB-FUND";
 
@@ -16,6 +17,7 @@ const balance_locked = {},
         [TYPE_COIN]: {},
         [TYPE_TOKEN]: {},
         [TYPE_CONVERT]: {},
+        [TYPE_REFUND]: {},
         [TYPE_BOND]: {},
         [TYPE_FUND]: {}
     };
@@ -63,6 +65,7 @@ const WITHDRAWAL_MESSAGE = {
     [TYPE_COIN]: "(withdrawal from market)",
     [TYPE_TOKEN]: "(withdrawal from market)",
     [TYPE_CONVERT]: "(convert coin)",
+    [TYPE_REFUND]: "(refund from market)",
     [TYPE_BOND]: "(bond closing)",
     [TYPE_FUND]: "(fund investment closing)"
 }
@@ -84,6 +87,7 @@ const updateSyntax = {
     [TYPE_COIN]: "UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?",
     [TYPE_TOKEN]: "UPDATE WithdrawToken SET status=?, txid=? WHERE id=?",
     [TYPE_CONVERT]: "UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?",
+    [TYPE_REFUND]: "UPDATE RefundTransact SET status=?, out_txid=? WHERE id=?",
     [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?",
     [TYPE_FUND]: "UPDATE CloseFundTransact SET status=?, txid=? WHERE id=?"
 };
@@ -135,8 +139,8 @@ function sendToken_retry(floID, token, quantity, id) {
     else sendAsset(floID, token, quantity, TYPE_TOKEN, id);
 }
 
-function convertToCoin_init(floID, coin, currency_amount, coin_quantity, id) {
-    DB.query("UPDATE DirectConvert SET amount=?, quantity=?, status=?, locktime=DEFAULT WHERE id=?", [currency_amount, coin_quantity, "PROCESSING", id])
+function convertToCoin_init(floID, coin, coin_quantity, id) {
+    DB.query("UPDATE DirectConvert SET quantity=?, status=?, locktime=DEFAULT WHERE id=?", [coin_quantity, "PROCESSING", id])
         .then(result => sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
@@ -147,16 +151,16 @@ function convertToCoin_retry(floID, coin, coin_quantity, id) {
     else sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id);
 }
 
-function convertFromCoin_init(floID, currency_amount, coin_quantity, id) {
-    DB.query("UPDATE DirectConvert SET amount=?, quantity=?, status=?, locktime=DEFAULT WHERE id=?", [currency_amount, coin_quantity, "PROCESSING", id])
+function convertFromCoin_init(floID, currency_amount, id) {
+    DB.query("UPDATE DirectConvert SET amount=?, status=?, locktime=DEFAULT WHERE id=?", [currency_amount, "PROCESSING", id])
         .then(result => sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
 
-function convertFromCoin_retry(floID, current_amount, id) {
+function convertFromCoin_retry(floID, currency_amount, id) {
     if (id in callbackCollection[TYPE_CONVERT])
         console.debug("A callback is already pending for this Coin Convert");
-    else sendAsset(floID, floGlobals.currency, current_amount, TYPE_CONVERT, id);
+    else sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id);
 }
 
 function bondTransact_retry(floID, amount, id) {
@@ -169,6 +173,18 @@ function fundTransact_retry(floID, amount, id) {
     if (id in callbackCollection[TYPE_FUND])
         console.debug("A callback is already pending for this Fund investment closing");
     else sendAsset(floID, floGlobals.currency, amount, TYPE_FUND, id);
+}
+
+function refundTransact_init(floID, amount, id) {
+    DB.query("UPDATE RefundTransact SET amount=?, status=?, locktime=DEFAULT WHERE id=?", [amount, "PROCESSING", id])
+        .then(result => sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id))
+        .catch(error => console.error(error))
+}
+
+function refundTransact_retry(floID, amount, id) {
+    if (id in callbackCollection[TYPE_REFUND])
+        console.debug("A callback is already pending for this Refund");
+    else sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id);
 }
 
 module.exports = {
@@ -202,6 +218,10 @@ module.exports = {
     },
     fundTransact: {
         retry: fundTransact_retry
+    },
+    refundTransact: {
+        init: refundTransact_init,
+        retry: refundTransact_retry
     },
     set DB(db) {
         DB = db;
