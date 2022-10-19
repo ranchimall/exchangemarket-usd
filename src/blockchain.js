@@ -1,11 +1,12 @@
 'use strict';
 
+const pCode = require('../docs/scripts/floExchangeAPI').processCode;
+
 var collectAndCall; //container for collectAndCall function from backup module
 var chests; //container for blockchain ids (where assets are stored)
 var DB; //container for database
 
-const TYPE_TOKEN = "TOKEN",
-    TYPE_COIN = "COIN",
+const TYPE_VAULT = "VAULT",
     TYPE_CONVERT = "CONVERT",
     TYPE_CONVERT_POOL = "CONVERT_POOL",
     TYPE_REFUND = "REFUND",
@@ -15,8 +16,7 @@ const TYPE_TOKEN = "TOKEN",
 const balance_locked = {},
     balance_cache = {},
     callbackCollection = {
-        [TYPE_COIN]: {},
-        [TYPE_TOKEN]: {},
+        [TYPE_VAULT]: {},
         [TYPE_CONVERT]: {},
         [TYPE_CONVERT_POOL]: {},
         [TYPE_REFUND]: {},
@@ -64,8 +64,7 @@ function getSinkID(quantity, asset, sinkList = null) {
 }
 
 const WITHDRAWAL_MESSAGE = {
-    [TYPE_COIN]: "(withdrawal from market)",
-    [TYPE_TOKEN]: "(withdrawal from market)",
+    [TYPE_VAULT]: "(withdrawal from market)",
     [TYPE_CONVERT]: "(convert coin)",
     [TYPE_CONVERT_POOL]: "(convert fund)",
     [TYPE_REFUND]: "(refund from market)",
@@ -87,13 +86,12 @@ function sendTx(floID, asset, quantity, sinkID, sinkKey, message) {
 }
 
 const updateSyntax = {
-    [TYPE_COIN]: "UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?",
-    [TYPE_TOKEN]: "UPDATE WithdrawToken SET status=?, txid=? WHERE id=?",
-    [TYPE_CONVERT]: "UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?",
-    [TYPE_CONVERT_POOL]: "UPDATE ConvertFund SET status=?, txid=? WHERE id=?",
-    [TYPE_REFUND]: "UPDATE RefundTransact SET status=?, out_txid=? WHERE id=?",
-    [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?",
-    [TYPE_FUND]: "UPDATE CloseFundTransact SET status=?, txid=? WHERE id=?"
+    [TYPE_VAULT]: "UPDATE VaultTransactions SET r_status=?, txid=? WHERE id=?",
+    [TYPE_CONVERT]: "UPDATE DirectConvert SET r_status=?, out_txid=? WHERE id=?",
+    [TYPE_CONVERT_POOL]: "UPDATE ConvertFund SET r_status=?, txid=? WHERE id=?",
+    [TYPE_REFUND]: "UPDATE RefundTransact SET r_status=?, out_txid=? WHERE id=?",
+    [TYPE_BOND]: "UPDATE CloseBondTransact SET r_status=?, txid=? WHERE id=?",
+    [TYPE_FUND]: "UPDATE CloseFundTransact SET r_status=?, txid=? WHERE id=?"
 };
 
 function sendAsset(floID, asset, quantity, type, id) {
@@ -104,7 +102,7 @@ function sendAsset(floID, asset, quantity, type, id) {
                 if (!txid)
                     console.error("Transaction not successful");
                 else //Transaction was successful, Add in DB
-                    DB.query(updateSyntax[type], ["WAITING_CONFIRMATION", txid, id])
+                    DB.query(updateSyntax[type], [pCode.STATUS_CONFIRMATION, txid, id])
                         .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error)).finally(_ => {
                 delete callbackCollection[type][id];
@@ -119,32 +117,21 @@ function sendAsset(floID, asset, quantity, type, id) {
     }).catch(error => console.error(error))
 }
 
-function sendCoin_init(floID, coin, quantity) {
-    DB.query("INSERT INTO WithdrawCoin (floID, coin, amount, status) VALUES (?, ?, ?, ?)", [floID, coin, quantity, "PENDING"])
-        .then(result => sendAsset(floID, coin, quantity, TYPE_COIN, result.insertId))
+function withdrawAsset_init(floID, asset, amount) {
+    let asset_type = ["FLO", "BTC"].includes(asset) ? pCode.ASSET_TYPE_COIN : pCode.ASSET_TYPE_TOKEN;
+    DB.query("INSERT INTO VaultTransactions (floID, mode, asset_type, asset, amount, r_status) VALUES (?)", [floID, pCode.VAULT_MODE_WITHDRAW, asset_type, asset, amount, pCode.STATUS_PENDING])
+        .then(result => sendAsset(floID, asset, amount, TYPE_VAULT, result.insertId))
         .catch(error => console.error(error))
 }
 
-function sendCoin_retry(floID, coin, quantity, id) {
-    if (id in callbackCollection[TYPE_COIN])
+function withdrawAsset_retry(floID, asset, amount, id) {
+    if (id in callbackCollection[TYPE_VAULT])
         console.debug("A callback is already pending for this Coin transfer");
-    else sendAsset(floID, coin, quantity, TYPE_COIN, id);
-}
-
-function sendToken_init(floID, token, quantity) {
-    DB.query("INSERT INTO WithdrawToken (floID, token, amount, status) VALUES (?, ?, ?, ?)", [floID, token, quantity, "PENDING"])
-        .then(result => sendAsset(floID, quantity, TYPE_TOKEN, result.insertId))
-        .catch(error => console.error(error))
-}
-
-function sendToken_retry(floID, token, quantity, id) {
-    if (id in callbackCollection[TYPE_TOKEN])
-        console.debug("A callback is already pending for this Token transfer");
-    else sendAsset(floID, token, quantity, TYPE_TOKEN, id);
+    else sendAsset(floID, asset, amount, TYPE_VAULT, id);
 }
 
 function convertToCoin_init(floID, coin, coin_quantity, id) {
-    DB.query("UPDATE DirectConvert SET quantity=?, status=?, locktime=DEFAULT WHERE id=?", [coin_quantity, "PROCESSING", id])
+    DB.query("UPDATE DirectConvert SET quantity=?, r_status=?, locktime=DEFAULT WHERE id=?", [coin_quantity, pCode.STATUS_PROCESSING, id])
         .then(result => sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
@@ -156,7 +143,7 @@ function convertToCoin_retry(floID, coin, coin_quantity, id) {
 }
 
 function convertFromCoin_init(floID, currency_amount, id) {
-    DB.query("UPDATE DirectConvert SET amount=?, status=?, locktime=DEFAULT WHERE id=?", [currency_amount, "PROCESSING", id])
+    DB.query("UPDATE DirectConvert SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [currency_amount, pCode.STATUS_PROCESSING, id])
         .then(result => sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
@@ -186,7 +173,7 @@ function fundTransact_retry(floID, amount, id) {
 }
 
 function refundTransact_init(floID, amount, id) {
-    DB.query("UPDATE RefundTransact SET amount=?, status=?, locktime=DEFAULT WHERE id=?", [amount, "PROCESSING", id])
+    DB.query("UPDATE RefundTransact SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [amount, pCode.STATUS_PROCESSING, id])
         .then(result => sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id))
         .catch(error => console.error(error))
 }
@@ -207,13 +194,9 @@ module.exports = {
     set chests(c) {
         chests = c;
     },
-    sendCoin: {
-        init: sendCoin_init,
-        retry: sendCoin_retry
-    },
-    sendToken: {
-        init: sendToken_init,
-        retry: sendToken_retry
+    withdrawAsset: {
+        init: withdrawAsset_init,
+        retry: withdrawAsset_retry
     },
     convertToCoin: {
         init: convertToCoin_init,

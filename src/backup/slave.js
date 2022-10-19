@@ -154,7 +154,7 @@ function storeSinkShare(sinkID, keyShare, decrypt = true) {
         keyShare = floCrypto.decryptData(keyShare, global.myPrivKey)
     let encryptedShare = Crypto.AES.encrypt(keyShare, global.myPrivKey);
     console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
-    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?", [sinkID, encryptedShare, encryptedShare])
+    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?) ON DUPLICATE KEY UPDATE share=?", [[sinkID, encryptedShare], encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }
 
@@ -285,7 +285,7 @@ storeBackupData.commit = function (data, result) {
                 break;
             case "rejected":
                 console.error(result[i].reason);
-                promises.push(DB.query("UPDATE _backupCache SET status=FALSE WHERE id=?", data[i].id));
+                promises.push(DB.query("UPDATE _backupCache SET fail=TRUE WHERE id=?", data[i].id));
                 break;
         }
     return Promise.allSettled(promises);

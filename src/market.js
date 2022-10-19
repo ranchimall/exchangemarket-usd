@@ -13,6 +13,7 @@ const {
 } = require('./_constants')["market"];
 
 const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
+const pCode = require('../docs/scripts/floExchangeAPI').processCode;
 
 const updateBalance = background.updateBalance = coupling.updateBalance;
 
@@ -20,9 +21,7 @@ var DB, assetList; //container for database and allowed assets
 
 function login(floID, proxyKey) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?, ?) " +
-                "ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",
-                [floID, proxyKey, proxyKey])
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?) ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",[[floID, proxyKey], proxyKey])
             .then(result => resolve("Login Successful"))
             .catch(error => reject(error))
     })
@@ -42,8 +41,8 @@ function getRateHistory(asset, duration) {
             reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset(${asset})`));
         else
             coupling.price.getHistory(asset, duration)
-            .then(result => resolve(result))
-            .catch(error => reject(error))
+                .then(result => resolve(result))
+                .catch(error => reject(error))
     })
 }
 
@@ -137,7 +136,7 @@ function addSellOrder(floID, asset, quantity, min_price) {
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset (${asset})`));
         getAssetBalance.check(floID, asset, quantity).then(_ => {
             checkSellRequirement(floID, asset, quantity, min_price).then(_ => {
-                DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, min_price]).then(result => {
+                DB.query("INSERT INTO SellOrder(floID, asset, quantity, minPrice) VALUES (?)", [[floID, asset, quantity, min_price]]).then(result => {
                     resolve('Sell Order placed successfully');
                     coupling.initiate(asset);
                 }).catch(error => reject(error));
@@ -185,7 +184,7 @@ function addBuyOrder(floID, asset, quantity, max_price) {
         else if (!assetList.includes(asset))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset (${asset})`));
         getAssetBalance.check(floID, floGlobals.currency, quantity * max_price).then(_ => {
-            DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?, ?, ?, ?)", [floID, asset, quantity, max_price]).then(result => {
+            DB.query("INSERT INTO BuyOrder(floID, asset, quantity, maxPrice) VALUES (?)", [[floID, asset, quantity, max_price]]).then(result => {
                 resolve('Buy Order placed successfully');
                 coupling.initiate(asset);
             }).catch(error => reject(error));
@@ -257,11 +256,7 @@ function getAccountDetails(floID) {
 
 function getUserTransacts(floID) {
     return new Promise((resolve, reject) => {
-        DB.query("(SELECT 'deposit' as type, txid, token, amount, status FROM DepositToken WHERE floID=?)" +
-                "UNION (SELECT 'deposit' as type, txid, coin as token, amount, status FROM DepositCoin WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, token, amount, status FROM WithdrawToken WHERE floID=?)" +
-                "UNION (SELECT 'withdraw' as type, txid, coin as token, amount, status FROM WithdrawCoin WHERE floID=?)",
-                [floID, floID, floID, floID])
+        DB.query("SELECT mode, asset, amount, txid, locktime, r_status, FROM VaultTransactions WHERE floID=?", [floID])
             .then(result => resolve(result))
             .catch(error => reject(error))
     })
@@ -315,7 +310,7 @@ function transferToken(sender, receivers, token) {
                 checkDistributor(sender, token).then(result => {
                     if (result)
                         for (let floID in receivers)
-                            txQueries.push(["INSERT INTO SellChips (floID, asset, quantity) VALUES (?, ?, ?)", [floID, token, receivers[floID]]]);
+                            txQueries.push(["INSERT INTO SellChips (floID, asset, quantity) VALUES (?)", [[floID, token, receivers[floID]]]]);
                     let time = Date.now();
                     let hash = TRANSFER_HASH_PREFIX + Crypto.SHA256(JSON.stringify({
                         sender: sender,
@@ -325,8 +320,8 @@ function transferToken(sender, receivers, token) {
                         tx_time: time,
                     }));
                     txQueries.push([
-                        "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid) VALUE (?, ?, ?, ?, ?, ?)",
-                        [sender, JSON.stringify(receivers), token, totalAmount, new Date(time), hash]
+                        "INSERT INTO TransferTransactions (sender, receiver, token, totalAmount, tx_time, txid) VALUE (?)",
+                        [[sender, JSON.stringify(receivers), token, totalAmount, new Date(time), hash]]
                     ]);
                     DB.transaction(txQueries)
                         .then(result => resolve(hash))
@@ -339,20 +334,20 @@ function transferToken(sender, receivers, token) {
 
 function depositFLO(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM DepositCoin WHERE txid=? AND floID=? AND coin=?", [txid, floID, "FLO"]).then(result => {
+        DB.query("SELECT r_status FROM VaultTransactions WHERE txid=? AND floID=? AND asset=?", [txid, floID, "FLO"]).then(result => {
             if (result.length) {
-                switch (result[0].status) {
-                    case "PENDING":
+                switch (result[0].r_status) {
+                    case pCode.STATUS_PENDING:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-                    case "REJECTED":
+                    case pCode.STATUS_REJECTED:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already rejected"));
-                    case "SUCCESS":
+                    case pCode.STATUS_SUCCESS:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add coins"));
                 }
             } else
-                DB.query("INSERT INTO DepositCoin(txid, floID, coin, status) VALUES (?, ?, ?, ?)", [txid, floID, "FLO", "PENDING"])
-                .then(result => resolve("Deposit request in process"))
-                .catch(error => reject(error));
+                DB.query("INSERT INTO VaultTransactions(floID, mode, asset_type, asset, txid, r_status) VALUES (?)", [[floID, pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_COIN, "FLO", txid, pCode.STATUS_PENDING]])
+                    .then(result => resolve("Deposit request in process"))
+                    .catch(error => reject(error));
         }).catch(error => reject(error))
     });
 }
@@ -367,7 +362,7 @@ function withdrawFLO(floID, amount) {
             let txQueries = [];
             txQueries.push(updateBalance.consume(floID, "FLO", amount));
             DB.transaction(txQueries).then(result => {
-                blockchain.sendCoin.init(floID, "FLO", amount);
+                blockchain.withdrawAsset.init(floID, "FLO", amount);
                 resolve("Withdrawal request is in process");
             }).catch(error => reject(error));
         }).catch(error => reject(error));
@@ -376,20 +371,20 @@ function withdrawFLO(floID, amount) {
 
 function depositToken(floID, txid) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM DepositToken WHERE txid=? AND floID=?", [txid, floID]).then(result => {
+        DB.query("SELECT r_status FROM VaultTransactions WHERE txid=? AND floID=? AND asset_type=?", [txid, floID, pCode.ASSET_TYPE_TOKEN]).then(result => {
             if (result.length) {
-                switch (result[0].status) {
-                    case "PENDING":
+                switch (result[0].r_status) {
+                    case pCode.STATUS_PENDING:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-                    case "REJECTED":
+                    case pCode.STATUS_REJECTED:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already rejected"));
-                    case "SUCCESS":
+                    case pCode.STATUS_SUCCESS:
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add tokens"));
                 }
             } else
-                DB.query("INSERT INTO DepositToken(txid, floID, status) VALUES (?, ?, ?)", [txid, floID, "PENDING"])
-                .then(result => resolve("Deposit request in process"))
-                .catch(error => reject(error));
+                DB.query("INSERT INTO VaultTransactions(floID, mode, asset_type, txid, r_status) VALUES (?)", [floID, pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_TOKEN, txid, pCode.STATUS_PENDING])
+                    .then(result => resolve("Deposit request in process"))
+                    .catch(error => reject(error));
         }).catch(error => reject(error))
     });
 }
@@ -411,7 +406,7 @@ function withdrawToken(floID, token, amount) {
                 txQueries.push(updateBalance.consume(floID, token, amount));
                 DB.transaction(txQueries).then(result => {
                     //Send Token to user via token API
-                    blockchain.sendToken.init(floID, token, amount);
+                    blockchain.withdrawAsset.init(floID, token, amount);
                     resolve("Withdrawal request is in process");
                 }).catch(error => reject(error));
             }).catch(error => reject(error));
@@ -421,7 +416,7 @@ function withdrawToken(floID, token, amount) {
 
 function addTag(floID, tag) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO UserTag (floID, tag) VALUE (?,?)", [floID, tag])
+        DB.query("INSERT INTO UserTag (floID, tag) VALUE (?)", [[floID, tag]])
             .then(result => resolve(`Added ${floID} to ${tag}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
@@ -444,7 +439,7 @@ function removeTag(floID, tag) {
 
 function addDistributor(floID, asset) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO Distributors (floID, asset) VALUE (?,?)", [floID, asset])
+        DB.query("INSERT INTO Distributors (floID, asset) VALUE (?)", [[floID, asset]])
             .then(result => resolve(`Added ${asset} distributor: ${floID}`))
             .catch(error => {
                 if (error.code === "ER_DUP_ENTRY")

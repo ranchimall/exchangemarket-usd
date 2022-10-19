@@ -11,7 +11,7 @@ var DB; //container for database
 
 const updateBalance = {};
 updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
-updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [floID, token, amount, amount]];
+updateBalance.add = (floID, token, amount) => ["INSERT INTO UserBalance (floID, token, quantity) VALUE (?) ON DUPLICATE KEY UPDATE quantity=quantity+?", [[floID, token, amount], amount]];
 
 const couplingInstance = {},
     couplingTimeout = {};
@@ -181,7 +181,7 @@ function processOrders(seller_best, buyer_best, asset, cur_rate, quantity) {
     txQueries.push(updateBalance.add(buyer_best.floID, asset, quantity));
 
     //Add SellChips to Buyer
-    txQueries.push(["INSERT INTO SellChips(floID, asset, base, quantity) VALUES (?, ?, ?, ?)", [buyer_best.floID, asset, cur_rate, quantity]])
+    txQueries.push(["INSERT INTO SellChips(floID, asset, base, quantity) VALUES (?)", [[buyer_best.floID, asset, cur_rate, quantity]]])
 
     //Record transaction
     let time = Date.now();
@@ -194,8 +194,8 @@ function processOrders(seller_best, buyer_best, asset, cur_rate, quantity) {
         tx_time: time,
     }));
     txQueries.push([
-        "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [seller_best.floID, buyer_best.floID, asset, quantity, cur_rate, new Date(time), hash]
+        "INSERT INTO TradeTransactions (seller, buyer, asset, quantity, unitValue, tx_time, txid) VALUES (?)",
+        [[seller_best.floID, buyer_best.floID, asset, quantity, cur_rate, new Date(time), hash]]
     ]);
 
     return txQueries;
@@ -214,11 +214,11 @@ function endAudit(sellerID, buyerID, asset, old_bal, unit_price, quantity) {
         DB.query("INSERT INTO AuditTrade (asset, quantity, unit_price, total_cost," +
             " sellerID, seller_old_cash, seller_old_asset, seller_new_cash, seller_new_asset," +
             " buyerID, buyer_old_cash, buyer_old_asset, buyer_new_cash, buyer_new_asset)" +
-            " Value (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+            " Value (?)", [[
                 asset, quantity, unit_price, quantity * unit_price,
                 sellerID, old_bal[sellerID].cash, old_bal[sellerID].asset, new_bal[sellerID].cash, new_bal[sellerID].asset,
                 buyerID, old_bal[buyerID].cash, old_bal[buyerID].asset, new_bal[buyerID].cash, new_bal[buyerID].asset,
-            ]).then(_ => null).catch(error => console.error(error))
+            ]]).then(_ => null).catch(error => console.error(error))
     }).catch(error => console.error(error));
 }
 
@@ -234,7 +234,7 @@ function auditBalance(sellerID, buyerID, asset) {
                 asset: 0
             }
         };
-        DB.query("SELECT floID, quantity, token FROM UserBalance WHERE floID IN (?, ?) AND token IN (?, ?)", [sellerID, buyerID, floGlobals.currency, asset]).then(result => {
+        DB.query("SELECT floID, quantity, token FROM UserBalance WHERE floID IN (?) AND token IN (?)", [[sellerID, buyerID], [floGlobals.currency, asset]]).then(result => {
             for (let i in result) {
                 if (result[i].token === floGlobals.currency)
                     balance[result[i].floID].cash = result[i].quantity;

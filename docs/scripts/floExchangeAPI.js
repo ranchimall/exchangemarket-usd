@@ -561,6 +561,23 @@
         });
     }
 
+    const processCode = exchangeAPI.processCode = {
+        ASSET_TYPE_COIN: 0,
+        ASSET_TYPE_TOKEN: 1,
+
+        VAULT_MODE_DEPOSIT: 1,
+        VAULT_MODE_WITHDRAW: 0,
+
+        STATUS_PENDING: 0,
+        STATUS_PROCESSING: 1,
+        STATUS_CONFIRMATION: 90,
+        STATUS_REJECTED: -1,
+        STATUS_SUCCESS: 100,
+
+        CONVERT_MODE_GET: 1,
+        CONVERT_MODE_PUT: 0,
+    }
+
     exchangeAPI.getAccount = function (floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {

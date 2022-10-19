@@ -95,7 +95,7 @@ validateRequest.checkIfSignUsed = sign => new Promise((resolve, reject) => {
 
 function logRequest(floID, req_str, sign, proxy = false) {
     //console.debug(floID, req_str);
-    DB.query("INSERT INTO RequestLog (floID, request, sign, proxy) VALUES (?,?,?, ?)", [floID, req_str, sign, proxy])
+    DB.query("INSERT INTO RequestLog (floID, request, sign, proxy) VALUES (?)", [[floID, req_str, sign, proxy]])
         .then(_ => null).catch(error => console.error(error));
 }
 

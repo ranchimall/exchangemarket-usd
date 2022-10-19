@@ -51,13 +51,13 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM NodeList WHERE floID=?", [n]));
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
-                                promises.push(DB.query("INSERT INTO NodeList (floID, uri) VALUE (?,?) ON DUPLICATE KEY UPDATE uri=?", [n, content.Nodes.add[n], content.Nodes.add[n]]));
+                                promises.push(DB.query("INSERT INTO NodeList (floID, uri) VALUE (?) ON DUPLICATE KEY UPDATE uri=?", [[n, content.Nodes.add[n]], content.Nodes.add[n]]));
                     }
                     //Asset List
                     if (content.Assets) {
                         assets_change = true;
                         for (let a in content.Assets)
-                            promises.push(DB.query("INSERT INTO AssetList (asset, initialPrice) VALUE (?,?) ON DUPLICATE KEY UPDATE initialPrice=?", [a, content.Assets[a], content.Assets[a]]));
+                            promises.push(DB.query("INSERT INTO AssetList (asset, initialPrice) VALUE (?) ON DUPLICATE KEY UPDATE initialPrice=?", [[a, content.Assets[a]], content.Assets[a]]));
                     }
                     //Trusted List
                     if (content.Trusted) {
@@ -76,14 +76,14 @@ function refreshDataFromBlockchain() {
                                 promises.push(DB.query("DELETE FROM TagList WHERE tag=?", [t]));
                         if (content.Tag.add)
                             for (let t in content.Tag.add)
-                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority) VALUE (?, ?, ?) ON DUPLICATE KEY UPDATE tag=tag", [t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority]));
+                                promises.push(DB.query("INSERT INTO TagList (tag, sellPriority, buyPriority) VALUE (?) ON DUPLICATE KEY UPDATE tag=tag", [[t, content.Tag.add[t].sellPriority, content.Tag.add[t].buyPriority]]));
                         if (content.Tag.update)
                             for (let t in content.Tag.update)
                                 for (let a in content.Tag.update[t])
                                     promises.push(`UPDATE TagList WHERE tag=? SET ${a}=?`, [t, content.Tag.update[t][a]]);
                     }
                 });
-                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?, ?) ON DUPLICATE KEY UPDATE num=?", [floGlobals.adminID, result.totalTxs, result.totalTxs]));
+                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[floGlobals.adminID, result.totalTxs], result.totalTxs]));
                 //Check if all save process were successful
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));

@@ -114,43 +114,16 @@ CREATE TABLE BuyOrder (
     FOREIGN KEY (asset) REFERENCES AssetList(asset)
 );
 
-CREATE TABLE DepositCoin (
+CREATE TABLE VaultTransactions (
     id INT NOT NULL AUTO_INCREMENT,
-    txid VARCHAR(128) NOT NULL,
     floID CHAR(34) NOT NULL,
-    coin VARCHAR(8) NOT NULL,
+    mode BIT NOT NULL,
+    asset_type BIT NOT NULL,
+    asset VARCHAR(32),
     amount DECIMAL(16, 8),
-    status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id)
-);
-
-CREATE TABLE WithdrawCoin (
-    id INT NOT NULL AUTO_INCREMENT,
     txid VARCHAR(128),
-    floID CHAR(34) NOT NULL,
-    coin VARCHAR(8) NOT NULL,
-    amount DECIMAL(16, 8) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id)
-);
-
-CREATE TABLE DepositToken (
-    id INT NOT NULL AUTO_INCREMENT,
-    txid VARCHAR(128) NOT NULL,
-    floID CHAR(34) NOT NULL,
-    token VARCHAR(64),
-    amount DECIMAL(16, 8),
-    status VARCHAR(50) NOT NULL,
-    PRIMARY KEY(id)
-);
-
-CREATE TABLE WithdrawToken (
-    id INT NOT NULL AUTO_INCREMENT,
-    txid VARCHAR(128),
-    floID CHAR(34) NOT NULL,
-    token VARCHAR(64) NOT NULL,
-    amount DECIMAL(16, 8) NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -241,7 +214,7 @@ CREATE TABLE CloseBondTransact(
     usd_net DECIMAL(16, 2) NOT NULL,
     txid VARCHAR(128),
     close_id VARCHAR(128),
-    status VARCHAR(50) NOT NULL,
+    r_status TINYINT NOT NULL,
     KEY(id),
     PRIMARY KEY(bond_id),
     FOREIGN KEY (bond_id) REFERENCES BlockchainBonds(bond_id)
@@ -280,7 +253,7 @@ CREATE TABLE CloseFundTransact(
     usd_net DECIMAL(16, 2) NOT NULL,
     txid VARCHAR(128),
     close_id VARCHAR(128),
-    status VARCHAR(50) NOT NULL,
+    r_status TINYINT NOT NULL,
     KEY(id),
     PRIMARY KEY(fund_id, floID),
     FOREIGN KEY (fund_id) REFERENCES BobsFund(fund_id)
@@ -293,7 +266,7 @@ CREATE TABLE ConvertFund(
     quantity DECIMAL(16, 8),
     mode BIT NOT NULL,
     txid VARCHAR(128),
-    status VARCHAR(50) NOT NULL,
+    r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -307,7 +280,7 @@ CREATE TABLE DirectConvert(
     in_txid VARCHAR(128),
     out_txid VARCHAR(128),
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(50) NOT NULL,
+    r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
 );
 
@@ -318,7 +291,7 @@ CREATE TABLE RefundTransact(
     in_txid VARCHAR(128),
     out_txid VARCHAR(128),
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(50) NOT NULL,
+    r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
 )
 
@@ -328,7 +301,7 @@ CREATE TABLE _backup (
     t_name VARCHAR(64),
     id INT,
     mode BOOLEAN DEFAULT TRUE,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    u_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(t_name, id)
 );
 
@@ -336,7 +309,7 @@ CREATE table _backupCache(
     id INT AUTO_INCREMENT,
     t_name VARCHAR(64),
     data_cache LONGTEXT,
-    status BOOLEAN,
+    fail BOOLEAN,
     PRIMARY KEY(id)
 );
 
@@ -389,33 +362,12 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUP
 CREATE TRIGGER BuyOrder_D AFTER DELETE ON BuyOrder
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
-CREATE TRIGGER DepositCoin_I AFTER INSERT ON DepositCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER DepositCoin_U AFTER UPDATE ON DepositCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER DepositCoin_D AFTER DELETE ON DepositCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
-
-CREATE TRIGGER WithdrawCoin_I AFTER INSERT ON WithdrawCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER WithdrawCoin_U AFTER UPDATE ON WithdrawCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER WithdrawCoin_D AFTER DELETE ON WithdrawCoin
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawCoin', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
-
-CREATE TRIGGER DepositToken_I AFTER INSERT ON DepositToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER DepositToken_U AFTER UPDATE ON DepositToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER DepositToken_D AFTER DELETE ON DepositToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DepositToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
-
-CREATE TRIGGER WithdrawToken_I AFTER INSERT ON WithdrawToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER WithdrawToken_U AFTER UPDATE ON WithdrawToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
-CREATE TRIGGER WithdrawToken_D AFTER DELETE ON WithdrawToken
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+CREATE TRIGGER VaultTransactions_I AFTER INSERT ON VaultTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER VaultTransactions_U AFTER UPDATE ON VaultTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER VaultTransactions_D AFTER DELETE ON VaultTransactions
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER CloseBondTransact_I AFTER INSERT ON CloseBondTransact
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;

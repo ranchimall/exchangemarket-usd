@@ -22,7 +22,7 @@ const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
 function storeHistory(asset, rate) {
-    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?, ?)", [asset, rate.toFixed(8)])
+    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?)", [[asset, rate.toFixed(8)]])
         .then(_ => null).catch(error => console.error(error))
 }
 

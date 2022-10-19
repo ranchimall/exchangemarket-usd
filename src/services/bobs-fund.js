@@ -1,6 +1,7 @@
 'use strict';
 
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
+const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 const getRate = require('./conversion').getRate;
 
 var DB; //container for database
@@ -232,7 +233,7 @@ function refreshBlockchainData(nodeList = []) {
                             promises.push(DB.query("UPDATE BobsFundInvestments SET close_id=? amount_out=? WHERE fund_id=? AND floID=?", [d.txid, details.amountFinal, details.fundID, details.floID]));
                     }
                 });
-                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?, ?) ON DUPLICATE KEY UPDATE num=?", [bobsFund.config.adminID, result.totalTxs, result.totalTxs]));
+                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[bobsFund.config.adminID, result.totalTxs], result.totalTxs]));
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
@@ -246,7 +247,7 @@ function refreshBlockchainData(nodeList = []) {
 
 function closeFund(fund_id, floID, ref) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT status FROM CloseFundTransact WHERE fund_id=?", [fund_id]).then(result => {
+        DB.query("SELECT r_status FROM CloseFundTransact WHERE fund_id=?", [fund_id]).then(result => {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, `Fund closing already in process`));
             DB.query("SELECT * FROM BobsFund WHERE fund_id=?", [fund_id]).then(result => {
@@ -278,7 +279,7 @@ function closeFund(fund_id, floID, ref) {
                     getRate.BTC_USD().then(btc_rate => {
                         getRate.USD_INR().then(usd_rate => {
                             let net_value = bobsFund.calcNetValue(fund.btc_base, btc_rate, fund.usd_base, usd_rate, investment.amount_in, fund.fee)
-                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, status) VALUE ?", [[fund_id, floID, net_value, cur_date, btc_rate, usd_rate, ref, "PENDING"]])
+                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, r_status) VALUE ?", [[fund_id, floID, net_value, cur_date, btc_rate, usd_rate, ref, pCode.STATUS_PENDING]])
                                 .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": cur_date }))
                                 .catch(error => reject(error))
                         }).catch(error => reject(error))
