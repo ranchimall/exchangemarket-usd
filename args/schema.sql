@@ -286,6 +286,17 @@ CREATE TABLE CloseFundTransact(
     FOREIGN KEY (fund_id) REFERENCES BobsFund(fund_id)
 );
 
+CREATE TABLE ConvertFund(
+    id INT NOT NULL AUTO_INCREMENT, 
+    amount DECIMAL(16, 8),
+    coin VARCHAR(8) NOT NULL,
+    quantity DECIMAL(16, 8),
+    mode BIT NOT NULL,
+    txid VARCHAR(128),
+    status VARCHAR(50) NOT NULL,
+    PRIMARY KEY(id)
+);
+
 CREATE TABLE DirectConvert(
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
@@ -406,12 +417,40 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', NEW.id) O
 CREATE TRIGGER WithdrawToken_D AFTER DELETE ON WithdrawToken
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('WithdrawToken', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
+CREATE TRIGGER CloseBondTransact_I AFTER INSERT ON CloseBondTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER CloseBondTransact_U AFTER UPDATE ON CloseBondTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER CloseBondTransact_D AFTER DELETE ON CloseBondTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER CloseFundTransact_I AFTER INSERT ON CloseFundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER CloseFundTransact_U AFTER UPDATE ON CloseFundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER CloseFundTransact_D AFTER DELETE ON CloseFundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER ConvertFund_I AFTER INSERT ON ConvertFund
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER ConvertFund_U AFTER UPDATE ON ConvertFund
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER ConvertFund_D AFTER DELETE ON ConvertFund
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
 CREATE TRIGGER DirectConvert_I AFTER INSERT ON DirectConvert
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER DirectConvert_U AFTER UPDATE ON DirectConvert
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
 CREATE TRIGGER DirectConvert_D AFTER DELETE ON DirectConvert
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+
+CREATE TRIGGER RefundTransact_I AFTER INSERT ON RefundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER RefundTransact_U AFTER UPDATE ON RefundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+CREATE TRIGGER RefundTransact_D AFTER DELETE ON RefundTransact
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
 
 CREATE TRIGGER UserTag_I AFTER INSERT ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;

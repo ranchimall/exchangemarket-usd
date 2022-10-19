@@ -8,7 +8,6 @@ TRUNCATE DepositCoin;
 TRUNCATE DepositToken;
 TRUNCATE WithdrawCoin;
 TRUNCATE WithdrawToken;
-TRUNCATE DirectConvert;
 TRUNCATE PriceHistory;
 TRUNCATE RequestLog;
 TRUNCATE SellOrder;
@@ -18,10 +17,18 @@ TRUNCATE UserTag;
 TRUNCATE TransferTransactions;
 TRUNCATE TradeTransactions;
 TRUNCATE SellChips;
+TRUNCATE CloseBondTransact;
+TRUNCATE CloseFundTransact;
+TRUNCATE ConvertFund;
+TRUNCATE DirectConvert;
+TRUNCATE RefundTransact;
 
 /* Blockchain data */
 TRUNCATE LastTx;
 TRUNCATE NodeList;
 TRUNCATE TrustedList;
+DELETE FROM BlockchainBonds;
+TRUNCATE BobsFundInvestments;
+DELETE FROM BobsFund;
 DELETE FROM TagList;
 DELETE FROM AssetList;
