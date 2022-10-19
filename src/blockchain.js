@@ -7,6 +7,7 @@ var DB; //container for database
 const TYPE_TOKEN = "TOKEN",
     TYPE_COIN = "COIN",
     TYPE_CONVERT = "CONVERT",
+    TYPE_CONVERT_POOL = "CONVERT_POOL",
     TYPE_REFUND = "REFUND",
     TYPE_BOND = "BOND",
     TYPE_FUND = "BOB-FUND";
@@ -17,6 +18,7 @@ const balance_locked = {},
         [TYPE_COIN]: {},
         [TYPE_TOKEN]: {},
         [TYPE_CONVERT]: {},
+        [TYPE_CONVERT_POOL]: {},
         [TYPE_REFUND]: {},
         [TYPE_BOND]: {},
         [TYPE_FUND]: {}
@@ -65,6 +67,7 @@ const WITHDRAWAL_MESSAGE = {
     [TYPE_COIN]: "(withdrawal from market)",
     [TYPE_TOKEN]: "(withdrawal from market)",
     [TYPE_CONVERT]: "(convert coin)",
+    [TYPE_CONVERT_POOL]: "(convert fund)",
     [TYPE_REFUND]: "(refund from market)",
     [TYPE_BOND]: "(bond closing)",
     [TYPE_FUND]: "(fund investment closing)"
@@ -87,6 +90,7 @@ const updateSyntax = {
     [TYPE_COIN]: "UPDATE WithdrawCoin SET status=?, txid=? WHERE id=?",
     [TYPE_TOKEN]: "UPDATE WithdrawToken SET status=?, txid=? WHERE id=?",
     [TYPE_CONVERT]: "UPDATE DirectConvert SET status=?, out_txid=? WHERE id=?",
+    [TYPE_CONVERT_POOL]: "UPDATE ConvertFund SET status=?, txid=? WHERE id=?",
     [TYPE_REFUND]: "UPDATE RefundTransact SET status=?, out_txid=? WHERE id=?",
     [TYPE_BOND]: "UPDATE CloseBondTransact SET status=?, txid=? WHERE id=?",
     [TYPE_FUND]: "UPDATE CloseFundTransact SET status=?, txid=? WHERE id=?"
@@ -163,6 +167,12 @@ function convertFromCoin_retry(floID, currency_amount, id) {
     else sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id);
 }
 
+function convertFundWithdraw_retry(asset, amount, id) {
+    if (id in callbackCollection[TYPE_CONVERT_POOL])
+        console.debug("A callback is already pending for this Convert fund withdrawal");
+    else sendAsset(floGlobals.adminID, asset, amount, TYPE_CONVERT_POOL, id);
+}
+
 function bondTransact_retry(floID, amount, id) {
     if (id in callbackCollection[TYPE_BOND])
         console.debug("A callback is already pending for this Bond closing");
@@ -212,6 +222,9 @@ module.exports = {
     convertFromCoin: {
         init: convertFromCoin_init,
         retry: convertFromCoin_retry
+    },
+    convertFundWithdraw: {
+        retry: convertFundWithdraw_retry
     },
     bondTransact: {
         retry: bondTransact_retry

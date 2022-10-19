@@ -48,7 +48,11 @@ function checkPoolBalance(coin, req_value, mode) {
     return new Promise((resolve, reject) => {
         if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
-        DB.query("SELECT mode, SUM(quantity) AS coin_val, SUM(amount) AS cash_val FROM DirectConvert WHERE coin=? AND status NOT IN (?) GROUP BY mode", [coin, ["REJECTED", "REFUND"]]).then(result => {
+        let q = "SELECT mode, SUM(quantity) AS coin_val, SUM(amount) AS cash_val FROM (" +
+            "(SELECT amount, coin, quantity, mode, status FROM DirectConvert) UNION " +
+            "(SELECT amount, coin, quantity, mode, status FROM ConvertFund) " +
+            ") WHERE coin=? AND status NOT IN (?) GROUP BY mode"
+        DB.query(q, [coin, ["REJECTED", "REFUND"]]).then(result => {
             let coin_net = 0, cash_net = 0;
             for (let r of result)
                 if (r.mode == _sql.CONVERT_MODE_GET) {
@@ -130,34 +134,72 @@ function convertFromCoin(floID, txid, tx_hex, coin, quantity) {
     })
 }
 
-function addCurrencyFund(floID, txid, coin) {
+function depositCurrencyFund(floID, txid, coin) {
     return new Promise((resolve, reject) => {
         if (floID !== floGlobals.adminID)
             return reject(INVALID(eCode.ACCESS_DENIED, 'Access Denied'));
         else if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
-        DB.query("SELECT status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, _sql.CONVERT_MODE_GET]).then(result => {
+        DB.query("SELECT status FROM ConvertFund WHERE txid=? AND mode=?", [txid, _sql.CONVERT_MODE_GET]).then(result => {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-            DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, status) VALUES (?)", [[floID, b_txid, _sql.CONVERT_MODE_GET, coin, "DEPOSIT_PENDING"]])
+            DB.query("INSERT INTO ConvertFund(txid, mode, coin, status) VALUES (?)", [[b_txid, _sql.CONVERT_MODE_GET, coin, "PROCESSING"]])
                 .then(result => resolve("Add currency fund in process"))
                 .catch(error => reject(error))
         }).catch(error => reject(error))
     })
 }
 
-function addCoinFund(floID, txid, coin) {
+function depositCoinFund(floID, txid, coin) {
     return new Promise((resolve, reject) => {
         if (floID !== floGlobals.adminID)
             return reject(INVALID(eCode.ACCESS_DENIED, 'Access Denied'));
         else if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
-        DB.query("SELECT status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, _sql.CONVERT_MODE_PUT]).then(result => {
+        DB.query("SELECT status FROM ConvertFund WHERE txid=? AND mode=?", [txid, _sql.CONVERT_MODE_PUT]).then(result => {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-            DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, status) VALUES (?)", [[floID, b_txid, _sql.CONVERT_MODE_PUT, coin, "DEPOSIT_PENDING"]])
+            DB.query("INSERT INTO ConvertFund(txid, mode, coin, status) VALUES (?)", [[b_txid, _sql.CONVERT_MODE_PUT, coin, "PROCESSING"]])
                 .then(result => resolve("Add coin fund in process"))
                 .catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
+function withdrawCurrencyFund(floID, coin, amount) {
+    return new Promise((resolve, reject) => {
+        if (floID !== floGlobals.adminID)
+            return reject(INVALID(eCode.ACCESS_DENIED, 'Access Denied'));
+        else if (!allowedConversion.includes(coin))
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
+        DB.query("SELECT SUM(amount) AS deposit_amount FROM ConvertFund WHERE mode=? AND status=?", [_sql.CONVERT_MODE_GET, "SUCCESS"]).then(r1 => {
+            DB.query("SELECT SUM(amount) AS withdraw_amount FROM ConvertFund WHERE mode=? AND status IN (?)", [_sql.CONVERT_MODE_PUT, ["SUCCESS", "PENDING", "WAITING_CONFIRMATION"]]).then(r2 => {
+                let available_amount = (r1[0].deposit_amount || 0) - (r2[0].withdraw_amount || 0);
+                if (available_amount < amount)
+                    return reject(INVALID(eCode.INSUFFICIENT_BALANCE, "Insufficient convert-fund deposits to withdraw"));
+                DB.query("INSERT INTO ConvertFund(mode, coin, amount, status) VALUES (?)", [[_sql.CONVERT_MODE_PUT, coin, amount, "PENDING"]])
+                    .then(result => resolve("Add currency fund in process"))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
+function withdrawCoinFund(floID, coin, quantity) {
+    return new Promise((resolve, reject) => {
+        if (floID !== floGlobals.adminID)
+            return reject(INVALID(eCode.ACCESS_DENIED, 'Access Denied'));
+        else if (!allowedConversion.includes(coin))
+            return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
+        DB.query("SELECT SUM(quantity) AS deposit_quantity FROM ConvertFund WHERE mode=? AND status=?", [_sql.CONVERT_MODE_PUT, "SUCCESS"]).then(r1 => {
+            DB.query("SELECT SUM(quantity) AS withdraw_quantity FROM ConvertFund WHERE mode=? AND status IN (?)", [_sql.CONVERT_MODE_GET, ["SUCCESS", "PENDING"]]).then(r2 => {
+                let available_quantity = (r1[0].deposit_quantity || 0) - (r2[0].withdraw_quantity || 0);
+                if (available_quantity < quantity)
+                    return reject(INVALID(eCode.INSUFFICIENT_BALANCE, "Insufficient convert-fund deposits to withdraw"));
+                DB.query("INSERT INTO ConvertFund(mode, coin, quantity, status) VALUES (?)", [[_sql.CONVERT_MODE_GET, coin, quantity, "PENDING"]])
+                    .then(result => resolve("Add currency fund in process"))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
 }
@@ -170,9 +212,13 @@ module.exports = {
     },
     convertToCoin,
     convertFromCoin,
-    addFund: {
-        coin: addCoinFund,
-        currency: addCurrencyFund
+    depositFund: {
+        coin: depositCoinFund,
+        currency: depositCurrencyFund
+    },
+    withdrawFund: {
+        coin: withdrawCoinFund,
+        currency: withdrawCurrencyFund
     },
     set DB(db) {
         DB = db;

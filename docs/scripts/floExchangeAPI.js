@@ -1314,7 +1314,7 @@
         })
     }
 
-    exchangeAPI.addConvertFundCurrency = function (amount, floID, sinkID, privKey) {
+    exchangeAPI.depositConvertFundCurrency = function (amount, floID, sinkID, privKey) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
@@ -1328,14 +1328,14 @@
                     timestamp: Date.now()
                 };
                 request.sign = signRequest({
-                    type: "add_convert_currency_fund",
+                    type: "deposit_convert_currency_fund",
                     coin: request.coin,
                     txid: txid,
                     timestamp: request.timestamp
                 }, privKey);
                 console.debug(request);
 
-                fetch_api('/add-convert-currency-fund', {
+                fetch_api('/deposit-convert-currency-fund', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -1350,7 +1350,7 @@
         })
     }
 
-    exchangeAPI.addConvertFundBTC = function (quantity, floID, sinkID, privKey) {
+    exchangeAPI.depositConvertFundBTC = function (quantity, floID, sinkID, privKey) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
@@ -1366,14 +1366,14 @@
                     timestamp: Date.now()
                 };
                 request.sign = signRequest({
-                    type: "add_convert_coin_fund",
+                    type: "deposit_convert_coin_fund",
                     coin: request.coin,
                     txid: data.txid,
                     timestamp: request.timestamp
                 }, proxySecret || privKey);
                 console.debug(request);
 
-                fetch_api('/add-convert-coin-fund', {
+                fetch_api('/deposit-convert-coin-fund', {
                     method: "POST",
                     headers: {
                         'Content-Type': 'application/json'
@@ -1384,6 +1384,74 @@
                         .then(result => resolve(result))
                         .catch(error => reject(error))
                 }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.withdrawConvertFundCurrency = function (amount, floID, privKey) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            if (floID !== floGlobals.adminID)
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+            let request = {
+                floID: floID,
+                amount: amount,
+                coin: "BTC",
+                timestamp: Date.now()
+            };
+            request.sign = signRequest({
+                type: "withdraw_convert_currency_fund",
+                coin: request.coin,
+                amount: amount,
+                timestamp: request.timestamp
+            }, privKey);
+            console.debug(request);
+
+            fetch_api('/withdraw-convert-currency-fund', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => {
+                responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.withdrawConvertFundCurrency = function (quantity, floID, privKey) {
+        return new Promise((resolve, reject) => {
+            if (!floCrypto.verifyPrivKey(privKey, floID))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+            if (floID !== floGlobals.adminID)
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+            let request = {
+                floID: floID,
+                quantity: quantity,
+                coin: "BTC",
+                timestamp: Date.now()
+            };
+            request.sign = signRequest({
+                type: "withdraw_convert_coin_fund",
+                coin: request.coin,
+                quantity: quantity,
+                timestamp: request.timestamp
+            }, privKey);
+            console.debug(request);
+
+            fetch_api('/withdraw-convert-coin-fund', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => {
+                responseParse(result, false)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
             }).catch(error => reject(error))
         })
     }

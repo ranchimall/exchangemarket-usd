@@ -222,7 +222,7 @@ verifyTx.BTC = function (sender, txid) {
 function verifyConvert() {
     DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE status=? AND coin=?", ["PENDING", "BTC"]).then(results => {
         results.forEach(r => {
-            if (mode == _sql.CONVERT_MODE_GET) {
+            if (r.mode == _sql.CONVERT_MODE_GET) {
                 verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
                     if (r.amount !== amount)
                         throw ([true, "Transaction amount mismatched in blockchain"]);
@@ -235,7 +235,7 @@ function verifyConvert() {
                         DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["REJECTED", r.id])
                             .then(_ => null).catch(error => console.error(error));
                 });
-            } else if (mode == _sql.CONVERT_MODE_PUT) {
+            } else if (r.mode == _sql.CONVERT_MODE_PUT) {
                 verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
                     if (r.quantity !== quantity)
                         throw ([true, "Transaction quantity mismatched in blockchain"]);
@@ -256,9 +256,9 @@ function verifyConvert() {
 function retryConvert() {
     DB.query("SELECT id, floID, mode, amount, quantity FROM DirectConvert WHERE status=? AND coin=?", ["PROCESSING", "BTC"]).then(results => {
         results.forEach(r => {
-            if (mode == _sql.CONVERT_MODE_GET)
+            if (r.mode == _sql.CONVERT_MODE_GET)
                 blockchain.convertToCoin.retry(r.floID, "BTC", r.quantity, r.id);
-            else if (mode == _sql.CONVERT_MODE_PUT)
+            else if (r.mode == _sql.CONVERT_MODE_PUT)
                 blockchain.convertFromCoin.retry(r.floID, r.amount, r.id)
         })
     }).catch(error => console.error(error))
@@ -267,7 +267,7 @@ function retryConvert() {
 function confirmConvert() {
     DB.query("SELECT id, floID, mode, amount, quantity, out_txid FROM DirectConvert WHERE status=? AND coin=?", ["WAITING_CONFIRMATION", "BTC"]).then(results => {
         results.forEach(r => {
-            if (mode == _sql.CONVERT_MODE_GET)
+            if (r.mode == _sql.CONVERT_MODE_GET)
                 btcOperator.getTx(r.out_txid).then(tx => {
                     if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                         return;
@@ -275,7 +275,7 @@ function confirmConvert() {
                         .then(result => console.debug(`${r.floID} converted ${amount} to ${r.quantity} BTC`))
                         .catch(error => console.error(error))
                 }).catch(error => console.error(error));
-            else if (mode == _sql.CONVERT_MODE_PUT)
+            else if (r.mode == _sql.CONVERT_MODE_PUT)
                 floTokenAPI.getTx(r.out_txid).then(tx => {
                     if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                         return;
@@ -287,29 +287,64 @@ function confirmConvert() {
     }).catch(error => console.error(error));
 }
 
-function convert_depositFund() {
-    DB.query("SELECT id, floID, mode, in_txid FROM DirectConvert WHERE status=? AND coin=?", ["DEPOSIT_PENDING", "BTC"]).then(results => {
+function verifyConvertFundDeposit() {
+    DB.query("SELECT id, floID, mode, txid FROM ConvertFund WHERE status=? AND coin=?", ["PROCESSING", "BTC"]).then(results => {
         results.forEach(r => {
-            if (mode == _sql.CONVERT_MODE_GET) {
-                verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
-                    DB.query("UPDATE DirectConvert SET status=?, amount=? WHERE id=?", ["DEPOSIT_SUCCESS", amount, r.id])
+            if (r.mode == _sql.CONVERT_MODE_GET) { //deposit currency
+                verifyTx.token(r.floID, r.txid, true).then(({ amount }) => {
+                    DB.query("UPDATE ConvertFund SET status=?, amount=? WHERE id=?", ["SUCCESS", amount, r.id])
                         .then(_ => null).catch(error => console.error(error));
                 }).catch(error => {
                     console.error(error);
                     if (error[0])
-                        DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["REJECTED", r.id])
+                        DB.query("UPDATE ConvertFund SET status=? WHERE id=?", ["REJECTED", r.id])
                             .then(_ => null).catch(error => console.error(error));
                 });
-            } else if (mode == _sql.CONVERT_MODE_PUT) {
-                verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
-                    DB.query("UPDATE DirectConvert SET status=?, quantity=? WHERE id=?", ["DEPOSIT_SUCCESS", quantity, r.id])
+            } else if (r.mode == _sql.CONVERT_MODE_PUT) {//deposit coin
+                verifyTx.BTC(r.floID, r.txid).then(quantity => {
+                    DB.query("UPDATE ConvertFund SET status=?, quantity=? WHERE id=?", ["SUCCESS", quantity, r.id])
                         .then(_ => null).catch(error => console.error(error));
                 }).catch(error => {
                     console.error(error);
                     if (error[0])
-                        DB.query("UPDATE DirectConvert SET status=? WHERE id=?", ["REJECTED", r.id])
+                        DB.query("UPDATE ConvertFund SET status=? WHERE id=?", ["REJECTED", r.id])
                             .then(_ => null).catch(error => console.error(error));
                 });
+            }
+        })
+    }).catch(error => console.error(error))
+}
+
+function retryConvertFundWithdraw() {
+    DB.query("SELECT id, mode, coin, quantity, amount FROM ConvertFund WHERE status=? AND coin=?", ["PENDING", "BTC"]).then(results => {
+        results.forEach(r => {
+            if (r.mode == _sql.CONVERT_MODE_GET)  //withdraw coin
+                blockchain.convertFundWithdraw.retry(r.coin, r.quantity, r.id);
+            else if (r.mode == _sql.CONVERT_MODE_PUT) //withdraw currency
+                blockchain.convertFundWithdraw.retry(floGlobals.currency, r.amount, r.id);
+        })
+    }).catch(error => console.error(error))
+}
+
+function confirmConvertFundWithdraw() {
+    DB.query("SELECT * FROM ConvertFund WHERE status=? AND coin=?", ["WAITING_CONFIRMATION", "BTC"]).then(results => {
+        results.forEach(r => {
+            if (r.mode == _sql.CONVERT_MODE_GET) { //withdraw coin
+                btcOperator.getTx(r.txid).then(tx => {
+                    if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                        return;
+                    DB.query("UPDATE ConvertFund SET status=? WHERE id=?", ["SUCCESS", r.id])
+                        .then(result => console.debug(`Withdraw-fund ${r.quantity} ${r.coin} successful`))
+                        .catch(error => console.error(error))
+                }).catch(error => console.error(error));
+            } else if (r.mode == _sql.CONVERT_MODE_PUT) {//withdraw currency
+                floTokenAPI.getTx(r.txid).then(tx => {
+                    if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                        return;
+                    DB.query("UPDATE ConvertFund SET status=? WHERE id=?", ["SUCCESS", r.id])
+                        .then(result => console.debug(`Withdraw-fund ${r.amount} ${floGlobals.currency} successful`))
+                        .catch(error => console.error(error));
+                }).catch(error => console.error(error));
             }
         })
     }).catch(error => console.error(error))
@@ -395,6 +430,7 @@ function confirmFundClosing() {
 }
 
 function processAll() {
+    //deposit-withdraw asset balance
     confirmDepositFLO();
     confirmDepositToken();
     retryWithdrawalCoin();
@@ -402,14 +438,20 @@ function processAll() {
     confirmWithdrawalFLO();
     confirmWithdrawalBTC();
     confirmWithdrawalToken();
+    //convert service
     verifyConvert();
     retryConvert();
     confirmConvert();
-    convert_depositFund();
+    verifyConvertFundDeposit();
+    retryConvertFundWithdraw();
+    confirmConvertFundWithdraw();
+    //blockchain-bond service
     retryBondClosing();
     confirmBondClosing();
+    //bob's fund service
     retryFundClosing();
     confirmFundClosing();
+    //refund transactions
     verifyRefund();
     retryRefund();
     confirmRefund();

@@ -326,32 +326,60 @@ function ConvertFrom(req, res) {
     }, () => conversion.convertFromCoin(data.floID, data.txid, data.tx_hex, data.coin, data.quantity));
 }
 
-function AddConvertCoinFund(req, res) {
+function DepositConvertCoinFund(req, res) {
     let data = req.body;
     if (data.floID !== floGlobals.adminID)
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else if (!data.pubKey)
         res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
-        type: "add_convert_coin_fund",
+        type: "deposit_convert_coin_fund",
         coin: data.coin,
         txid: data.txid,
         timestamp: data.timestamp
-    }, () => conversion.addFund.coin(data.floID, data.txid, data.coin));
+    }, () => conversion.depositFund.coin(data.floID, data.txid, data.coin));
 }
 
-function AddConvertCurrencyFund(req, res) {
+function DepositConvertCurrencyFund(req, res) {
     let data = req.body;
     if (data.floID !== floGlobals.adminID)
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else if (!data.pubKey)
         res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
-        type: "add_convert_currency_fund",
+        type: "deposit_convert_currency_fund",
         coin: data.coin,
         txid: data.txid,
         timestamp: data.timestamp
-    }, () => conversion.addFund.currency(data.floID, data.txid, data.coin));
+    }, () => conversion.depositFund.currency(data.floID, data.txid, data.coin));
+}
+
+function WithdrawConvertCoinFund(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
+        type: "withdraw_convert_coin_fund",
+        coin: data.coin,
+        quantity: data.quantity,
+        timestamp: data.timestamp
+    }, () => conversion.withdrawFund.coin(data.floID, data.coin, data.quantity));
+}
+
+function WithdrawConvertCurrencyFund(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Conversion Fund", {
+        type: "withdraw_convert_currency_fund",
+        coin: data.coin,
+        amount: data.amount,
+        timestamp: data.timestamp
+    }, () => conversion.withdrawFund.currency(data.floID, data.coin, data.amount));
 }
 
 function CloseBlockchainBond(req, res) {
@@ -573,8 +601,10 @@ module.exports = {
     RemoveDistributor,
     ConvertTo,
     ConvertFrom,
-    AddConvertCoinFund,
-    AddConvertCurrencyFund,
+    DepositConvertCoinFund,
+    DepositConvertCurrencyFund,
+    WithdrawConvertCoinFund,
+    WithdrawConvertCurrencyFund,
     CloseBlockchainBond,
     CloseBobsFund,
     set trustedIDs(ids) {
