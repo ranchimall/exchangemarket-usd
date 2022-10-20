@@ -55,7 +55,7 @@ function stopSlaveProcess() {
 
 function requestBackupSync(checksum_trigger, ws) {
     return new Promise((resolve, reject) => {
-        DB.query('SELECT MAX(timestamp) as last_time FROM _backup').then(result => {
+        DB.query('SELECT MAX(u_time) as last_time FROM _backup').then(result => {
             let request = {
                 floID: global.myFloID,
                 pubKey: global.myPubKey,
@@ -294,13 +294,13 @@ storeBackupData.commit = function (data, result) {
 function updateBackupTable(add_data, delete_data) {
     //update _backup table for added data
     DB.transaction(add_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, TRUE, ?) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=?",
-        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, u_time) VALUE (?, ?, TRUE, ?) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=?",
+        [r.t_name, r.id, validateValue(r.u_time), validateValue(r.u_time)]
     ])).then(_ => null).catch(error => console.error(error));
     //update _backup table for deleted data
     DB.transaction(delete_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=?",
-        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, u_time) VALUE (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, u_time=?",
+        [r.t_name, r.id, validateValue(r.u_time), validateValue(r.u_time)]
     ])).then(_ => null).catch(error => console.error(error));
 }
 

@@ -293,7 +293,7 @@ CREATE TABLE RefundTransact(
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
-)
+);
 
 /* Backup Feature (Tables & Triggers) */
 
@@ -321,127 +321,127 @@ CREATE TABLE sinkShares(
 );
 
 CREATE TRIGGER RequestLog_I AFTER INSERT ON RequestLog
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER RequestLog_U AFTER UPDATE ON RequestLog
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER RequestLog_D AFTER DELETE ON RequestLog
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER UserSession_I AFTER INSERT ON UserSession
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserSession_U AFTER UPDATE ON UserSession
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserSession_D AFTER DELETE ON UserSession
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserSession', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER UserBalance_I AFTER INSERT ON UserBalance
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserBalance_U AFTER UPDATE ON UserBalance
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserBalance_D AFTER DELETE ON UserBalance
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserBalance', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER SellChips_I AFTER INSERT ON SellChips
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER SellChips_U AFTER UPDATE ON SellChips
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER SellChips_D AFTER DELETE ON SellChips
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellChips', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER SellOrder_I AFTER INSERT ON SellOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER SellOrder_U AFTER UPDATE ON SellOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER SellOrder_D AFTER DELETE ON SellOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('SellOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER BuyOrder_I AFTER INSERT ON BuyOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER BuyOrder_U AFTER UPDATE ON BuyOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER BuyOrder_D AFTER DELETE ON BuyOrder
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('BuyOrder', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER VaultTransactions_I AFTER INSERT ON VaultTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER VaultTransactions_U AFTER UPDATE ON VaultTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER VaultTransactions_D AFTER DELETE ON VaultTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('VaultTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER CloseBondTransact_I AFTER INSERT ON CloseBondTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER CloseBondTransact_U AFTER UPDATE ON CloseBondTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER CloseBondTransact_D AFTER DELETE ON CloseBondTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseBondTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER CloseFundTransact_I AFTER INSERT ON CloseFundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER CloseFundTransact_U AFTER UPDATE ON CloseFundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER CloseFundTransact_D AFTER DELETE ON CloseFundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('CloseFundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER ConvertFund_I AFTER INSERT ON ConvertFund
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER ConvertFund_U AFTER UPDATE ON ConvertFund
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER ConvertFund_D AFTER DELETE ON ConvertFund
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('ConvertFund', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER DirectConvert_I AFTER INSERT ON DirectConvert
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER DirectConvert_U AFTER UPDATE ON DirectConvert
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER DirectConvert_D AFTER DELETE ON DirectConvert
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER RefundTransact_I AFTER INSERT ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER RefundTransact_U AFTER UPDATE ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER RefundTransact_D AFTER DELETE ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER UserTag_I AFTER INSERT ON UserTag
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserTag_U AFTER UPDATE ON UserTag
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER UserTag_D AFTER DELETE ON UserTag
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER Distributors_I AFTER INSERT ON Distributors
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER Distributors_U AFTER UPDATE ON Distributors
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER Distributors_D AFTER DELETE ON Distributors
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('Distributors', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER PriceHistory_I AFTER INSERT ON PriceHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER PriceHistory_U AFTER UPDATE ON PriceHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER PriceHistory_D AFTER DELETE ON PriceHistory
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('PriceHistory', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER AuditTrade_I AFTER INSERT ON AuditTrade
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER AuditTrade_U AFTER UPDATE ON AuditTrade
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER AuditTrade_D AFTER DELETE ON AuditTrade
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('AuditTrade', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER TradeTransactions_I AFTER INSERT ON TradeTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER TradeTransactions_U AFTER UPDATE ON TradeTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER TradeTransactions_D AFTER DELETE ON TradeTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TradeTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER TransferTransactions_I AFTER INSERT ON TransferTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER TransferTransactions_U AFTER UPDATE ON TransferTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
 CREATE TRIGGER TransferTransactions_D AFTER DELETE ON TransferTransactions
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=DEFAULT;
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('TransferTransactions', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;

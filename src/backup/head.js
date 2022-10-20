@@ -20,7 +20,7 @@ const SLAVE_MODE = 0,
 
 const sinkList = {};
 
-app.chests = {
+const chests = {
     get list() {
         return Object.keys(sinkList);
     },
@@ -362,6 +362,7 @@ function startBackupTransmitter(server) {
 
 function initProcess(a) {
     app = a;
+    app.chests = chests;
     startBackupTransmitter(app.server);
     connectToMaster(0, true);
 }

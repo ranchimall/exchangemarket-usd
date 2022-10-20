@@ -277,10 +277,10 @@ function confirmConvert() {
 }
 
 function verifyConvertFundDeposit() {
-    DB.query("SELECT id, floID, mode, txid FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_PROCESSING, "BTC"]).then(results => {
+    DB.query("SELECT id, mode, txid FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_PROCESSING, "BTC"]).then(results => {
         results.forEach(r => {
             if (r.mode == pCodeCONVERT_MODE_GET) { //deposit currency
-                verifyTx.token(r.floID, r.txid, true).then(({ amount }) => {
+                verifyTx.token(floGlobals.adminID, r.txid, true).then(({ amount }) => {
                     DB.query("UPDATE ConvertFund SET r_status=?, amount=? WHERE id=?", [pCode.STATUS_SUCCESS, amount, r.id])
                         .then(_ => null).catch(error => console.error(error));
                 }).catch(error => {
@@ -290,7 +290,7 @@ function verifyConvertFundDeposit() {
                             .then(_ => null).catch(error => console.error(error));
                 });
             } else if (r.mode == pCodeCONVERT_MODE_PUT) {//deposit coin
-                verifyTx.BTC(r.floID, r.txid).then(quantity => {
+                verifyTx.BTC(floGlobals.adminID, r.txid).then(quantity => {
                     DB.query("UPDATE ConvertFund SET r_status=?, quantity=? WHERE id=?", [pCode.STATUS_SUCCESS, quantity, r.id])
                         .then(_ => null).catch(error => console.error(error));
                 }).catch(error => {
@@ -341,14 +341,16 @@ function confirmConvertFundWithdraw() {
 
 function verifyRefund() {
     DB.query("SELECT id, floID, in_txid FROM RefundTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
-        verifyTx.token(r.floID, r.in_txid, true)
-            .then(({ amount }) => blockchain.refundTransact.init(r.floID, amount, r.id))
-            .catch(error => {
-                console.error(error);
-                if (error[0])
-                    DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
-                        .then(_ => null).catch(error => console.error(error));
-            });
+        results.forEach(r => {
+            verifyTx.token(r.floID, r.in_txid, true)
+                .then(({ amount }) => blockchain.refundTransact.init(r.floID, amount, r.id))
+                .catch(error => {
+                    console.error(error);
+                    if (error[0])
+                        DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
+                            .then(_ => null).catch(error => console.error(error));
+                });
+        })
     }).catch(error => console.error(error))
 }
 
@@ -359,7 +361,7 @@ function retryRefund() {
 }
 
 function confirmRefund() {
-    DB.query("SELECT * FROM RefundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(result => {
+    DB.query("SELECT * FROM RefundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
             floTokenAPI.getTx(r.txid).then(tx => {
                 if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
@@ -379,7 +381,7 @@ function retryBondClosing() {
 }
 
 function confirmBondClosing() {
-    DB.query("SELECT * FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(result => {
+    DB.query("SELECT * FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
             floTokenAPI.getTx(r.txid).then(tx => {
                 if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
@@ -402,7 +404,7 @@ function retryFundClosing() {
 }
 
 function confirmFundClosing() {
-    DB.query("SELECT * FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(result => {
+    DB.query("SELECT * FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
             floTokenAPI.getTx(r.txid).then(tx => {
                 if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed

@@ -545,7 +545,7 @@ module.exports = {
     set DB(db) {
         DB = db;
         coupling.DB = db;
-        blockchain.DB = db;
+        background.DB = db;
     },
     set assetList(assets) {
         assetList = assets;
