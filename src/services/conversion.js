@@ -144,7 +144,7 @@ function depositCurrencyFund(floID, txid, coin) {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
             DB.query("INSERT INTO ConvertFund(txid, mode, coin, r_status) VALUES (?)", [[txid, pCode.CONVERT_MODE_GET, coin, pCode.STATUS_PROCESSING]])
-                .then(result => resolve("Add currency fund in process"))
+                .then(result => resolve("Deposit currency fund in process"))
                 .catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -160,7 +160,7 @@ function depositCoinFund(floID, txid, coin) {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
             DB.query("INSERT INTO ConvertFund(txid, mode, coin, r_status) VALUES (?)", [[txid, pCode.CONVERT_MODE_PUT, coin, pCode.STATUS_PROCESSING]])
-                .then(result => resolve("Add coin fund in process"))
+                .then(result => resolve("Deposit coin fund in process"))
                 .catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -178,7 +178,7 @@ function withdrawCurrencyFund(floID, coin, amount) {
                 if (available_amount < amount)
                     return reject(INVALID(eCode.INSUFFICIENT_BALANCE, "Insufficient convert-fund deposits to withdraw"));
                 DB.query("INSERT INTO ConvertFund(mode, coin, amount, r_status) VALUES (?)", [[pCode.CONVERT_MODE_PUT, coin, amount, pCode.STATUS_PENDING]])
-                    .then(result => resolve("Add currency fund in process"))
+                    .then(result => resolve("Withdraw currency fund in process"))
                     .catch(error => reject(error))
             }).catch(error => reject(error))
         }).catch(error => reject(error))
@@ -197,7 +197,7 @@ function withdrawCoinFund(floID, coin, quantity) {
                 if (available_quantity < quantity)
                     return reject(INVALID(eCode.INSUFFICIENT_BALANCE, "Insufficient convert-fund deposits to withdraw"));
                 DB.query("INSERT INTO ConvertFund(mode, coin, quantity, r_status) VALUES (?)", [[pCode.CONVERT_MODE_GET, coin, quantity, pCode.STATUS_PENDING]])
-                    .then(result => resolve("Add currency fund in process"))
+                    .then(result => resolve("Withdraw currency fund in process"))
                     .catch(error => reject(error))
             }).catch(error => reject(error))
         }).catch(error => reject(error))

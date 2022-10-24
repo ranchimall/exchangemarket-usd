@@ -15,24 +15,17 @@ npm run create-schema           - Create schema in MySQL database.
 npm start                       - Start the application (main).
 ```
 **NOTE:**
-env variable `PASSWORD` required for `npm start`.
-
-Windows:
+Argument `PASSWORD` required for `npm start`.
 ```
-$env:PASSWORD="<password>"; npm start
-```
-Linux:
-```
-PASSWORD="<password"> npm start
+npm start -- -PASSWORD=<password>
 ```
 *(Optional)*
-Multiple instance can be run/setup on the same dir with different config files by using env variable 'I'.
-
-Windows: 
+Multiple instance can be run/setup on the same dir with different config files by using argument 'I'.
 ```
-$env:I="<instance_ID>"; <command>
+<command> -- -I=<instance_ID>
 ```
-Linux: 
+*(Optional)*
+`console.debug` is now turned off by default. pass argument `--debug` to turn it on
 ```
-I="<instance_ID>" <command>
+npm start -- -PASSWORD=<password> --debug
 ```

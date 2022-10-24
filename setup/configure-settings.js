@@ -1,9 +1,16 @@
 const fs = require('fs');
 const getInput = require('./getInput');
 
+let _I = "";
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
+
 var config, flag_new;
 try {
-    config = require(`../args/config${process.env.I || ""}.json`);
+    config = require(`../args/config${_I}.json`);
     flag_new = false;
 } catch (error) {
     config = {
@@ -24,8 +31,8 @@ function flaggedYesOrNo(text) {
             resolve(true);
         else
             getInput.YesOrNo(text)
-            .then(result => resolve(result))
-            .catch(error => reject(error))
+                .then(result => resolve(result))
+                .catch(error => reject(error))
     })
 }
 
@@ -84,7 +91,7 @@ function configure() {
         configurePort().then(port_result => {
             randomizeSessionSecret().then(secret_result => {
                 configureSQL().then(sql_result => {
-                    fs.writeFile(__dirname + `/../args/config${process.env.I || ""}.json`, JSON.stringify(config), 'utf8', (err) => {
+                    fs.writeFile(__dirname + `/../args/config${_I}.json`, JSON.stringify(config), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

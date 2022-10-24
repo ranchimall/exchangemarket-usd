@@ -161,7 +161,7 @@ function collectShares(floID, sinkID, share) {
     try {
         let sinkKey = floCrypto.retrieveShamirSecret([].concat(...Object.values(shares_collected[sinkID].shares)));
         if (floCrypto.verifyPrivKey(sinkKey, sinkID)) {
-            console.log("Shares collected successfully for", sinkID);
+            console.debug("Shares collected successfully for", sinkID);
             shares_collected[sinkID].callbacks.forEach(fn => fn instanceof Function ? fn(sinkKey) : null);
             delete shares_collected[sinkID];
         }
@@ -200,7 +200,7 @@ function connectToMaster(i = 0, init = false) {
 
 //Node becomes master
 function serveAsMaster(init) {
-    console.debug('Starting master process');
+    console.info('Starting master process');
     slave.stop();
     _mode = MASTER_MODE;
     informLiveNodes(init);
@@ -208,7 +208,7 @@ function serveAsMaster(init) {
 }
 
 function serveAsSlave(ws, init) {
-    console.debug('Starting slave process');
+    console.info('Starting slave process');
     app.pause();
     slave.start(ws, init);
     _mode = SLAVE_MODE;

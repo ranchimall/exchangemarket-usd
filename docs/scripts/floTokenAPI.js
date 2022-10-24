@@ -1,4 +1,4 @@
-(function(EXPORTS) { //floTokenAPI v1.0.3b
+(function(EXPORTS) { //floTokenAPI v1.0.3c
     /* Token Operator to send/receive tokens via blockchain using API calls*/
     'use strict';
     const tokenAPI = EXPORTS;
@@ -29,7 +29,7 @@
 
     const fetch_api = tokenAPI.fetch = function(apicall) {
         return new Promise((resolve, reject) => {
-            console.log(DEFAULT.apiURL + apicall);
+            console.debug(DEFAULT.apiURL + apicall);
             fetch(DEFAULT.apiURL + apicall).then(response => {
                 if (response.ok)
                     response.json().then(data => resolve(data));

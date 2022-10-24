@@ -14,13 +14,9 @@ npm run backup                  - Run the backup-node.
 
 npm start                       - Start the application (main).
 
-NOTE: env variable 'PASSWORD' required for 'npm start'.
+NOTE: argument 'PASSWORD' required for 'npm start'
+npm start -- -PASSWORD=<password>
 
-WINDOWS: 
-$env:PASSWORD="<password>"; npm start
-
-LINUX: 
-PASSWORD="<password"> npm start
 `;
 
 console.log(message);

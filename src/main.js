@@ -5,7 +5,7 @@ require('../docs/scripts/lib');
 global.floCrypto = require('../docs/scripts/floCrypto');
 global.floBlockchainAPI = require('../docs/scripts/floBlockchainAPI');
 global.floTokenAPI = require('../docs/scripts/floTokenAPI');
-global.btcOperator =  require('../docs/scripts/btcOperator');
+global.btcOperator = require('../docs/scripts/btcOperator');
 
 const Database = require("./database");
 const App = require('./app');
@@ -162,11 +162,17 @@ function setDB(db) {
 }
 
 module.exports = function startServer(public_dir) {
-    const config = require(`../args/config${process.env.I || ""}.json`);
+    let _pass, _I = "";
+    for (let arg of process.argv) {
+        if (/^-I=/.test(arg))
+            _I = arg.split(/=(.*)/s)[1];
+        else if (/^-password=/i.test(arg))
+            _pass = arg.split(/=(.*)/s)[1];
+    }
+    const config = require(`../args/config${_I}.json`);
     try {
-        var _tmp = require(`../args/keys${process.env.I || ""}.json`);
+        var _tmp = require(`../args/keys${_I}.json`);
         _tmp = floCrypto.retrieveShamirSecret(_tmp);
-        var _pass = process.env.PASSWORD;
         if (!_pass) {
             console.error('Password not entered!');
             process.exit(1);

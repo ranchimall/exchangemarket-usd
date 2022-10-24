@@ -13,6 +13,9 @@ try {
         global[p] = param[p];
 }
 
+if (!process.argv.includes("--debug"))
+    global.console.debug = () => null;
+
 /*
 //Trace the debug logs in node js
 var debug = console.debug;

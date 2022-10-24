@@ -153,7 +153,7 @@ function storeSinkShare(sinkID, keyShare, decrypt = true) {
     if (decrypt)
         keyShare = floCrypto.decryptData(keyShare, global.myPrivKey)
     let encryptedShare = Crypto.AES.encrypt(keyShare, global.myPrivKey);
-    console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
+    console.debug(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
     DB.query("INSERT INTO sinkShares (floID, share) VALUE (?) ON DUPLICATE KEY UPDATE share=?", [[sinkID, encryptedShare], encryptedShare])
         .then(_ => null).catch(error => console.error(error));
 }

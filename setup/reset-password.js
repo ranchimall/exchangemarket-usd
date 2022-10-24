@@ -8,6 +8,13 @@ const floCrypto = require('../docs/scripts/floCrypto');
 
 console.log(__dirname);
 
+let _I = "";
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
+
 function validateKey(privKey) {
     return new Promise((resolve, reject) => {
         try {
@@ -62,7 +69,7 @@ function resetPassword() {
                     let encrypted = Crypto.AES.encrypt(privKey, password);
                     let randNum = floCrypto.randInt(10, 15);
                     let splitShares = floCrypto.createShamirsSecretShares(encrypted, randNum, randNum);
-                    fs.writeFile(__dirname + `/../args/keys${process.env.I || ""}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
+                    fs.writeFile(__dirname + `/../args/keys${_I}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

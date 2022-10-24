@@ -3,5 +3,7 @@
 /args/config*.json
 /args/param.json
 /args/keys*.json
+/log.txt
+/bash_start*
 *test*
 *.tmp*

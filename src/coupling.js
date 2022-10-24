@@ -98,7 +98,7 @@ function recursiveCoupling(asset, cur_rate, flag = false) {
     }).catch(error => {
         //noBuy = error[0], noSell = error[1], reason = error[2]
         price.noOrder(asset, error[0], error[1]);
-        console.error(error[2]);
+        error[3] ? console.debug(error[2]) : console.error(error[2]);
         //set timeout for next coupling (if not order placement occurs)
         if (flag) {
             price.updateLastTime(asset);
@@ -145,7 +145,7 @@ function processCoupling(asset, cur_rate) {
                 console.error(error.sell);
                 noSell = null;
             }
-            reject([noBuy, noSell, `No valid ${noSell? 'sellOrders': ''} | ${noBuy? 'buyOrders': ''} for Asset: ${asset}`]);
+            reject([noBuy, noSell, `No valid ${noSell ? 'sellOrders' : ''} | ${noBuy ? 'buyOrders' : ''} for Asset: ${asset}`, true]);
         });
     })
 }

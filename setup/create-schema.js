@@ -1,8 +1,15 @@
 const fs = require('fs');
 let Database = require('../src/database');
 
+let _I = "";
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
+
 function createSchema() {
-    const config = require(`../args/config${process.env.I || ""}.json`);
+    const config = require(`../args/config${_I}.json`);
     return new Promise((resolve, reject) => {
         fs.readFile(__dirname + '/../args/schema.sql', 'utf8', (err, data) => {
             if (err) {

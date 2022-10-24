@@ -501,7 +501,7 @@ function periodicProcess() {
         if (lastSyncBlockHeight < result.blocks[0].height) {
             lastSyncBlockHeight = result.blocks[0].height;
             background.process();
-            console.debug("Last Block :", lastSyncBlockHeight);
+            console.log("Last Block :", lastSyncBlockHeight);
         }
     }).catch(error => console.error(error));
 }
