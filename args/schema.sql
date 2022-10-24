@@ -277,6 +277,7 @@ CREATE TABLE DirectConvert(
     coin VARCHAR(8) NOT NULL,
     quantity DECIMAL(16, 8),
     mode TINYINT NOT NULL,
+    rate DECIMAL(16, 2),
     in_txid VARCHAR(128),
     out_txid VARCHAR(128),
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -1352,7 +1352,7 @@
                 request.sign = signRequest({
                     type: "deposit_convert_coin_fund",
                     coin: request.coin,
-                    txid: data.txid,
+                    txid: txid,
                     timestamp: request.timestamp
                 }, privKey);
                 console.debug(request);
@@ -1407,7 +1407,7 @@
         })
     }
 
-    exchangeAPI.withdrawConvertFundCurrency = function (quantity, floID, privKey) {
+    exchangeAPI.withdrawConvertFundCoin = function (quantity, floID, privKey) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
@@ -1454,8 +1454,8 @@
             request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "close_blockchain_bond",
-                bond_id: data.bond_id,
-                timestamp: data.timestamp
+                bond_id: request.bond_id,
+                timestamp: request.timestamp
             }, privKey);
             console.debug(request);
 
@@ -1485,8 +1485,8 @@
             request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "close_bobs_fund",
-                fund_id: data.fund_id,
-                timestamp: data.timestamp
+                fund_id: request.fund_id,
+                timestamp: request.timestamp
             }, privKey);
             console.debug(request);
 

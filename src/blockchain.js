@@ -118,6 +118,7 @@ function sendAsset(floID, asset, quantity, type, id) {
 }
 
 function withdrawAsset_init(floID, asset, amount) {
+    amount = parseFloat(amount.toFixed(8));
     let asset_type = ["FLO", "BTC"].includes(asset) ? pCode.ASSET_TYPE_COIN : pCode.ASSET_TYPE_TOKEN;
     DB.query("INSERT INTO VaultTransactions (floID, mode, asset_type, asset, amount, r_status) VALUES (?)", [[floID, pCode.VAULT_MODE_WITHDRAW, asset_type, asset, amount, pCode.STATUS_PENDING]])
         .then(result => sendAsset(floID, asset, amount, TYPE_VAULT, result.insertId))
@@ -130,8 +131,9 @@ function withdrawAsset_retry(floID, asset, amount, id) {
     else sendAsset(floID, asset, amount, TYPE_VAULT, id);
 }
 
-function convertToCoin_init(floID, coin, coin_quantity, id) {
-    DB.query("UPDATE DirectConvert SET quantity=?, r_status=?, locktime=DEFAULT WHERE id=?", [coin_quantity, pCode.STATUS_PROCESSING, id])
+function convertToCoin_init(floID, coin, currency_amount, rate, id) {
+    let coin_quantity = parseFloat((currency_amount / rate).toFixed(8));
+    DB.query("UPDATE DirectConvert SET quantity=?, r_status=?, rate=?, locktime=DEFAULT WHERE id=?", [coin_quantity, pCode.STATUS_PROCESSING, rate, id])
         .then(result => sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
@@ -142,8 +144,9 @@ function convertToCoin_retry(floID, coin, coin_quantity, id) {
     else sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id);
 }
 
-function convertFromCoin_init(floID, currency_amount, id) {
-    DB.query("UPDATE DirectConvert SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [currency_amount, pCode.STATUS_PROCESSING, id])
+function convertFromCoin_init(floID, coin_quantity, rate, id) {
+    let currency_amount = parseFloat((coin_quantity * rate).toFixed(8));
+    DB.query("UPDATE DirectConvert SET amount=?, r_status=?, rate=?, locktime=DEFAULT WHERE id=?", [currency_amount, pCode.STATUS_PROCESSING, rate, id])
         .then(result => sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id))
         .catch(error => console.error(error))
 }
@@ -173,6 +176,7 @@ function fundTransact_retry(floID, amount, id) {
 }
 
 function refundTransact_init(floID, amount, id) {
+    amount = parseFloat(amount.toFixed(8));
     DB.query("UPDATE RefundTransact SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [amount, pCode.STATUS_PROCESSING, id])
         .then(result => sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id))
         .catch(error => console.error(error))

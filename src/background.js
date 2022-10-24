@@ -8,6 +8,7 @@ const pCode = require('../docs/scripts/floExchangeAPI').processCode;
 const {
     LAUNCH_SELLER_TAG,
     MAXIMUM_LAUNCH_SELL_CHIPS,
+    REQUEST_TIMEOUT,
 } = require('./_constants')["market"];
 
 var DB, assetList; //container for database and allowed assets
@@ -209,37 +210,39 @@ verifyTx.BTC = function (sender, txid) {
 }
 
 function verifyConvert() {
-    DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
-        results.forEach(r => {
-            if (r.mode == pCode.CONVERT_MODE_GET) {
-                verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
-                    if (r.amount !== amount)
-                        throw ([true, "Transaction amount mismatched in blockchain"]);
-                    conversion_rates.BTC_INR().then(rate => {
-                        blockchain.convertToCoin.init(r.floID, "BTC", amount / rate, r.id)
-                    }).catch(error => console.error(error))
-                }).catch(error => {
-                    console.error(error);
-                    if (error[0])
-                        DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
-                            .then(_ => null).catch(error => console.error(error));
-                });
-            } else if (r.mode == pCode.CONVERT_MODE_PUT) {
-                verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
-                    if (r.quantity !== quantity)
-                        throw ([true, "Transaction quantity mismatched in blockchain"]);
-                    conversion_rates.BTC_INR().then(rate => {
-                        blockchain.convertFromCoin.init(r.floID, quantity * rate, r.id)
-                    }).catch(error => console.error(error))
-                }).catch(error => {
-                    console.error(error);
-                    if (error[0])
-                        DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
-                            .then(_ => null).catch(error => console.error(error));
-                });
-            }
-        })
-    }).catch(error => console.error(error))
+    DB.query("UPDATE DirectConvert SET r_status=? WHERE r_status=? AND locktime<?", [pCode.STATUS_REJECTED, pCode.STATUS_PENDING, new Date(Date.now() - REQUEST_TIMEOUT)]).then(result => {
+        DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
+            results.forEach(r => {
+                if (r.mode == pCode.CONVERT_MODE_GET) {
+                    verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
+                        if (r.amount !== amount)
+                            throw ([true, "Transaction amount mismatched in blockchain"]);
+                        conversion_rates.BTC_INR().then(rate => {
+                            blockchain.convertToCoin.init(r.floID, "BTC", amount, rate, r.id)
+                        }).catch(error => console.error(error))
+                    }).catch(error => {
+                        console.error(error);
+                        if (error[0])
+                            DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
+                                .then(_ => null).catch(error => console.error(error));
+                    });
+                } else if (r.mode == pCode.CONVERT_MODE_PUT) {
+                    verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
+                        if (r.quantity !== quantity)
+                            throw ([true, "Transaction quantity mismatched in blockchain"]);
+                        conversion_rates.BTC_INR().then(rate => {
+                            blockchain.convertFromCoin.init(r.floID, quantity, rate, r.id)
+                        }).catch(error => console.error(error))
+                    }).catch(error => {
+                        console.error(error);
+                        if (error[0])
+                            DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
+                                .then(_ => null).catch(error => console.error(error));
+                    });
+                }
+            })
+        }).catch(error => console.error(error))
+    }).catch(error => reject(error))
 }
 
 function retryConvert() {
@@ -261,7 +264,7 @@ function confirmConvert() {
                     if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.info(`${r.floID} converted ${amount} to ${r.quantity} BTC`))
+                        .then(result => console.info(`${r.floID} converted ${r.amount} to ${r.quantity} BTC`))
                         .catch(error => console.error(error))
                 }).catch(error => console.error(error));
             else if (r.mode == pCode.CONVERT_MODE_PUT)
@@ -269,7 +272,7 @@ function confirmConvert() {
                     if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.info(`${r.floID} converted ${r.quantity} BTC to ${amount}`))
+                        .then(result => console.info(`${r.floID} converted ${r.quantity} BTC to ${r.amount}`))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error));
         })

@@ -9,6 +9,7 @@ module.exports = {
     market: {
         PERIOD_INTERVAL: 5 * 60 * 1000, //5 min,
         WAIT_TIME: 2 * 60 * 1000, //2 mins,
+        REQUEST_TIMEOUT: 24 * 60 * 60 * 1000, //1 day
         LAUNCH_SELLER_TAG: "launch-seller",
         MAXIMUM_LAUNCH_SELL_CHIPS: 100000,
         TRADE_HASH_PREFIX: "z1",
