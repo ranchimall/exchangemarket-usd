@@ -10,7 +10,7 @@ const {
     MAXIMUM_LAUNCH_SELL_CHIPS,
 } = require('./_constants')["market"];
 
-var DB; //container for database
+var DB, assetList; //container for database and allowed assets
 var updateBalance; // container for updateBalance function
 
 const verifyTx = {};
@@ -23,7 +23,7 @@ function confirmDepositFLO() {
                     txQueries.push(updateBalance.add(r.floID, "FLO", amount));
                     txQueries.push(["UPDATE VaultTransactions SET r_status=?, amount=? WHERE id=?", [pCode.STATUS_SUCCESS, amount, r.id]]);
                     DB.transaction(txQueries)
-                        .then(result => console.debug("FLO deposited:", r.floID, amount))
+                        .then(result => console.info("FLO deposited:", r.floID, amount))
                         .catch(error => console.error(error))
                 }).catch(error => console.error(error))
             }).catch(error => {
@@ -91,10 +91,10 @@ function addSellChipsIfLaunchSeller(floID, quantity) {
 }
 
 function confirmDepositToken() {
-    DB.query("SELECT id, floID, txid FROM VaultTransactions WHERE mode=? AND asset_type=? AND r_status=?", [pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_COIN, pCode.STATUS_PENDING]).then(results => {
+    DB.query("SELECT id, floID, txid FROM VaultTransactions WHERE mode=? AND asset_type=? AND r_status=?", [pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_TOKEN, pCode.STATUS_PENDING]).then(results => {
         results.forEach(r => {
             verifyTx.token(r.floID, r.txid).then(({ token, amount, flo_amount }) => {
-                DB.query("SELECT id FROM VaultTransactions where floID=? AND mode=? AND asset=? AND asset_type=? AND txid=?", [r.floID, pCode.VAULT_MODE_DEPOSIT, "FLO", pCode.ASSET_TYPE_TOKEN, r.txid]).then(result => {
+                DB.query("SELECT id FROM VaultTransactions where floID=? AND mode=? AND asset=? AND asset_type=? AND txid=?", [r.floID, pCode.VAULT_MODE_DEPOSIT, "FLO", pCode.ASSET_TYPE_COIN, r.txid]).then(result => {
                     let txQueries = [];
                     //Add the FLO balance if necessary
                     if (!result.length) {
@@ -104,7 +104,7 @@ function confirmDepositToken() {
                     txQueries.push(["UPDATE VaultTransactions SET r_status=?, asset=?, amount=? WHERE id=?", [pCode.STATUS_SUCCESS, token, amount, r.id]]);
                     txQueries.push(updateBalance.add(r.floID, token, amount));
                     DB.transaction(txQueries)
-                        .then(result => console.debug("Token deposited:", r.floID, token, amount))
+                        .then(result => console.info("Token deposited:", r.floID, token, amount))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error));
             }).catch(error => {
@@ -163,7 +163,7 @@ function confirmVaultWithdraw() {
                         if (!tx.blockheight || !tx.confirmations) //Still not confirmed
                             return;
                         DB.query("UPDATE VaultTransactions SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                            .then(result => console.debug("FLO withdrawed:", r.floID, r.amount))
+                            .then(result => console.info("FLO withdrawed:", r.floID, r.amount))
                             .catch(error => console.error(error))
                     }).catch(error => console.error(error));
                 else if (r.asset == "BTC")
@@ -171,7 +171,7 @@ function confirmVaultWithdraw() {
                         if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                             return;
                         DB.query("UPDATE VaultTransactions SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                            .then(result => console.debug("BTC withdrawed:", r.floID, r.amount))
+                            .then(result => console.info("BTC withdrawed:", r.floID, r.amount))
                             .catch(error => console.error(error))
                     }).catch(error => console.error(error));
             } else if (r.asset_type == pCode.ASSET_TYPE_TOKEN)
@@ -179,7 +179,7 @@ function confirmVaultWithdraw() {
                     if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE VaultTransactions SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.debug("Token withdrawed:", r.floID, r.asset, r.amount))
+                        .then(result => console.info("Token withdrawed:", r.floID, r.asset, r.amount))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error));
         })
@@ -192,7 +192,7 @@ verifyTx.BTC = function (sender, txid) {
             let vin_sender = tx.inputs.filter(v => floCrypto.isSameAddr(v.address, sender))
             if (!vin_sender.length)
                 return reject([true, "Transaction not sent by the sender"]);
-            if (vin_sender.length !== tx.vin.length)
+            if (vin_sender.length !== tx.inputs.length)
                 return reject([true, "Transaction input containes other floIDs"]);
             if (!tx.block_no)
                 return reject([false, "Transaction not included in any block yet"]);
@@ -211,7 +211,7 @@ verifyTx.BTC = function (sender, txid) {
 function verifyConvert() {
     DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET) {
+            if (r.mode == pCode.CONVERT_MODE_GET) {
                 verifyTx.token(r.floID, r.in_txid, true).then(({ amount }) => {
                     if (r.amount !== amount)
                         throw ([true, "Transaction amount mismatched in blockchain"]);
@@ -224,7 +224,7 @@ function verifyConvert() {
                         DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
                             .then(_ => null).catch(error => console.error(error));
                 });
-            } else if (r.mode == pCodeCONVERT_MODE_PUT) {
+            } else if (r.mode == pCode.CONVERT_MODE_PUT) {
                 verifyTx.BTC(r.floID, r.in_txid).then(quantity => {
                     if (r.quantity !== quantity)
                         throw ([true, "Transaction quantity mismatched in blockchain"]);
@@ -245,9 +245,9 @@ function verifyConvert() {
 function retryConvert() {
     DB.query("SELECT id, floID, mode, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PROCESSING, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET)
+            if (r.mode == pCode.CONVERT_MODE_GET)
                 blockchain.convertToCoin.retry(r.floID, "BTC", r.quantity, r.id);
-            else if (r.mode == pCodeCONVERT_MODE_PUT)
+            else if (r.mode == pCode.CONVERT_MODE_PUT)
                 blockchain.convertFromCoin.retry(r.floID, r.amount, r.id)
         })
     }).catch(error => console.error(error))
@@ -256,20 +256,20 @@ function retryConvert() {
 function confirmConvert() {
     DB.query("SELECT id, floID, mode, amount, quantity, out_txid FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_CONFIRMATION, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET)
+            if (r.mode == pCode.CONVERT_MODE_GET)
                 btcOperator.getTx(r.out_txid).then(tx => {
                     if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.debug(`${r.floID} converted ${amount} to ${r.quantity} BTC`))
+                        .then(result => console.info(`${r.floID} converted ${amount} to ${r.quantity} BTC`))
                         .catch(error => console.error(error))
                 }).catch(error => console.error(error));
-            else if (r.mode == pCodeCONVERT_MODE_PUT)
+            else if (r.mode == pCode.CONVERT_MODE_PUT)
                 floTokenAPI.getTx(r.out_txid).then(tx => {
                     if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.debug(`${r.floID} converted ${r.quantity} BTC to ${amount}`))
+                        .then(result => console.info(`${r.floID} converted ${r.quantity} BTC to ${amount}`))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error));
         })
@@ -277,22 +277,24 @@ function confirmConvert() {
 }
 
 function verifyConvertFundDeposit() {
-    DB.query("SELECT id, mode, txid FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_PROCESSING, "BTC"]).then(results => {
+    DB.query("SELECT id, mode, txid, coin FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_PROCESSING, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET) { //deposit currency
+            if (r.mode == pCode.CONVERT_MODE_GET) { //deposit currency
                 verifyTx.token(floGlobals.adminID, r.txid, true).then(({ amount }) => {
                     DB.query("UPDATE ConvertFund SET r_status=?, amount=? WHERE id=?", [pCode.STATUS_SUCCESS, amount, r.id])
-                        .then(_ => null).catch(error => console.error(error));
+                        .then(result => console.info(`Deposit-fund ${amount} ${floGlobals.currency} successful`))
+                        .catch(error => console.error(error));
                 }).catch(error => {
                     console.error(error);
                     if (error[0])
                         DB.query("UPDATE ConvertFund SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
                             .then(_ => null).catch(error => console.error(error));
                 });
-            } else if (r.mode == pCodeCONVERT_MODE_PUT) {//deposit coin
+            } else if (r.mode == pCode.CONVERT_MODE_PUT) {//deposit coin
                 verifyTx.BTC(floGlobals.adminID, r.txid).then(quantity => {
                     DB.query("UPDATE ConvertFund SET r_status=?, quantity=? WHERE id=?", [pCode.STATUS_SUCCESS, quantity, r.id])
-                        .then(_ => null).catch(error => console.error(error));
+                        .then(result => console.info(`Deposit-fund ${quantity} ${r.coin} successful`))
+                        .catch(error => console.error(error));
                 }).catch(error => {
                     console.error(error);
                     if (error[0])
@@ -307,9 +309,9 @@ function verifyConvertFundDeposit() {
 function retryConvertFundWithdraw() {
     DB.query("SELECT id, mode, coin, quantity, amount FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET)  //withdraw coin
+            if (r.mode == pCode.CONVERT_MODE_GET)  //withdraw coin
                 blockchain.convertFundWithdraw.retry(r.coin, r.quantity, r.id);
-            else if (r.mode == pCodeCONVERT_MODE_PUT) //withdraw currency
+            else if (r.mode == pCode.CONVERT_MODE_PUT) //withdraw currency
                 blockchain.convertFundWithdraw.retry(floGlobals.currency, r.amount, r.id);
         })
     }).catch(error => console.error(error))
@@ -318,20 +320,20 @@ function retryConvertFundWithdraw() {
 function confirmConvertFundWithdraw() {
     DB.query("SELECT * FROM ConvertFund WHERE r_status=? AND coin=?", [pCode.STATUS_CONFIRMATION, "BTC"]).then(results => {
         results.forEach(r => {
-            if (r.mode == pCodeCONVERT_MODE_GET) { //withdraw coin
+            if (r.mode == pCode.CONVERT_MODE_GET) { //withdraw coin
                 btcOperator.getTx(r.txid).then(tx => {
                     if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE ConvertFund SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.debug(`Withdraw-fund ${r.quantity} ${r.coin} successful`))
+                        .then(result => console.info(`Withdraw-fund ${r.quantity} ${r.coin} successful`))
                         .catch(error => console.error(error))
                 }).catch(error => console.error(error));
-            } else if (r.mode == pCodeCONVERT_MODE_PUT) {//withdraw currency
+            } else if (r.mode == pCode.CONVERT_MODE_PUT) {//withdraw currency
                 floTokenAPI.getTx(r.txid).then(tx => {
                     if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE ConvertFund SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                        .then(result => console.debug(`Withdraw-fund ${r.amount} ${floGlobals.currency} successful`))
+                        .then(result => console.info(`Withdraw-fund ${r.amount} ${floGlobals.currency} successful`))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error));
             }
@@ -363,11 +365,11 @@ function retryRefund() {
 function confirmRefund() {
     DB.query("SELECT * FROM RefundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
-            floTokenAPI.getTx(r.txid).then(tx => {
+            floTokenAPI.getTx(r.out_txid).then(tx => {
                 if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
                     return;
                 DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                    .then(result => console.debug(`Refunded ${r.amount} to ${r.floID}`))
+                    .then(result => console.info(`Refunded ${r.amount} to ${r.floID}`))
                     .catch(error => console.error(error));
             }).catch(error => console.error(error));
         })
@@ -389,7 +391,7 @@ function confirmBondClosing() {
                 let closeBondString = bond_util.stringify.end(r.bond_id, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeBondString, global.myPrivKey, bond_util.config.adminID).then(txid => {
                     DB.query("UPDATE CloseBondTransact SET r_status=?, close_id=? WHERE id=?", [pCode.STATUS_SUCCESS, txid, r.id])
-                        .then(result => console.debug("Bond closed:", r.bond_id))
+                        .then(result => console.info("Bond closed:", r.bond_id))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error))
             }).catch(error => console.error(error));
@@ -412,7 +414,7 @@ function confirmFundClosing() {
                 let closeFundString = fund_util.stringify.end(r.fund_id, r.floID, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeFundString, global.myPrivKey, fund_util.config.adminID).then(txid => {
                     DB.query("UPDATE CloseFundTransact SET r_status=?, close_id=? WHERE id=?", [pCode.STATUS_SUCCESS, txid, r.id])
-                        .then(result => console.debug("Fund investment closed:", r.fund_id))
+                        .then(result => console.info("Fund investment closed:", r.fund_id))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error))
             }).catch(error => console.error(error));
@@ -448,6 +450,9 @@ function processAll() {
 module.exports = {
     blockchain,
     process: processAll,
+    set assetList(assets) {
+        assetList = assets;
+    },
     set DB(db) {
         DB = db;
         blockchain.DB = db;

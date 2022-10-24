@@ -21,7 +21,7 @@ var DB, assetList; //container for database and allowed assets
 
 function login(floID, proxyKey) {
     return new Promise((resolve, reject) => {
-        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?) ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?",[[floID, proxyKey], proxyKey])
+        DB.query("INSERT INTO UserSession (floID, proxyKey) VALUE (?) ON DUPLICATE KEY UPDATE session_time=DEFAULT, proxyKey=?", [[floID, proxyKey], proxyKey])
             .then(result => resolve("Login Successful"))
             .catch(error => reject(error))
     })
@@ -256,7 +256,7 @@ function getAccountDetails(floID) {
 
 function getUserTransacts(floID) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT mode, asset, amount, txid, locktime, r_status, FROM VaultTransactions WHERE floID=?", [floID])
+        DB.query("SELECT mode, asset, amount, txid, locktime, r_status FROM VaultTransactions WHERE floID=?", [floID])
             .then(result => resolve(result))
             .catch(error => reject(error))
     })
@@ -382,7 +382,7 @@ function depositToken(floID, txid) {
                         return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already used to add tokens"));
                 }
             } else
-                DB.query("INSERT INTO VaultTransactions(floID, mode, asset_type, txid, r_status) VALUES (?)", [floID, pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_TOKEN, txid, pCode.STATUS_PENDING])
+                DB.query("INSERT INTO VaultTransactions(floID, mode, asset_type, txid, r_status) VALUES (?)", [[floID, pCode.VAULT_MODE_DEPOSIT, pCode.ASSET_TYPE_TOKEN, txid, pCode.STATUS_PENDING]])
                     .then(result => resolve("Deposit request in process"))
                     .catch(error => reject(error));
         }).catch(error => reject(error))
@@ -549,6 +549,7 @@ module.exports = {
     },
     set assetList(assets) {
         assetList = assets;
+        background.assetList = assets;
     },
     get assetList() {
         return assetList

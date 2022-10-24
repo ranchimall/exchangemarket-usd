@@ -119,7 +119,7 @@ function sendAsset(floID, asset, quantity, type, id) {
 
 function withdrawAsset_init(floID, asset, amount) {
     let asset_type = ["FLO", "BTC"].includes(asset) ? pCode.ASSET_TYPE_COIN : pCode.ASSET_TYPE_TOKEN;
-    DB.query("INSERT INTO VaultTransactions (floID, mode, asset_type, asset, amount, r_status) VALUES (?)", [floID, pCode.VAULT_MODE_WITHDRAW, asset_type, asset, amount, pCode.STATUS_PENDING])
+    DB.query("INSERT INTO VaultTransactions (floID, mode, asset_type, asset, amount, r_status) VALUES (?)", [[floID, pCode.VAULT_MODE_WITHDRAW, asset_type, asset, amount, pCode.STATUS_PENDING]])
         .then(result => sendAsset(floID, asset, amount, TYPE_VAULT, result.insertId))
         .catch(error => console.error(error))
 }

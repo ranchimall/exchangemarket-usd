@@ -363,6 +363,7 @@ function startBackupTransmitter(server) {
 function initProcess(a) {
     app = a;
     app.chests = chests;
+    app.collectAndCall = collectAndCall;
     startBackupTransmitter(app.server);
     connectToMaster(0, true);
 }
