@@ -708,39 +708,6 @@
         })
     }
 
-    /*
-    exchangeAPI.signUp = function (privKey, code, hash) {
-        return new Promise((resolve, reject) => {
-            if (!code || !hash)
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Login Code missing", errorCode.MISSING_PARAMETER));
-            let request = {
-                pubKey: floCrypto.getPubKeyHex(privKey),
-                floID: floCrypto.getFloID(privKey),
-                code: code,
-                hash: hash,
-                timestamp: Date.now()
-            };
-            request.sign = signRequest({
-                type: "create_account",
-                random: code,
-                timestamp: request.timestamp
-            }, privKey);
-            console.debug(request);
-
-            fetch_api("/signup", {
-                    method: "POST",
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                }).then(result => {responseParse(result, false)
-                    .then(result => resolve(result))
-                    .catch(error => reject(error))})
-                .catch(error => reject(error));
-        });
-    }
-    */
-
     exchangeAPI.login = function (privKey, proxyKey, code, hash) {
         return new Promise((resolve, reject) => {
             if (!code || !hash)
@@ -1252,7 +1219,7 @@
         })
     }
 
-    exchangeAPI.convertToBTC = function (amount, floID, sinkID, privKey, proxySecret = null) {
+    exchangeAPI.convertToBTC = function (amount, floID, sinkID, privKey) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
@@ -1264,15 +1231,14 @@
                     amount: amount,
                     timestamp: Date.now()
                 };
-                if (!proxySecret) //Direct signing (without proxy)
-                    request.pubKey = floCrypto.getPubKeyHex(privKey);
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
                 request.sign = signRequest({
                     type: "convert_to",
                     coin: request.coin,
                     amount: amount,
                     txid: txid,
                     timestamp: request.timestamp
-                }, proxySecret || privKey);
+                }, privKey);
                 console.debug(request);
 
                 fetch_api('/convert-to', {
@@ -1290,13 +1256,13 @@
         })
     }
 
-    exchangeAPI.convertFromBTC = function (quantity, floID, sinkID, privKey, proxySecret = null) {
+    exchangeAPI.convertFromBTC = function (quantity, floID, sinkID, privKey, fee = null) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
             let btc_id = btcOperator.convert.legacy2bech(floID),
                 btc_sink = btcOperator.convert.legacy2bech(sinkID);
-            btcOperator.createSignedTx(btc_id, privKey, btc_sink, quantity, null).then(result => {
+            btcOperator.createSignedTx(btc_id, privKey, btc_sink, quantity, fee).then(result => {
                 let request = {
                     floID: floID,
                     txid: btcOperator.transactionID(result.transaction),
@@ -1305,15 +1271,14 @@
                     quantity: quantity,
                     timestamp: Date.now()
                 };
-                if (!proxySecret) //Direct signing (without proxy)
-                    request.pubKey = floCrypto.getPubKeyHex(privKey);
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
                 request.sign = signRequest({
                     type: "convert_from",
                     coin: request.coin,
                     quantity: quantity,
-                    txid: data.txid,
+                    txid: request.txid,
                     timestamp: request.timestamp
-                }, proxySecret || privKey);
+                }, privKey);
                 console.debug(request);
 
                 fetch_api('/convert-from', {
@@ -1344,6 +1309,7 @@
                     coin: "BTC",
                     timestamp: Date.now()
                 };
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
                 request.sign = signRequest({
                     type: "deposit_convert_currency_fund",
                     coin: request.coin,
@@ -1382,12 +1348,13 @@
                     coin: "BTC",
                     timestamp: Date.now()
                 };
+                request.pubKey = floCrypto.getPubKeyHex(privKey);
                 request.sign = signRequest({
                     type: "deposit_convert_coin_fund",
                     coin: request.coin,
                     txid: data.txid,
                     timestamp: request.timestamp
-                }, proxySecret || privKey);
+                }, privKey);
                 console.debug(request);
 
                 fetch_api('/deposit-convert-coin-fund', {
@@ -1417,6 +1384,7 @@
                 coin: "BTC",
                 timestamp: Date.now()
             };
+            request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "withdraw_convert_currency_fund",
                 coin: request.coin,
@@ -1451,6 +1419,7 @@
                 coin: "BTC",
                 timestamp: Date.now()
             };
+            request.pubKey = floCrypto.getPubKeyHex(privKey);
             request.sign = signRequest({
                 type: "withdraw_convert_coin_fund",
                 coin: request.coin,

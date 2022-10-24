@@ -1,4 +1,4 @@
-(function (EXPORTS) { //btcOperator v1.0.11
+(function (EXPORTS) { //btcOperator v1.0.12
     /* BTC Crypto and API Operator */
     const btcOperator = EXPORTS;
 
@@ -32,16 +32,30 @@
     }
 
     const broadcastTx = btcOperator.broadcastTx = rawTxHex => new Promise((resolve, reject) => {
-        $.ajax({
-            type: "POST",
-            url: URL + "send_tx/BTC/",
-            data: {
-                "tx_hex": rawTxHex
+        let url = 'https://coinb.in/api/?uid=1&key=12345678901234567890123456789012&setmodule=bitcoin&request=sendrawtransaction';
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
-            dataType: "json",
-            error: e => reject((e.responseJSON && e.responseJSON.status === "fail") ? null : e.responseJSON),
-            success: r => r.status === "success" ? resolve(r.data.txid) : reject(r)
-        })
+            body: "rawtx=" + rawTxHex
+        }).then(response => {
+            response.text().then(resultText => {
+                let r = resultText.match(/<result>.*<\/result>/);
+                if (!r)
+                    reject(resultText);
+                else {
+                    r = r.pop().replace('<result>', '').replace('</result>', '');
+                    if (r == '1') {
+                        let txid = resultText.match(/<txid>.*<\/txid>/).pop().replace('<txid>', '').replace('</txid>', '');
+                        resolve(txid);
+                    } else if (r == '0') {
+                        let error = resultText.match(/<response>.*<\/response>/).pop().replace('<response>', '').replace('</response>', '');
+                        reject(decodeURIComponent(error.replace(/\+/g, " ")));
+                    } else reject(resultText);
+                }
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
     });
 
     Object.defineProperties(btcOperator, {
@@ -461,7 +475,7 @@
         })
     }
 
-    const createSignedTx = btcOperator.createSignedTx = function (senders, privkeys, receivers, amounts, fee, change_addr = null) {
+    const createSignedTx = btcOperator.createSignedTx = function (senders, privkeys, receivers, amounts, fee = null, change_addr = null) {
         return new Promise((resolve, reject) => {
             try {
                 ({
@@ -529,7 +543,7 @@
         })
     }
 
-    btcOperator.createMultiSigTx = function (sender, redeemScript, receivers, amounts, fee) {
+    btcOperator.createMultiSigTx = function (sender, redeemScript, receivers, amounts, fee = null) {
         return new Promise((resolve, reject) => {
             //validate tx parameters
             if (validateAddress(sender) !== "multisig")

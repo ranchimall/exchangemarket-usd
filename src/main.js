@@ -5,6 +5,7 @@ require('../docs/scripts/lib');
 global.floCrypto = require('../docs/scripts/floCrypto');
 global.floBlockchainAPI = require('../docs/scripts/floBlockchainAPI');
 global.floTokenAPI = require('../docs/scripts/floTokenAPI');
+global.btcOperator =  require('../docs/scripts/btcOperator');
 
 const Database = require("./database");
 const App = require('./app');

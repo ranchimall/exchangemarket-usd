@@ -117,8 +117,8 @@ CREATE TABLE BuyOrder (
 CREATE TABLE VaultTransactions (
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
-    mode BIT NOT NULL,
-    asset_type BIT NOT NULL,
+    mode TINYINT NOT NULL,
+    asset_type TINYINT NOT NULL,
     asset VARCHAR(32),
     amount DECIMAL(16, 8),
     txid VARCHAR(128),
@@ -264,7 +264,7 @@ CREATE TABLE ConvertFund(
     amount DECIMAL(16, 8),
     coin VARCHAR(8) NOT NULL,
     quantity DECIMAL(16, 8),
-    mode BIT NOT NULL,
+    mode TINYINT NOT NULL,
     txid VARCHAR(128),
     r_status TINYINT NOT NULL,
     PRIMARY KEY(id)
@@ -276,7 +276,7 @@ CREATE TABLE DirectConvert(
     amount DECIMAL(16, 8),
     coin VARCHAR(8) NOT NULL,
     quantity DECIMAL(16, 8),
-    mode BIT NOT NULL,
+    mode TINYINT NOT NULL,
     in_txid VARCHAR(128),
     out_txid VARCHAR(128),
     locktime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
