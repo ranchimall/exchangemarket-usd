@@ -387,7 +387,7 @@ function CloseBlockchainBond(req, res) {
     if (!data.pubKey)
         res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else
-        processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
+        processRequest(res, data.floID, data.pubKey, data.sign, "Blockchain Bond Closing", {
             type: "close_blockchain_bond",
             bond_id: data.bond_id,
             timestamp: data.timestamp
@@ -399,7 +399,7 @@ function CloseBobsFund(req, res) {
     if (!data.pubKey)
         res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
     else
-        processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
+        processRequest(res, data.floID, data.pubKey, data.sign, "Bob's Fund closing", {
             type: "close_bobs_fund",
             fund_id: data.fund_id,
             timestamp: data.timestamp
@@ -631,7 +631,7 @@ module.exports = {
     },
     refreshData(nodeList) {
         blockchain_bonds.refresh(nodeList);
-        bobs_fund.refresh(nodeList)
+        bobs_fund.refresh(nodeList);
     },
     pause() {
         serving = false;

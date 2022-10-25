@@ -88,7 +88,7 @@ const blockchainBond = (function () {
         return [
             `${productStr}`,
             `Base value: ${BTC_base} USD`,
-            `Date of bond start: ${start_date}`,
+            `Date of bond start: ${dateFormat(start_date)}`,
             `Guaranteed interest: ${guaranteed_interest}% per annum simple for ${guarantee_period}`,
             `Bond value: guaranteed interest or ${gain_cut}% of the gains whichever is higher`,
             `Amount invested: Rs ${amount}`,
@@ -122,7 +122,7 @@ const blockchainBond = (function () {
                 case "flo id of bond holder":
                     details["floID"] = d[1]; break;
             }
-        })
+        });
         return details;
     }
 
@@ -131,7 +131,7 @@ const blockchainBond = (function () {
             `${productStr}`,
             `Bond: ${bond_id}`,
             `End value: ${BTC_net} USD`,
-            `Date of bond end: ${end_date}`,
+            `Date of bond end: ${dateFormat(end_date)}`,
             `USD INR rate at end: ${USD_net}`,
             `Amount withdrawn: Rs ${amount} via ${payment_ref}`,
             `Reference: ${ref_sign}`
@@ -158,7 +158,8 @@ const blockchainBond = (function () {
                 case "reference":
                     details["refSign"] = d[1]; break;
             }
-        })
+        });
+        return details;
     }
 
     return {
@@ -189,12 +190,12 @@ function refreshBlockchainData(nodeList = []) {
             let lastTx = result.length ? result[0].num : 0;
             floBlockchainAPI.readData(blockchainBond.config.adminID, {
                 ignoreOld: lastTx,
-                senders: [nodeList].concat(blockchainBond.config.adminID), //sentOnly: true,
+                senders: nodeList.concat(blockchainBond.config.adminID), //sentOnly: true,
                 tx: true,
                 filter: d => d.startsWith(blockchainBond.productStr)
             }).then(result => {
                 let promises = [];
-                result.data.forEach(d => {
+                result.data.reverse().forEach(d => {
                     let bond = d.senders.has(blockchainBond.config.adminID) ? blockchainBond.parse.main(d.data) : null;
                     if (bond && bond.amount)
                         promises.push(DB.query("INSERT INTO BlockchainBonds(bond_id, floID, amount_in, begin_date, btc_base, usd_base, gain_cut, min_ipa, max_period, lockin_period) VALUES ? ON DUPLICATE KEY UPDATE bond_id=bond_id",
@@ -202,15 +203,17 @@ function refreshBlockchainData(nodeList = []) {
                     else {
                         let details = blockchainBond.parse.end(d.data);
                         if (details.bondID && details.amountFinal)
-                            promises.push(DB.query("UPDATE BlockchainBonds SET close_id=? amount_out=? WHERE bond_id=?", [d.txid, details.amountFinal, details.bondID]));
+                            promises.push(DB.query("UPDATE BlockchainBonds SET close_id=?, amount_out=? WHERE bond_id=?", [d.txid, details.amountFinal, details.bondID]));
                     }
                 });
-                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[blockchainBond.config.adminID, result.totalTxs], result.totalTxs]));
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
-                        console.warn("Some bond data might not have been saved in database correctly");
-                    resolve(result.totalTxs);
+                        reject("Some bond data might not have been saved in database correctly");
+                    else
+                        DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[blockchainBond.config.adminID, result.totalTxs], result.totalTxs])
+                            .then(_ => resolve(result.totalTxs))
+                            .catch(error => reject(error));
                 })
             }).catch(error => reject(error))
         }).catch(error => reject(error))
@@ -219,9 +222,9 @@ function refreshBlockchainData(nodeList = []) {
 
 function closeBond(bond_id, floID, ref) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT r_status FROM CloseBondTransact WHERE bond_id=?", [bond_id]).then(result => {
+        DB.query("SELECT r_status, close_id FROM CloseBondTransact WHERE bond_id=?", [bond_id]).then(result => {
             if (result.length)
-                return reject(INVALID(eCode.DUPLICATE_ENTRY, `Bond closing already in process`));
+                return reject(INVALID(eCode.DUPLICATE_ENTRY, result[0].r_status == pCode.STATUS_SUCCESS ? `Bond already closed (${result[0].close_id})` : `Bond closing already in process`));
             DB.query("SELECT * FROM BlockchainBonds WHERE bond_id=?", [bond_id]).then(result => {
                 if (!result.length)
                     return reject(INVALID(eCode.NOT_FOUND, 'Bond not found'));
@@ -236,7 +239,7 @@ function closeBond(bond_id, floID, ref) {
                     getRate.USD_INR().then(usd_rate => {
                         let end_date = new Date(),
                             net_value = blockchainBond.calcNetValue(bond.btc_base, btc_rate, bond.begin_date, bond.min_ipa, bond.max_period, bond.gain_cut, bond.amount_in, bond.usd_base, usd_rate);
-                        DB.query("INSERT INTO CloseBondTransact(bond_id, floID, amount, end_date, btc_net, usd_net, ref_sign, r_status) VALUE ?", [[bond_id, floID, net_value, end_date, btc_rate, usd_rate, ref, pCode.STATUS_PENDING]])
+                        DB.query("INSERT INTO CloseBondTransact(bond_id, floID, amount, end_date, btc_net, usd_net, ref_sign, r_status) VALUE (?)", [[bond_id, floID, net_value, end_date, btc_rate, usd_rate, ref, pCode.STATUS_PENDING]])
                             .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": end_date }))
                             .catch(error => reject(error))
                     }).catch(error => reject(error))
@@ -247,7 +250,11 @@ function closeBond(bond_id, floID, ref) {
 }
 
 module.exports = {
-    refresh: refreshBlockchainData,
+    refresh(nodeList) {
+        refreshBlockchainData(nodeList)
+            .then(result => console.debug("Refreshed Blockchain-bonds data"))
+            .catch(error => console.error(error));
+    },
     set DB(db) {
         DB = db;
     },

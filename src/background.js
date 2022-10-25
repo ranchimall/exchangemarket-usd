@@ -417,7 +417,7 @@ function confirmFundClosing() {
                 let closeFundString = fund_util.stringify.end(r.fund_id, r.floID, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeFundString, global.myPrivKey, fund_util.config.adminID).then(txid => {
                     DB.query("UPDATE CloseFundTransact SET r_status=?, close_id=? WHERE id=?", [pCode.STATUS_SUCCESS, txid, r.id])
-                        .then(result => console.info("Fund investment closed:", r.fund_id))
+                        .then(result => console.info("Fund investment closed:", r.fund_id, r.floID))
                         .catch(error => console.error(error));
                 }).catch(error => console.error(error))
             }).catch(error => console.error(error));

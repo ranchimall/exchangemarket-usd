@@ -96,97 +96,97 @@ const bobsFund = (function () {
         return result.join("|");
     }
 
-    function stringify_continue(fundID, investments) {
+    function stringify_continue(fund_id, investments) {
         return [
             `${productStr}`,
-            `continue: ${fundID}`,
+            `continue: ${fund_id}`,
             `Investment(s) (INR): ${investments.map(f => `${f[0].trim()}-${f[1].trim()}`).join("; ")}`
         ].join("|");
-    }
-
-    function parse_main(data) {
-        let funds = {};
-        if (!Array.isArray(data))
-            data = [data];
-        data.forEach(fd => {
-            let cont = /continue: [a-z0-9]{64}\|/.test(fd);
-            fd.data.split("|").forEach(d => {
-                d = d.split(': ');
-                switch (d[0].toLowerCase()) {
-                    case "start date":
-                        cont ? null : funds["start_date"] = d[1]; break;
-                    case "base value":
-                        cont ? null : funds["BTC_base"] = parseNumber(d[1].slice(0, -4)); break;
-                    case "usd inr rate at start":
-                        cont ? null : funds["USD_base"] = parseFloat(d[1]); break;
-                    case "duration":
-                        cont ? null : funds["duration"] = parsePeriod(d[1]); break;
-                    case "management fee":
-                        cont ? null : funds["fee"] = parseFloat(d[1]); break;
-                    case "tapout availability":
-                        let x = d[1].toLowerCase().split("after")
-                        funds["tapoutInterval"] = x[1].match(/\d+ [a-z]+/gi).map(y => parsePeriod(y))
-                        funds["topoutWindow"] = parsePeriod(x[0]); break;
-                    case "invesment(s) (inr)":
-                    case "investment(s) (inr)":
-                        funds["amounts"] = funds["amounts"] || [];
-                        funds["amounts"].push(d[1].split("; ").map(a => {
-                            a = a.split("-");
-                            return [a[0], parseNumber(a[1])]
-                        })); break;
-                }
-            });
-        })
-        return funds;
     }
 
     function stringify_end(fund_id, floID, end_date, BTC_net, USD_net, amount, ref_sign, payment_ref) {
         return [
             `${productStr}`,
-            `Fund: ${fund_id}`,
+            `close: ${fund_id}`,
             `Investor: ${floID}`,
             `End value: ${BTC_net} USD`,
-            `Date of withdrawal: ${end_date}`,
+            `Date of withdrawal: ${dateFormat(end_date)}`,
             `USD INR rate at end: ${USD_net}`,
             `Amount withdrawn: Rs ${amount} via ${payment_ref}`,
             `Reference: ${ref_sign}`
         ].join("|");
     }
 
-    function parse_end(data) {
-        //Data (end fund) send by market nodes
-        let details = {};
-        data.split("|").forEach(d => {
-            d = d.split(': ');
-            switch (d[0].toLowerCase()) {
-                case "fund":
-                    details["fundID"] = d[1]; break;
-                case "investor":
-                    details["floID"] = d[1]; break;
-                case "end value":
-                    details["BTC_net"] = parseNumber(d[1].slice(0, -4)); break;
-                case "date of withdrawal":
-                    details["endDate"] = new Date(d[1]); break;
-                case "amount withdrawn":
-                    details["amountFinal"] = parseNumber(d[1].match(/\d.+ via/).toString());
-                    details["payment_refRef"] = d[1].match(/via .+/).toString().substring(4); break;
-                case "usd inr rate at end":
-                    details["USD_net"] = parseFloat(d[1]); break;
-                case "reference":
-                    details["refSign"] = d[1]; break;
+    function parse_details(data) {
+        let funds = {};
+        funds.investments = {};
+        if (!Array.isArray(data))
+            data = [data];
+        data.forEach(fd => {
+            if (!/close: [a-z0-9]{64}\|/.test(fd)) { // not a closing tx
+                let cont = /continue: [a-z0-9]{64}\|/.test(fd);
+                fd.split("|").forEach(d => {
+                    d = d.split(': ');
+                    if (["invesment(s) (inr)", "investment(s) (inr)"].includes(d[0].toLowerCase()))
+                        d[1].split(";").forEach(a => {
+                            a = a.split("-");
+                            let floID = a[0].replace(/\s/g, ''); //for removing spaces (trailing) if any
+                            funds["investments"][floID] = funds["investments"][floID] || {};
+                            funds["investments"][floID].amount = parseNumber(a[1])
+                        });
+                    else if (!cont)
+                        switch (d[0].toLowerCase()) {
+                            case "start date":
+                                funds["start_date"] = new Date(d[1]); break;
+                            case "base value":
+                                funds["BTC_base"] = parseNumber(d[1].slice(0, -4)); break;
+                            case "usd inr rate at start":
+                                funds["USD_base"] = parseFloat(d[1]); break;
+                            case "duration":
+                                funds["duration"] = parsePeriod(d[1]); break;
+                            case "management fee":
+                                funds["fee"] = parseFloat(d[1]); break;
+                            case "tapout availability":
+                                let x = d[1].toLowerCase().split("after")
+                                funds["tapoutInterval"] = x[1].match(/\d+ [a-z]+/gi).map(y => parsePeriod(y))
+                                funds["topoutWindow"] = parsePeriod(x[0]); break;
+                        }
+                });
+            } else {
+                let floID, details = {};
+                fd.split("|").forEach(d => {
+                    d = d.split(': ');
+                    switch (d[0].toLowerCase()) {
+                        case "investor":
+                            floID = d[1]; break;
+                        case "end value":
+                            details["BTC_net"] = parseNumber(d[1].slice(0, -4)); break;
+                        case "date of withdrawal":
+                            details["endDate"] = new Date(d[1]); break;
+                        case "amount withdrawn":
+                            details["amountFinal"] = parseNumber(d[1].match(/\d.+ via/).toString());
+                            details["payment_refRef"] = d[1].match(/via .+/).toString().substring(4); break;
+                        case "usd inr rate at end":
+                            details["USD_net"] = parseFloat(d[1]); break;
+                        case "reference":
+                            details["refSign"] = d[1]; break;
+                    }
+                });
+                if (floID) {
+                    funds.investments[floID] = funds.investments[floID] || {};
+                    funds.investments[floID].closed = details;
+                }
             }
-        })
+        });
+        return funds;
     }
 
-
     return {
+        productStr,
         dateAdder,
         dateFormat,
         calcNetValue,
-        parse: {
-            main: parse_main,
-            end: parse_end
-        },
+        parse: parse_details,
         stringify: {
             main: stringify_main,
             continue: stringify_continue,
@@ -207,14 +207,14 @@ function refreshBlockchainData(nodeList = []) {
             let lastTx = result.length ? result[0].num : 0;
             floBlockchainAPI.readData(bobsFund.config.adminID, {
                 ignoreOld: lastTx,
-                senders: [nodeList].concat(bobsFund.config.adminID), //sentOnly: true,
+                senders: nodeList.concat(bobsFund.config.adminID), //sentOnly: true,
                 tx: true,
-                filter: d => d.startsWith(bobsFund.config.productStr)
+                filter: d => d.startsWith(bobsFund.productStr)
             }).then(result => {
                 let promises = [];
-                result.data.forEach(d => {
-                    let fund = d.senders.has(bobsFund.config.adminID) ? bobsFund.parse.main(d.data) : null;
-                    if (fund && fund.amount) {
+                result.data.reverse().forEach(d => {
+                    let fund = bobsFund.parse(d.data);
+                    if (d.senders.has(bobsFund.config.adminID) && !/close:/.test(d.data)) {
                         let fund_id = d.data.match(/continue: [a-z0-9]{64}\|/);
                         if (!fund_id) {
                             fund_id = d.txid;
@@ -224,21 +224,27 @@ function refreshBlockchainData(nodeList = []) {
                             promises.push(DB.query(`INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration ${fund.tapoutInterval ? ", tapout_window, tapout_interval" : ""}) VALUES ? ON DUPLICATE KEY UPDATE fund_id=fund_id`, [[values]]));
                         } else
                             fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
-                        let investments = fund.amounts.map(i => [fund_id, i[0], i[1]]);
-                        promises.push(DB.query("INSERT INTO BobsFundInvestments(fund_id, floID, amount_in) VALUES ?", [investments]));
+                        let investments = Object.entries(fund.investments).map(a => [fund_id, a[0], a[1].amount]);
+                        promises.push(DB.query("INSERT INTO BobsFundInvestments(fund_id, floID, amount_in) VALUES ? ON DUPLICATE KEY UPDATE floID=floID", [investments]));
                     }
                     else {
-                        let details = bobsFund.parse.end(d.data);
-                        if (details.fundID && details.floID && details.amountFinal)
-                            promises.push(DB.query("UPDATE BobsFundInvestments SET close_id=? amount_out=? WHERE fund_id=? AND floID=?", [d.txid, details.amountFinal, details.fundID, details.floID]));
+                        let fund_id = d.data.match(/close: [a-z0-9]{64}\|/);
+                        if (fund_id) {
+                            fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
+                            let closing_details = Object.entries(fund.investments).filter(a => typeof a[1].closed === "object" && a[1].closed.amountFinal).pop();   //only one close-fund will be there in a tx
+                            if (closing_details)
+                                promises.push(DB.query("UPDATE BobsFundInvestments SET close_id=?, amount_out=? WHERE fund_id=? AND floID=?", [d.txid, closing_details[1].closed.amountFinal, fund_id, closing_details[0]]))
+                        }
                     }
                 });
-                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[bobsFund.config.adminID, result.totalTxs], result.totalTxs]));
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));
                     if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
-                        console.warn("Some fund data might not have been saved in database correctly");
-                    resolve(result.totalTxs);
+                        reject("Some fund data might not have been saved in database correctly");
+                    else
+                        DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[bobsFund.config.adminID, result.totalTxs], result.totalTxs])
+                            .then(_ => resolve(result.totalTxs))
+                            .catch(error => reject(error));
                 })
             }).catch(error => reject(error))
         }).catch(error => reject(error))
@@ -247,9 +253,9 @@ function refreshBlockchainData(nodeList = []) {
 
 function closeFund(fund_id, floID, ref) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT r_status FROM CloseFundTransact WHERE fund_id=?", [fund_id]).then(result => {
+        DB.query("SELECT r_status, close_id FROM CloseFundTransact WHERE fund_id=?", [fund_id]).then(result => {
             if (result.length)
-                return reject(INVALID(eCode.DUPLICATE_ENTRY, `Fund closing already in process`));
+                return reject(INVALID(eCode.DUPLICATE_ENTRY, result[0].r_status == pCode.STATUS_SUCCESS ? `Fund investment already closed (${result[0].close_id})` : `Fund closing already in process`));
             DB.query("SELECT * FROM BobsFund WHERE fund_id=?", [fund_id]).then(result => {
                 if (!result.length)
                     return reject(INVALID(eCode.NOT_FOUND, 'Fund not found'));
@@ -279,7 +285,7 @@ function closeFund(fund_id, floID, ref) {
                     getRate.BTC_USD().then(btc_rate => {
                         getRate.USD_INR().then(usd_rate => {
                             let net_value = bobsFund.calcNetValue(fund.btc_base, btc_rate, fund.usd_base, usd_rate, investment.amount_in, fund.fee)
-                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, r_status) VALUE ?", [[fund_id, floID, net_value, cur_date, btc_rate, usd_rate, ref, pCode.STATUS_PENDING]])
+                            DB.query("INSERT INTO CloseFundTransact(fund_id, floID, amount, end_date, btc_net, usd_net, ref_sign, r_status) VALUE (?)", [[fund_id, floID, net_value, cur_date, btc_rate, usd_rate, ref, pCode.STATUS_PENDING]])
                                 .then(result => resolve({ "USD_net": usd_rate, "BTC_net": btc_rate, "amount_out": net_value, "end_date": cur_date }))
                                 .catch(error => reject(error))
                         }).catch(error => reject(error))
@@ -291,7 +297,11 @@ function closeFund(fund_id, floID, ref) {
 }
 
 module.exports = {
-    refresh: refreshBlockchainData,
+    refresh(nodeList) {
+        refreshBlockchainData(nodeList)
+            .then(result => console.debug("Refreshed Bob's Fund data"))
+            .catch(error => console.error(error));
+    },
     set DB(db) {
         DB = db;
     },

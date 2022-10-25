@@ -1,4 +1,4 @@
-(function (EXPORTS) { //floBlockchainAPI v2.3.3c
+(function (EXPORTS) { //floBlockchainAPI v2.3.3d
     /* FLO Blockchain Operator to send/receive data from blockchain using API calls*/
     'use strict';
     const floBlockchainAPI = EXPORTS;
@@ -485,8 +485,8 @@
     floBlockchainAPI.readData = function (addr, options = {}) {
         options.limit = options.limit || 0;
         options.ignoreOld = options.ignoreOld || 0;
-        if (typeof options.sender === "string") options.sender = [options.sender];
-        if (typeof options.receiver === "string") options.receiver = [options.receiver];
+        if (typeof options.senders === "string") options.senders = [options.senders];
+        if (typeof options.receivers === "string") options.receivers = [options.receivers];
         return new Promise((resolve, reject) => {
             promisedAPI(`api/addrs/${addr}/txs?from=0&to=1`).then(response => {
                 var newItems = response.totalItems - options.ignoreOld;
@@ -521,10 +521,10 @@
                                 }
                             if (!flag) continue;
                         }
-                        if (Array.isArray(options.sender)) {
+                        if (Array.isArray(options.senders)) {
                             let flag = false;
                             for (let vin of response.items[i].vin)
-                                if (options.sender.includes(vin.addr)) {
+                                if (options.senders.includes(vin.addr)) {
                                     flag = true;
                                     break;
                                 }
@@ -539,10 +539,10 @@
                                 }
                             if (!flag) continue;
                         }
-                        if (Array.isArray(options.receiver)) {
+                        if (Array.isArray(options.receivers)) {
                             let flag = false;
                             for (let vout of response.items[i].vout)
-                                if (options.receiver.includes(vout.scriptPubKey.addresses[0])) {
+                                if (options.receivers.includes(vout.scriptPubKey.addresses[0])) {
                                     flag = true;
                                     break;
                                 }
