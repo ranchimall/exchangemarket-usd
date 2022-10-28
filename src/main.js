@@ -7,6 +7,12 @@ global.floBlockchainAPI = require('../docs/scripts/floBlockchainAPI');
 global.floTokenAPI = require('../docs/scripts/floTokenAPI');
 global.btcOperator = require('../docs/scripts/btcOperator');
 
+(function () {
+    const { adminID, application } = require("../docs/scripts/floExchangeAPI");
+    floGlobals.adminID = adminID;
+    floGlobals.application = application;
+})();
+
 const Database = require("./database");
 const App = require('./app');
 

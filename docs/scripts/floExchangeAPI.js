@@ -1,7 +1,12 @@
 'use strict';
 
-(function (EXPORTS) { //floExchangeAPI v1.1.2
+(function (EXPORTS) { //floExchangeAPI v1.1.3
     const exchangeAPI = EXPORTS;
+
+    const DEFAULT = {
+        marketID: floGlobals.marketID || "FMxYC7gYZhouzqtHZukGnPiQ8nvG4CMzXM",
+        marketApp: "exchange"
+    }
 
     /*Kademlia DHT K-bucket implementation as a binary tree.*/
     /**
@@ -463,6 +468,23 @@
     }
 
     var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
+
+    Object.defineProperties(exchangeAPI, {
+        adminID: {
+            get: () => DEFAULT.marketID
+        },
+        application: {
+            get: () => DEFAULT.marketApp
+        },
+        nodeList: {
+            get: () => {
+                if (Array.isArray(nodeList))
+                    return Array.from(nodeList);
+                else
+                    throw "Exchange API is not loaded";
+            }
+        }
+    });
 
     function fetch_api(api, options) {
         return new Promise((resolve, reject) => {
@@ -1300,7 +1322,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
-            if (floID !== floGlobals.adminID)
+            if (floID !== DEFAULT.marketID)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
             floTokenAPI.sendToken(privKey, amount, sinkID, '(add convert fund)', floGlobals.currency).then(txid => {
                 let request = {
@@ -1337,7 +1359,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
-            if (floID !== floGlobals.adminID)
+            if (floID !== DEFAULT.marketID)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
             let btc_id = btcOperator.convert.legacy2bech(floID),
                 btc_sink = btcOperator.convert.legacy2bech(sinkID);
@@ -1376,7 +1398,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
-            if (floID !== floGlobals.adminID)
+            if (floID !== DEFAULT.marketID)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
             let request = {
                 floID: floID,
@@ -1411,7 +1433,7 @@
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
-            if (floID !== floGlobals.adminID)
+            if (floID !== DEFAULT.marketID)
                 return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
             let request = {
                 floID: floID,
@@ -1504,7 +1526,7 @@
         })
     }
 
-    exchangeAPI.init = function refreshDataFromBlockchain(adminID = floGlobals.adminID, appName = floGlobals.application) {
+    exchangeAPI.init = function refreshDataFromBlockchain() {
         return new Promise((resolve, reject) => {
             let nodes, assets, tags, lastTx;
             try {
@@ -1521,13 +1543,13 @@
                 tags = new Set();
                 lastTx = 0;
             }
-            floBlockchainAPI.readData(adminID, {
+            floBlockchainAPI.readData(DEFAULT.marketID, {
                 ignoreOld: lastTx,
                 sentOnly: true,
-                pattern: appName
+                pattern: DEFAULT.marketApp
             }).then(result => {
                 result.data.reverse().forEach(data => {
-                    var content = JSON.parse(data)[appName];
+                    var content = JSON.parse(data)[DEFAULT.marketApp];
                     //Node List
                     if (content.Nodes) {
                         if (content.Nodes.remove)
@@ -1557,7 +1579,7 @@
                 localStorage.setItem('exchange-assets', Array.from(assets).join(","));
                 localStorage.setItem('exchange-tags', Array.from(tags).join(","));
                 nodeURL = nodes;
-                nodeKBucket = new K_Bucket(adminID, Object.keys(nodeURL));
+                nodeKBucket = new K_Bucket(DEFAULT.marketID, Object.keys(nodeURL));
                 nodeList = nodeKBucket.order;
                 resolve(nodes);
             }).catch(error => reject(error));

@@ -1,7 +1,6 @@
 const floGlobals = {
     blockchain: "FLO",
-    application: "exchange",
-    adminID: "FMxYC7gYZhouzqtHZukGnPiQ8nvG4CMzXM",
+    marketID: "FMxYC7gYZhouzqtHZukGnPiQ8nvG4CMzXM",
     currency: "rupee"
 };
 
