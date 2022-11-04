@@ -22,11 +22,11 @@ const updateLastTime = asset => lastTime[asset] = Date.now();
 
 //store FLO price in DB every 1 hr
 function storeHistory(asset, rate) {
-    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?)", [[asset, rate.toFixed(8)]])
+    DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?)", [[asset, global.toStandardDecimal(rate)]])
         .then(_ => null).catch(error => console.error(error))
 }
 
-storeHistory.start = function() {
+storeHistory.start = function () {
     storeHistory.stop();
     storeHistory.instance = setInterval(() => {
         for (let asset in currentRate)
@@ -34,7 +34,7 @@ storeHistory.start = function() {
     }, REC_HISTORY_INTERVAL);
 }
 
-storeHistory.stop = function() {
+storeHistory.stop = function () {
     if (storeHistory.instance !== undefined) {
         clearInterval(storeHistory.instance);
         delete storeHistory.instance;
@@ -157,8 +157,8 @@ function checkForRatedSellers(asset) {
             DB.query("SELECT COUNT(*) as value FROM SellOrder WHERE floID IN (" +
                 " SELECT UserTag.floID FROM UserTag INNER JOIN TagList ON UserTag.tag = TagList.tag" +
                 " WHERE TagList.sellPriority > ?) AND asset=?", [ratedMin, asset]).then(result => {
-                resolve(result[0].value > 0);
-            }).catch(error => reject(error))
+                    resolve(result[0].value > 0);
+                }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
 }

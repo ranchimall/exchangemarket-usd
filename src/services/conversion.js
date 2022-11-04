@@ -96,7 +96,7 @@ function convertToCoin(floID, txid, coin, amount) {
             }).catch(error => {
                 if (error instanceof INVALID && error.ecode === eCode.INSUFFICIENT_FUND)
                     DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, pCode.STATUS_REJECTED]]).then(result => {
-                        DB.query("INSERT INTO RefundTransact(floID, in_txid, amount, r_status) VALUES (?)", [[floID, txid, amount, pCode.STATUS_PENDING]])
+                        DB.query("INSERT INTO RefundTransact(floID, in_txid, asset_type, asset, r_status) VALUES (?)", [[floID, txid, pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING]])
                             .then(_ => null).catch(error => console.error(error));
                     }).catch(error => console.error(error))
                 reject(error);

@@ -253,7 +253,7 @@ function refreshBlockchainData(nodeList = []) {
 
 function closeFund(fund_id, floID, ref) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT r_status, close_id FROM CloseFundTransact WHERE fund_id=?", [fund_id]).then(result => {
+        DB.query("SELECT r_status, close_id FROM CloseFundTransact WHERE fund_id=? AND floID=?", [fund_id, floID]).then(result => {
             if (result.length)
                 return reject(INVALID(eCode.DUPLICATE_ENTRY, result[0].r_status == pCode.STATUS_SUCCESS ? `Fund investment already closed (${result[0].close_id})` : `Fund closing already in process`));
             DB.query("SELECT * FROM BobsFund WHERE fund_id=?", [fund_id]).then(result => {

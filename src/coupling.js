@@ -34,7 +34,7 @@ function startCouplingForAsset(asset, updatePrice = false) {
         return;
     }
     price.getRates(asset, updatePrice).then(cur_rate => {
-        cur_rate = cur_rate.toFixed(8);
+        cur_rate = global.toStandardDecimal(cur_rate);
         couplingInstance[asset] = true; //set instance as running
         recursiveCoupling(asset, cur_rate, updatePrice);
     }).catch(error => console.error(error));

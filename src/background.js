@@ -152,7 +152,7 @@ function retryVaultWithdrawal() {
             } else if (r.asset_type == pCode.ASSET_TYPE_TOKEN)
                 blockchain.withdrawAsset.retry(r.floID, r.asset, r.amount, r.id)
         })
-    }).catch(error => reject(error))
+    }).catch(error => console.error(error))
 }
 
 function confirmVaultWithdraw() {
@@ -210,7 +210,16 @@ verifyTx.BTC = function (sender, txid) {
 }
 
 function verifyConvert() {
-    DB.query("UPDATE DirectConvert SET r_status=? WHERE r_status=? AND locktime<?", [pCode.STATUS_REJECTED, pCode.STATUS_PENDING, new Date(Date.now() - REQUEST_TIMEOUT)]).then(result => {
+    //Set all timeout convert request to refund mode (thus, asset will be refund if tx gets confirmed later)
+    let req_timeout = new Date(Date.now() - REQUEST_TIMEOUT),
+        to_refund_sql = "INSERT INTO RefundTransact (floID, in_txid, asset_type, asset, r_status)" +
+            " SELECT floID, in_txid, ? AS asset_type, ? AS asset, r_status" +
+            " WHERE r_status=? AND locktime<? AND mode=?";
+    let txQueries = [];
+    txQueries.push([to_refund_sql, [pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING, req_timeout, pCode.CONVERT_MODE_GET]]);
+    txQueries.push([to_refund_sql, [pCode.ASSET_TYPE_COIN, "BTC", pCode.STATUS_PENDING, req_timeout, pCode.CONVERT_MODE_PUT]]);
+    txQueries.push(["UPDATE DirectConvert SET r_status=? WHERE r_status=? AND locktime<?", [pCode.STATUS_REJECTED, pCode.STATUS_PENDING, req_timeout]]);
+    DB.transaction(txQueries).then(result => {
         DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
             results.forEach(r => {
                 if (r.mode == pCode.CONVERT_MODE_GET) {
@@ -242,7 +251,7 @@ function verifyConvert() {
                 }
             })
         }).catch(error => console.error(error))
-    }).catch(error => reject(error))
+    }).catch(error => console.error(error))
 }
 
 function retryConvert() {
@@ -345,11 +354,34 @@ function confirmConvertFundWithdraw() {
 }
 
 function verifyRefund() {
-    DB.query("SELECT id, floID, in_txid FROM RefundTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
+    DB.query("SELECT id, floID, asset_type, asset, in_txid FROM RefundTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
         results.forEach(r => {
-            verifyTx.token(r.floID, r.in_txid, true)
-                .then(({ amount }) => blockchain.refundTransact.init(r.floID, amount, r.id))
-                .catch(error => {
+            if (r.ASSET_TYPE_COIN) {
+                if (r.asset == "FLO")
+                    verifyTx.FLO(r.floID, r.in_txid)
+                        .then(amount => blockchain.refundTransact.init(r.floID, r.asset, amount, r.id))
+                        .catch(error => {
+                            console.error(error);
+                            if (error[0])
+                                DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
+                                    .then(_ => null).catch(error => console.error(error));
+                        });
+                else if (r.asset == "BTC")
+                    verifyTx.BTC(r.floID, r.in_txid)
+                        .then(amount => blockchain.refundTransact.init(r.floID, r.asset, amount, r.id))
+                        .catch(error => {
+                            console.error(error);
+                            if (error[0])
+                                DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
+                                    .then(_ => null).catch(error => console.error(error));
+                        });
+            } else if (r.ASSET_TYPE_TOKEN)
+                verifyTx.token(r.floID, r.in_txid).then(({ token, amount }) => {
+                    if (token !== r.asset)
+                        throw ([true, "Transaction token mismatched"]);
+                    else
+                        blockchain.refundTransact.init(r.floID, token, amount, r.id);
+                }).catch(error => {
                     console.error(error);
                     if (error[0])
                         DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_REJECTED, r.id])
@@ -360,36 +392,54 @@ function verifyRefund() {
 }
 
 function retryRefund() {
-    DB.query("SELECT id, floID, amount FROM RefundTransact WHERE r_status=?", [pCode.STATUS_PROCESSING]).then(results => {
-        results.forEach(r => blockchain.refundTransact.retry(r.floID, r.amount, r.id))
+    DB.query("SELECT id, floID, asset, amount FROM RefundTransact WHERE r_status=?", [pCode.STATUS_PROCESSING]).then(results => {
+        results.forEach(r => blockchain.refundTransact.retry(r.floID, r.asset, r.amount, r.id))
     }).catch(error => console.error(error))
 }
 
 function confirmRefund() {
     DB.query("SELECT * FROM RefundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
-        results.forEach(r => {
-            floTokenAPI.getTx(r.out_txid).then(tx => {
-                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
-                    return;
-                DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
-                    .then(result => console.info(`Refunded ${r.amount} to ${r.floID}`))
-                    .catch(error => console.error(error));
-            }).catch(error => console.error(error));
+        results.forEach(r => { //TODO
+            if (r.ASSET_TYPE_COIN) {
+                if (r.asset == "FLO")
+                    floBlockchainAPI.getTx(r.out_txid).then(tx => {
+                        if (!tx.blockheight || !tx.confirmations) //Still not confirmed
+                            return;
+                        DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
+                            .then(result => console.info(`Refunded ${r.amount} ${r.asset} to ${r.floID}`))
+                            .catch(error => console.error(error))
+                    }).catch(error => console.error(error));
+                else if (r.asset == "BTC")
+                    btcOperator.getTx(r.out_txid).then(tx => {
+                        if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                            return;
+                        DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
+                            .then(result => console.info(`Refunded ${r.amount} ${r.asset} to ${r.floID}`))
+                            .catch(error => console.error(error))
+                    }).catch(error => console.error(error));
+            } else if (r.ASSET_TYPE_TOKEN)
+                floTokenAPI.getTx(r.out_txid).then(tx => {
+                    if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+                        return;
+                    DB.query("UPDATE RefundTransact SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
+                        .then(result => console.info(`Refunded ${r.amount} ${r.asset} to ${r.floID}`))
+                        .catch(error => console.error(error));
+                }).catch(error => console.error(error));
         })
     }).catch(error => console.error(error))
 }
 
 function retryBondClosing() {
-    DB.query("SELECT id, floID, amount FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
-        results.forEach(r => blockchain.bondTransact.retry(r.floID, r.amount, r.id))
+    DB.query("SELECT id, floID, amount, btc_net, usd_net FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
+        results.forEach(r => blockchain.bondTransact.retry(r.floID, r.amount, r.btc_net, r.usd_net, r.id))
     }).catch(error => console.error(error))
 }
 
 function confirmBondClosing() {
     DB.query("SELECT * FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
-            floTokenAPI.getTx(r.txid).then(tx => {
-                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+            btcOperator.getTx(r.txid).then(tx => {
+                if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                     return;
                 let closeBondString = bond_util.stringify.end(r.bond_id, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeBondString, global.myPrivKey, bond_util.config.adminID).then(txid => {
@@ -403,16 +453,16 @@ function confirmBondClosing() {
 }
 
 function retryFundClosing() {
-    DB.query("SELECT id, floID, amount FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
-        results.forEach(r => blockchain.fundTransact.retry(r.floID, r.amount, r.id))
+    DB.query("SELECT id, floID, amount, btc_net, usd_net FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
+        results.forEach(r => blockchain.fundTransact.retry(r.floID, r.amount, r.btc_net, r.usd_net, r.id))
     }).catch(error => console.error(error))
 }
 
 function confirmFundClosing() {
     DB.query("SELECT * FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
-            floTokenAPI.getTx(r.txid).then(tx => {
-                if (!tx.transactionDetails.blockheight || !tx.transactionDetails.confirmations) //Still not confirmed
+            btcOperator.getTx(r.txid).then(tx => {
+                if (!tx.blockhash || !tx.confirmations) //Still not confirmed
                     return;
                 let closeFundString = fund_util.stringify.end(r.fund_id, r.floID, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(global.myFloID, closeFundString, global.myPrivKey, fund_util.config.adminID).then(txid => {

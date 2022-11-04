@@ -79,7 +79,7 @@ function sendTx(floID, asset, quantity, sinkID, sinkKey, message) {
         case "BTC":
             let btc_sinkID = btcOperator.convert.legacy2bech(sinkID),
                 btc_receiver = btcOperator.convert.legacy2bech(floID);
-            return btcOperator.sendTx(btc_sinkID, sinkKey, btc_receiver, quantity, null);
+            return btcOperator.sendTx(btc_sinkID, sinkKey, btc_receiver, quantity, null, { fee_from_receiver: true });
         default:
             return floTokenAPI.sendToken(sinkKey, quantity, floID, message, asset);
     }
@@ -95,6 +95,7 @@ const updateSyntax = {
 };
 
 function sendAsset(floID, asset, quantity, type, id) {
+    quantity = global.toStandardDecimal(quantity);
     getSinkID(quantity, asset).then(sinkID => {
         let callback = (sinkKey) => {
             //Send asset to user via API
@@ -118,7 +119,7 @@ function sendAsset(floID, asset, quantity, type, id) {
 }
 
 function withdrawAsset_init(floID, asset, amount) {
-    amount = parseFloat(amount.toFixed(8));
+    amount = global.toStandardDecimal(amount);
     let asset_type = ["FLO", "BTC"].includes(asset) ? pCode.ASSET_TYPE_COIN : pCode.ASSET_TYPE_TOKEN;
     DB.query("INSERT INTO VaultTransactions (floID, mode, asset_type, asset, amount, r_status) VALUES (?)", [[floID, pCode.VAULT_MODE_WITHDRAW, asset_type, asset, amount, pCode.STATUS_PENDING]])
         .then(result => sendAsset(floID, asset, amount, TYPE_VAULT, result.insertId))
@@ -132,7 +133,7 @@ function withdrawAsset_retry(floID, asset, amount, id) {
 }
 
 function convertToCoin_init(floID, coin, currency_amount, rate, id) {
-    let coin_quantity = parseFloat((currency_amount / rate).toFixed(8));
+    let coin_quantity = global.toStandardDecimal(currency_amount / rate);
     DB.query("UPDATE DirectConvert SET quantity=?, r_status=?, rate=?, locktime=DEFAULT WHERE id=?", [coin_quantity, pCode.STATUS_PROCESSING, rate, id])
         .then(result => sendAsset(floID, coin, coin_quantity, TYPE_CONVERT, id))
         .catch(error => console.error(error))
@@ -145,7 +146,7 @@ function convertToCoin_retry(floID, coin, coin_quantity, id) {
 }
 
 function convertFromCoin_init(floID, coin_quantity, rate, id) {
-    let currency_amount = parseFloat((coin_quantity * rate).toFixed(8));
+    let currency_amount = global.toStandardDecimal(coin_quantity * rate);
     DB.query("UPDATE DirectConvert SET amount=?, r_status=?, rate=?, locktime=DEFAULT WHERE id=?", [currency_amount, pCode.STATUS_PROCESSING, rate, id])
         .then(result => sendAsset(floID, floGlobals.currency, currency_amount, TYPE_CONVERT, id))
         .catch(error => console.error(error))
@@ -163,29 +164,28 @@ function convertFundWithdraw_retry(asset, amount, id) {
     else sendAsset(floGlobals.adminID, asset, amount, TYPE_CONVERT_POOL, id);
 }
 
-function bondTransact_retry(floID, amount, id) {
+function bondTransact_retry(floID, amount, btc_rate, usd_rate, id) {
     if (id in callbackCollection[TYPE_BOND])
         console.debug("A callback is already pending for this Bond closing");
-    else sendAsset(floID, floGlobals.currency, amount, TYPE_BOND, id);
+    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_BOND, id);
 }
-
-function fundTransact_retry(floID, amount, id) {
+function fundTransact_retry(floID, amount, btc_rate, usd_rate, id) {
     if (id in callbackCollection[TYPE_FUND])
         console.debug("A callback is already pending for this Fund investment closing");
-    else sendAsset(floID, floGlobals.currency, amount, TYPE_FUND, id);
+    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_FUND, id);
 }
 
-function refundTransact_init(floID, amount, id) {
-    amount = parseFloat(amount.toFixed(8));
+function refundTransact_init(floID, asset, amount, id) {
+    amount = global.toStandardDecimal(amount);
     DB.query("UPDATE RefundTransact SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [amount, pCode.STATUS_PROCESSING, id])
-        .then(result => sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id))
+        .then(result => sendAsset(floID, asset, amount, TYPE_REFUND, id))
         .catch(error => console.error(error))
 }
 
-function refundTransact_retry(floID, amount, id) {
+function refundTransact_retry(floID, asset, amount, id) {
     if (id in callbackCollection[TYPE_REFUND])
         console.debug("A callback is already pending for this Refund");
-    else sendAsset(floID, floGlobals.currency, amount, TYPE_REFUND, id);
+    else sendAsset(floID, asset, amount, TYPE_REFUND, id);
 }
 
 module.exports = {

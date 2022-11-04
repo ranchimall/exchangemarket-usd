@@ -71,7 +71,7 @@ getBalance.floID_token = (floID, token) => new Promise((resolve, reject) => {
     DB.query("SELECT quantity AS balance FROM UserBalance WHERE floID=? AND token=?", [floID, token]).then(result => resolve({
         floID,
         token,
-        balance: result.length ? result[0].balance.toFixed(8) : 0
+        balance: result.length ? global.toStandardDecimal(result[0].balance) : 0
     })).catch(error => reject(error))
 });
 
@@ -82,7 +82,7 @@ getBalance.floID = (floID) => new Promise((resolve, reject) => {
             balance: {}
         };
         for (let row of result)
-            response.balance[row.token] = row.balance.toFixed(8);
+            response.balance[row.token] = global.toStandardDecimal(row.balance);
         resolve(response);
     }).catch(error => reject(error))
 });
@@ -94,7 +94,7 @@ getBalance.token = (token) => new Promise((resolve, reject) => {
             balance: {}
         };
         for (let row of result)
-            response.balance[row.floID] = row.balance.toFixed(8);
+            response.balance[row.floID] = global.toStandardDecimal(row.balance);
         resolve(response);
     }).catch(error => reject(error))
 });

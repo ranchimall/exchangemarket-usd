@@ -288,6 +288,8 @@ CREATE TABLE DirectConvert(
 CREATE TABLE RefundTransact(
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
+    asset_type TINYINT NOT NULL,
+    asset VARCHAR(32) NOT NULL,
     amount DECIMAL(16, 8),
     in_txid VARCHAR(128),
     out_txid VARCHAR(128),
