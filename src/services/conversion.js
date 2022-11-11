@@ -1,12 +1,11 @@
 'use strict';
 
+const DB = require("../database");
 const { MIN_FUND } = require('../_constants')['convert'];
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 
 const allowedConversion = ["BTC"];
-
-var DB; //container for database
 
 function BTC_INR() {
     return new Promise((resolve, reject) => {
@@ -219,8 +218,5 @@ module.exports = {
     withdrawFund: {
         coin: withdrawCoinFund,
         currency: withdrawCurrencyFund
-    },
-    set DB(db) {
-        DB = db;
     }
 }

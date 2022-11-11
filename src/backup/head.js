@@ -4,12 +4,13 @@ const K_Bucket = require('../../docs/scripts/floExchangeAPI').K_Bucket;
 const slave = require('./slave');
 const sync = require('./sync');
 const WebSocket = require('ws');
+const DB = require("../database");
 
 const {
     SHARE_THRESHOLD
 } = require("../_constants")["backup"];
 
-var DB, app, wss, tokenList; //Container for database and app
+var app, wss, tokenList; //Container for app and wss
 var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
 const connectedSlaves = {},
     shares_collected = {},
@@ -380,11 +381,6 @@ module.exports = {
     },
     set assetList(assets) {
         tokenList = assets.filter(a => a.toUpperCase() !== "FLO");
-    },
-    set DB(db) {
-        DB = db;
-        sync.DB = db;
-        slave.DB = db;
     },
     get wss() {
         return wss;

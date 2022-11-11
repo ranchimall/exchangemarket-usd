@@ -13,7 +13,7 @@ global.btcOperator = require('../docs/scripts/btcOperator');
     floGlobals.application = application;
 })();
 
-const Database = require("./database");
+const DB = require("./database");
 const App = require('./app');
 
 const backup = require('./backup/head');
@@ -22,7 +22,7 @@ const {
     BLOCKCHAIN_REFRESH_INTERVAL
 } = require("./_constants")["app"];
 
-var DB, app;
+var app;
 
 function refreshData(startup = false) {
     return new Promise((resolve, reject) => {
@@ -162,12 +162,7 @@ loadDataFromDB.trustedIDs = function () {
     })
 }
 
-function setDB(db) {
-    DB = db;
-    backup.DB = DB;
-}
-
-module.exports = function startServer(public_dir) {
+module.exports = function startServer() {
     let _pass, _I = "";
     for (let arg of process.argv) {
         if (/^-I=/.test(arg))
@@ -193,12 +188,10 @@ module.exports = function startServer(public_dir) {
         process.exit(1);
     }
 
-    global.PUBLIC_DIR = public_dir;
     console.log("Logged in as", global.myFloID);
 
-    Database(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(db => {
-        setDB(db);
-        app = new App(config['secret'], DB);
+    DB.connect(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(result => {
+        app = new App(config['secret']);
         refreshData(true).then(_ => {
             app.start(config['port']).then(result => {
                 console.log(result);

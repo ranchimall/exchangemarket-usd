@@ -1,10 +1,10 @@
 'use strict';
 
+const DB = require("../database");
+
 const {
     HASH_N_ROW
 } = require("../_constants")["backup"];
-
-var DB; //Container for database
 
 //Backup Transfer
 function sendBackupData(last_time, checksum, ws) {
@@ -263,8 +263,5 @@ function tableSync_checksum(tables, ws) {
 module.exports = {
     sendBackupData,
     sendTableHash,
-    sendTableData,
-    set DB(db) {
-        DB = db;
-    }
+    sendTableData
 }

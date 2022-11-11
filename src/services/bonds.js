@@ -1,10 +1,9 @@
 'use strict';
 
+const DB = require("../database");
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 const getRate = require('./conversion').getRate;
-
-var DB; //container for database
 
 const blockchainBond = (function () {
     const productStr = "Product: RanchiMall Bitcoin Bond";
@@ -254,9 +253,6 @@ module.exports = {
         refreshBlockchainData(nodeList)
             .then(result => console.debug("Refreshed Blockchain-bonds data"))
             .catch(error => console.error(error));
-    },
-    set DB(db) {
-        DB = db;
     },
     util: blockchainBond,
     closeBond

@@ -1,4 +1,5 @@
 'use strict';
+const DB = require("./database");
 
 const {
     MIN_TIME,
@@ -11,8 +12,6 @@ const {
     REC_HISTORY_INTERVAL
 } = require("./_constants")["price"];
 
-var DB; //container for database
-
 var currentRate = {}, //container for FLO price (from API or by model)
     lastTime = {}, //container for timestamp of the last tx
     noBuyOrder = {},
@@ -20,7 +19,7 @@ var currentRate = {}, //container for FLO price (from API or by model)
 
 const updateLastTime = asset => lastTime[asset] = Date.now();
 
-//store FLO price in DB every 1 hr
+//store FLO price in database every 1 hr
 function storeHistory(asset, rate) {
     DB.query("INSERT INTO PriceHistory (asset, rate) VALUE (?)", [[asset, global.toStandardDecimal(rate)]])
         .then(_ => null).catch(error => console.error(error))
@@ -172,9 +171,6 @@ module.exports = {
     noOrder(asset, buy, sell) {
         noBuyOrder[asset] = buy;
         noSellOrder[asset] = sell;
-    },
-    set DB(db) {
-        DB = db;
     },
     get currentRates() {
         return Object.assign({}, currentRate);

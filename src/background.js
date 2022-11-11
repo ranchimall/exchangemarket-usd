@@ -4,6 +4,7 @@ const conversion_rates = require('./services/conversion').getRate;
 const bond_util = require('./services/bonds').util;
 const fund_util = require('./services/bobs-fund').util;
 const pCode = require('../docs/scripts/floExchangeAPI').processCode;
+const DB = require("./database");
 
 const {
     LAUNCH_SELLER_TAG,
@@ -11,7 +12,7 @@ const {
     REQUEST_TIMEOUT,
 } = require('./_constants')["market"];
 
-var DB, assetList; //container for database and allowed assets
+var assetList; //container and allowed assets
 var updateBalance; // container for updateBalance function
 
 const verifyTx = {};
@@ -505,10 +506,6 @@ module.exports = {
     process: processAll,
     set assetList(assets) {
         assetList = assets;
-    },
-    set DB(db) {
-        DB = db;
-        blockchain.DB = db;
     },
     set updateBalance(f) {
         updateBalance = f;

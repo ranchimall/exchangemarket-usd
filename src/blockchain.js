@@ -1,10 +1,10 @@
 'use strict';
 
 const pCode = require('../docs/scripts/floExchangeAPI').processCode;
+const DB = require("./database");
 
 var collectAndCall; //container for collectAndCall function from backup module
 var chests; //container for blockchain ids (where assets are stored)
-var DB; //container for database
 
 const TYPE_VAULT = "VAULT",
     TYPE_CONVERT = "CONVERT",
@@ -102,7 +102,7 @@ function sendAsset(floID, asset, quantity, type, id) {
             sendTx(floID, asset, quantity, sinkID, sinkKey, WITHDRAWAL_MESSAGE[type]).then(txid => {
                 if (!txid)
                     console.error("Transaction not successful");
-                else //Transaction was successful, Add in DB
+                else //Transaction was successful, Add in database
                     DB.query(updateSyntax[type], [pCode.STATUS_CONFIRMATION, txid, id])
                         .then(_ => null).catch(error => console.error(error));
             }).catch(error => console.error(error)).finally(_ => {
@@ -222,8 +222,5 @@ module.exports = {
     refundTransact: {
         init: refundTransact_init,
         retry: refundTransact_retry
-    },
-    set DB(db) {
-        DB = db;
     }
 }

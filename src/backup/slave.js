@@ -1,5 +1,7 @@
 'use strict';
 
+const DB = require("../database");
+
 const {
     BACKUP_INTERVAL,
     BACKUP_SYNC_TIMEOUT,
@@ -7,7 +9,6 @@ const {
     HASH_N_ROW
 } = require("../_constants")["backup"];
 
-var DB; //Container for Database connection
 var masterWS = null; //Container for Master websocket connection
 
 var intervalID = null;
@@ -161,7 +162,7 @@ function storeSinkShare(sinkID, keyShare, decrypt = true) {
 function sendSinkShare(sinkID, pubKey) {
     DB.query("SELECT share FROM sinkShares WHERE floID=?", [sinkID]).then(result => {
         if (!result.length)
-            return console.warn(`key-shares for ${sinkID} not found in DB!`);
+            return console.warn(`key-shares for ${sinkID} not found in database!`);
         let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
         let response = {
             type: "SINK_SHARE",
@@ -421,9 +422,6 @@ function requestTableChunks(tables, ws) {
 }
 
 module.exports = {
-    set DB(db) {
-        DB = db;
-    },
     get masterWS() {
         return masterWS;
     },

@@ -2,6 +2,7 @@
 
 const coupling = require('./coupling');
 const background = require('./background');
+const DB = require("./database");
 
 const blockchain = background.blockchain;
 
@@ -17,7 +18,7 @@ const pCode = require('../docs/scripts/floExchangeAPI').processCode;
 
 const updateBalance = background.updateBalance = coupling.updateBalance;
 
-var DB, assetList; //container for database and allowed assets
+var assetList; //container for allowed assets
 
 function login(floID, proxyKey) {
     return new Promise((resolve, reject) => {
@@ -541,11 +542,6 @@ module.exports = {
     periodicProcess: {
         start: periodicProcess_start,
         stop: periodicProcess_stop
-    },
-    set DB(db) {
-        DB = db;
-        coupling.DB = db;
-        background.DB = db;
     },
     set assetList(assets) {
         assetList = assets;

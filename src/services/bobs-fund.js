@@ -1,10 +1,9 @@
 'use strict';
 
+const DB = require("../database");
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 const getRate = require('./conversion').getRate;
-
-var DB; //container for database
 
 const bobsFund = (function () {
     const productStr = "Bobs Fund";
@@ -301,9 +300,6 @@ module.exports = {
         refreshBlockchainData(nodeList)
             .then(result => console.debug("Refreshed Bob's Fund data"))
             .catch(error => console.error(error));
-    },
-    set DB(db) {
-        DB = db;
     },
     util: bobsFund,
     closeFund

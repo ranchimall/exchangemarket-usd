@@ -3,11 +3,13 @@ const express = require('express');
 //const cookieParser = require("cookie-parser");
 //const sessions = require('express-session');
 const Request = require('./request');
+const path = require('path');
+const PUBLIC_DIR = path.resolve(__dirname, '..', 'docs');
 
-module.exports = function App(secret, DB) {
+module.exports = function App(secret) {
 
     if (!(this instanceof App))
-        return new App(secret, DB);
+        return new App(secret);
 
     var server = null;
     const app = express();
@@ -103,7 +105,6 @@ module.exports = function App(secret, DB) {
     app.post('/add-distributor', Request.AddDistributor);
     app.post('/remove-distributor', Request.RemoveDistributor);
 
-    Request.DB = DB;
     Request.secret = secret;
 
     //Properties

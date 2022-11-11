@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const getInput = require('./getInput');
 
 let _I = "";
@@ -91,7 +92,7 @@ function configure() {
         configurePort().then(port_result => {
             randomizeSessionSecret().then(secret_result => {
                 configureSQL().then(sql_result => {
-                    fs.writeFile(__dirname + `/../args/config${_I}.json`, JSON.stringify(config), 'utf8', (err) => {
+                    fs.writeFile(path.resolve(__dirname, '..', 'args', `config${_I}.json`), JSON.stringify(config), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

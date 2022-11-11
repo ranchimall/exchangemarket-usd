@@ -1,13 +1,12 @@
 'use strict';
 
 const price = require("./price");
+const DB = require("./database");
 
 const {
     WAIT_TIME,
     TRADE_HASH_PREFIX
 } = require("./_constants")["market"];
-
-var DB; //container for database
 
 const updateBalance = {};
 updateBalance.consume = (floID, token, amount) => ["UPDATE UserBalance SET quantity=quantity-? WHERE floID=? AND token=?", [amount, floID, token]];
@@ -250,9 +249,5 @@ module.exports = {
     initiate: startCouplingForAsset,
     stopAll: stopAllInstance,
     updateBalance,
-    price,
-    set DB(db) {
-        DB = db;
-        price.DB = db;
-    }
+    price
 }

@@ -5,8 +5,7 @@ global.floGlobals = require('../docs/scripts/floGlobals');
 require('../src/set_globals');
 require('../docs/scripts/lib');
 const floCrypto = require('../docs/scripts/floCrypto');
-
-console.log(__dirname);
+const path = require('path');
 
 let _I = "";
 for (let arg of process.argv)
@@ -69,7 +68,7 @@ function resetPassword() {
                     let encrypted = Crypto.AES.encrypt(privKey, password);
                     let randNum = floCrypto.randInt(10, 15);
                     let splitShares = floCrypto.createShamirsSecretShares(encrypted, randNum, randNum);
-                    fs.writeFile(__dirname + `/../args/keys${_I}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
+                    fs.writeFile(path.resolve(__dirname, '..', 'args', `keys${_I}.json`), JSON.stringify(splitShares), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);

@@ -1,4 +1,5 @@
 'use strict';
+const DB = require("./database");
 
 const market = require("./market");
 const conversion = require('./services/conversion');
@@ -12,7 +13,7 @@ const {
 
 const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
 
-var DB, trustedIDs, secret; //container for database
+var trustedIDs, secret; //containers for trusted IDs and secret
 
 global.INVALID = function (ecode, message) {
     if (!(this instanceof INVALID))
@@ -618,13 +619,6 @@ module.exports = {
     },
     set collectAndCall(fn) {
         market.collectAndCall = fn;
-    },
-    set DB(db) {
-        DB = db;
-        market.DB = db;
-        conversion.DB = db;
-        blockchain_bonds.DB = db;
-        bobs_fund.DB = db;
     },
     set secret(s) {
         secret = s;
