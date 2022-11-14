@@ -1,9 +1,18 @@
 'use strict';
 
 const DB = require("../database");
-const { MIN_FUND } = require('../_constants')['convert'];
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
+
+const {
+    MIN_FUND,
+    TO_FIXED_VALUES,
+    TO_MAX_VALUE,
+    TO_MIN_VALUE,
+    FROM_FIXED_VALUES,
+    FROM_MAX_VALUE,
+    FROM_MIN_VALUE
+} = require('../_constants')['convert'];
 
 const allowedConversion = ["BTC"];
 
@@ -43,14 +52,14 @@ function USD_INR() {
     });
 }
 
-function checkPoolBalance(coin, req_value, mode) {
+function getPoolAvailability(coin) {
     return new Promise((resolve, reject) => {
         if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
         let q = "SELECT mode, SUM(quantity) AS coin_val, SUM(amount) AS cash_val FROM (" +
             "(SELECT amount, coin, quantity, mode, r_status FROM DirectConvert) UNION " +
             "(SELECT amount, coin, quantity, mode, r_status FROM ConvertFund) " +
-            ") AS T1 WHERE T1.coin=? AND T1.r_status NOT IN (?) GROUP BY T1.mode"
+            ") AS T1 WHERE T1.coin=? AND T1.r_status NOT IN (?) GROUP BY T1.mode";
         DB.query(q, [coin, [pCode.STATUS_REJECTED]]).then(result => {
             let coin_net = 0, cash_net = 0;
             for (let r of result)
@@ -63,18 +72,59 @@ function checkPoolBalance(coin, req_value, mode) {
                 }
             BTC_INR().then(rate => {
                 coin_net = coin_net * rate;
-                let availability = -1;
-                if (mode == pCode.CONVERT_MODE_GET)
-                    availability = coin_net - cash_net * MIN_FUND;
-                else if (mode == pCode.CONVERT_MODE_PUT) {
-                    availability = cash_net - coin_net * MIN_FUND;
-                    req_value = req_value * rate; //convert to currency value
-                }
-                if (req_value > availability)
-                    reject(INVALID(eCode.INSUFFICIENT_FUND, `Insufficient convert! Availability: ${availability > 0 ? availability : 0}`));
-                else
-                    resolve(true);
+                let cash_availability = cash_net - coin_net * MIN_FUND,
+                    coin_availability = (coin_net - cash_net * MIN_FUND) / rate;
+                if (cash_availability < 0) cash_availability = 0;
+                if (coin_availability < 0) coin_availability = 0;
+                resolve({ cash: cash_availability, coin: coin_availability, rate })
             }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
+function checkPoolBalance(coin, req_value, mode) {
+    return new Promise((resolve, reject) => {
+        getPoolAvailability(coin).then(result => {
+            let availability = -1;
+            if (mode == pCode.CONVERT_MODE_GET) {
+                availability = result.coin;
+                req_value = req_value / result.rate; //convert to coin value
+            }
+            else if (mode == pCode.CONVERT_MODE_PUT) {
+                availability = result.cash;
+                req_value = req_value * result.rate; //convert to currency value
+            }
+            if (req_value > availability)
+                reject(INVALID(eCode.INSUFFICIENT_FUND, `Insufficient convert! Availability: ${availability > 0 ? availability : 0}`));
+            else
+                resolve(true);
+        }).catch(error => reject(error))
+    })
+}
+
+function getConvertValues() {
+    return new Promise((resolve, reject) => {
+        getPoolAvailability("BTC").then(avail => {
+            let result = {};
+            if (avail.coin > 0) {
+                let coin_availability = avail.coin * avail.rate; //convert to currency value
+                if (Array.isArray(TO_FIXED_VALUES) && TO_FIXED_VALUES.length)
+                    result[pCode.CONVERT_MODE_GET] = TO_FIXED_VALUES.filter(a => a < coin_availability);
+                else if (!TO_MIN_VALUE || TO_MIN_VALUE <= coin_availability) {
+                    result[pCode.CONVERT_MODE_GET] = { min: 0 };
+                    result[pCode.CONVERT_MODE_GET].max = (!TO_MAX_VALUE || TO_MIN_VALUE >= coin_availability) ? coin_availability : TO_MAX_VALUE;
+                }
+            }
+            if (avail.cash > 0) {
+                let cash_availability = avail.cash / avail.rate; //convert to coin value
+                if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length)
+                    result[pCode.CONVERT_MODE_GET] = FROM_FIXED_VALUES.filter(a => a < cash_availability);
+                else if (!FROM_MIN_VALUE || FROM_MIN_VALUE <= cash_availability) {
+                    result[pCode.CONVERT_MODE_GET] = { min: 0 };
+                    result[pCode.CONVERT_MODE_GET].max = (!FROM_MAX_VALUE || FROM_MIN_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
+                }
+            }
+            resolve(result)
         }).catch(error => reject(error))
     })
 }
@@ -84,6 +134,11 @@ function convertToCoin(floID, txid, coin, amount) {
         if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
         else if (typeof amount !== "number" || amount <= 0)
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
+        else if (Array.isArray(TO_FIXED_VALUES) && TO_FIXED_VALUES.length) {
+            if (!TO_FIXED_VALUES.includes(amount))
+                return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
+        } else if (TO_MIN_VALUE && TO_MIN_VALUE > amount || TO_MAX_VALUE && TO_MAX_VALUE < amount)
             return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
         DB.query("SELECT r_status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, pCode.CONVERT_MODE_GET]).then(result => {
             if (result.length)
@@ -95,7 +150,7 @@ function convertToCoin(floID, txid, coin, amount) {
             }).catch(error => {
                 if (error instanceof INVALID && error.ecode === eCode.INSUFFICIENT_FUND)
                     DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, pCode.STATUS_REJECTED]]).then(result => {
-                        DB.query("INSERT INTO RefundTransact(floID, in_txid, asset_type, asset, r_status) VALUES (?)", [[floID, txid, pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING]])
+                        DB.query("INSERT INTO RefundConvert(floID, in_txid, asset_type, asset, r_status) VALUES (?)", [[floID, txid, pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING]])
                             .then(_ => null).catch(error => console.error(error));
                     }).catch(error => console.error(error))
                 reject(error);
@@ -109,6 +164,11 @@ function convertFromCoin(floID, txid, tx_hex, coin, quantity) {
         if (!allowedConversion.includes(coin))
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
         else if (typeof quantity !== "number" || quantity <= 0)
+            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
+        else if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length) {
+            if (!FROM_FIXED_VALUES.includes(quantity))
+                return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
+        } else if (FROM_MIN_VALUE && FROM_MIN_VALUE > quantity || FROM_MAX_VALUE && FROM_MAX_VALUE < quantity)
             return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
         else if (btcOperator.transactionID(tx_hex) !== txid)
             return reject(INVALID(eCode.INVALID_TX_ID, `txid ${txid} doesnt match the tx-hex`));
@@ -209,6 +269,7 @@ module.exports = {
         USD_INR,
         BTC_INR
     },
+    getConvertValues,
     convertToCoin,
     convertFromCoin,
     depositFund: {

@@ -33,7 +33,13 @@ module.exports = {
         REC_HISTORY_INTERVAL: 1 * 60 * 60 * 1000, //1 hr
     },
     convert: {
-        MIN_FUND: 0.3 // 30%
+        MIN_FUND: 0.3, // 30%
+        TO_FIXED_VALUES: [250, 500],
+        TO_MIN_VALUE: 1000,
+        TO_MAX_VALUE: 10000,
+        FROM_FIXED_VALUES: [0.01],
+        FROM_MIN_VALUE: 0.0001,
+        FROM_MAX_VALUE: 10000,
     },
     backup: {
         HASH_N_ROW: 100,
