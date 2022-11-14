@@ -600,6 +600,26 @@
         CONVERT_MODE_PUT: 0,
     }
 
+    const serviceList = exchangeAPI.serviceList = {
+        EXCHANGE: "exchange",
+        CONVERT: "convert",
+        BLOCKCHAIN_BOND: "blockchain-bond",
+        BOBS_FUND: "bobs-fund"
+    }
+
+    exchangeAPI.getSink = function (service = serviceList.EXCHANGE) {
+        return new Promise((resolve, reject) => {
+            if (!(service in serviceList))
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'service required', errorCode.INVALID_TYPE));
+            fetch_api('/get-sink?service=' + service)
+                .then(result => {
+                    responseParse(result, false)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error));
+        })
+    }
+
     exchangeAPI.getAccount = function (floID, proxySecret) {
         return new Promise((resolve, reject) => {
             let request = {
@@ -1238,6 +1258,17 @@
                     .then(result => resolve(result))
                     .catch(error => reject(error))
             }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.getConvertValues = function () {
+        return new Promise((resolve, reject) => {
+            fetch_api('/get-convert-values')
+                .then(result => {
+                    responseParse(result)
+                        .then(result => resolve(result))
+                        .catch(error => reject(error))
+                }).catch(error => reject(error));
         })
     }
 

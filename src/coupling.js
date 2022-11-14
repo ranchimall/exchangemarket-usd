@@ -248,6 +248,5 @@ function auditBalance(sellerID, buyerID, asset) {
 module.exports = {
     initiate: startCouplingForAsset,
     stopAll: stopAllInstance,
-    updateBalance,
-    price
+    updateBalance
 }

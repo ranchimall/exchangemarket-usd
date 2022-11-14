@@ -76,6 +76,7 @@ module.exports = function App(secret) {
     app.get('/rate-history', Request.GetRateHistory);
     app.get('/get-balance', Request.GetBalance);
     app.get('/get-transaction', Request.GetTransaction);
+    app.get('/get-sink', Request.GetSink);
 
     //get account details
     app.post('/account', Request.Account);
@@ -88,6 +89,7 @@ module.exports = function App(secret) {
     app.post('/get-transact', Request.GetUserTransacts);
 
     //convert from or to coin
+    app.get('/get-convert-values', Request.GetConvertValues);
     app.post('/convert-to', Request.ConvertTo);
     app.post('/convert-from', Request.ConvertFrom);
     app.post('/deposit-convert-coin-fund', Request.DepositConvertCoinFund);
@@ -125,14 +127,6 @@ module.exports = function App(secret) {
 
     Object.defineProperty(self, "assetList", {
         set: (assets) => Request.assetList = assets
-    });
-
-    Object.defineProperty(self, "chests", {
-        set: (chests) => Request.chests = chests
-    });
-
-    Object.defineProperty(self, "collectAndCall", {
-        set: (fn) => Request.collectAndCall = fn
     });
 
     //Refresh data (from blockchain)

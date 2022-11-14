@@ -5,6 +5,8 @@ const market = require("./market");
 const conversion = require('./services/conversion');
 const blockchain_bonds = require("./services/bonds");
 const bobs_fund = require("./services/bobs-fund");
+const background = require("./background");
+const keys = require("./keys");
 
 const {
     SIGN_EXPIRE_TIME,
@@ -12,6 +14,7 @@ const {
 } = require("./_constants")["request"];
 
 const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
+const serviceList = require('../docs/scripts/floExchangeAPI').serviceList;
 
 var trustedIDs, secret; //containers for trusted IDs and secret
 
@@ -132,7 +135,6 @@ function Account(req, res) {
         timestamp: data.timestamp
     }, data.sign, data.floID, data.pubKey).then(req_str => {
         market.getAccountDetails(data.floID).then(result => {
-            result.sinkID = market.chests.pick;
             if (trustedIDs.includes(data.floID))
                 result.subAdmin = true;
             res.send(result);
@@ -493,6 +495,43 @@ function ListTradeTransactions(req, res) {
     }
 }
 
+function GetConvertValues(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
+    else conversion.getConvertValues()
+        .then(result => res.send(result))
+        .catch(error => {
+            if (error instanceof INVALID)
+                res.status(INVALID.e_code).send(error.toString());
+            else {
+                console.error(error);
+                res.status(INTERNAL.e_code).send(INTERNAL.str("Unable to process! Try again later!"));
+            }
+        });
+}
+
+function GetSink(req, res) {
+    if (!serving)
+        res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
+    else {
+        let service = req.query.service;
+        if (!service)
+            res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Missing service parameter"));
+        else if (!(service in serviceList))
+            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TYPE, "Invalid service parameter"));
+        else {
+            let group;
+            switch (service) {
+                case serviceList[EXCHANGE]: group = keys.sink_groups.EXCHANGE; break;
+                case serviceList[CONVERT]: group = keys.sink_groups.CONVERT; break;
+                case serviceList[BLOCKCHAIN_BOND]: group = keys.sink_groups.BLOCKCHAIN_BONDS; break;
+                case serviceList[BOBS_FUND]: group = keys.sink_groups.BOBS_FUND; break;
+            }
+            res.send(keys.sink_chest.active_pick(group));
+        }
+    }
+}
+
 function GetRates(req, res) {
     if (!serving)
         res.status(INVALID.e_code).send(INCORRECT_SERVER_ERROR.toString());
@@ -590,6 +629,7 @@ module.exports = {
     GetRateHistory,
     GetTransaction,
     GetBalance,
+    GetSink,
     Account,
     DepositFLO,
     WithdrawFLO,
@@ -600,6 +640,7 @@ module.exports = {
     RemoveUserTag,
     AddDistributor,
     RemoveDistributor,
+    GetConvertValues,
     ConvertTo,
     ConvertFrom,
     DepositConvertCoinFund,
@@ -614,12 +655,6 @@ module.exports = {
     set assetList(assets) {
         market.assetList = assets;
     },
-    set chests(c) {
-        market.chests = c;
-    },
-    set collectAndCall(fn) {
-        market.collectAndCall = fn;
-    },
     set secret(s) {
         secret = s;
     },
@@ -629,10 +664,10 @@ module.exports = {
     },
     pause() {
         serving = false;
-        market.periodicProcess.stop();
+        background.periodicProcess.stop();
     },
     resume() {
         serving = true;
-        market.periodicProcess.start();
+        background.periodicProcess.start();
     }
 };
