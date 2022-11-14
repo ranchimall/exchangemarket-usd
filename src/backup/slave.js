@@ -1,5 +1,6 @@
 'use strict';
 
+const keys = require("../keys");
 const DB = require("../database");
 
 const {
@@ -21,18 +22,23 @@ function startSlaveProcess(ws, init) {
     ws.on('message', processDataFromMaster);
     masterWS = ws;
     let sinks_stored = [];
-    DB.query("SELECT floID FROM sinkShares").then(result => {
-        sinks_stored = result.map(r => r.floID);
+    Promise.all([keys.getStoredList(), keys.getDiscardedList()]).then(result => {
+        let stored_list = result[0],
+            discarded_list = result[1];
+        for (let g in stored_list)
+            for (let id in stored_list[g])
+                if (!(stored_list[g][id] in discarded_list))
+                    sinks_stored.push(id);
     }).catch(error => console.error(error)).finally(_ => {
         //inform master
         let message = {
-            floID: global.myFloID,
-            pubKey: global.myPubKey,
+            floID: keys.node_id,
+            pubKey: keys.node_pub,
             sinks: sinks_stored,
             req_time: Date.now(),
             type: "SLAVE_CONNECT"
         }
-        message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
+        message.sign = floCrypto.signData(message.type + "|" + message.req_time, keys.node_priv);
         ws.send(JSON.stringify(message));
         //start sync
         if (init)
@@ -58,14 +64,14 @@ function requestBackupSync(checksum_trigger, ws) {
     return new Promise((resolve, reject) => {
         DB.query('SELECT MAX(u_time) as last_time FROM _backup').then(result => {
             let request = {
-                floID: global.myFloID,
-                pubKey: global.myPubKey,
+                floID: keys.node_id,
+                pubKey: keys.node_pub,
                 type: "BACKUP_SYNC",
                 last_time: result[0].last_time,
                 checksum: checksum_trigger,
                 req_time: Date.now()
             };
-            request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+            request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
             ws.send(JSON.stringify(request));
             resolve(request);
         }).catch(error => reject(error))
@@ -134,10 +140,10 @@ function processDataFromMaster(message) {
             processBackupData(message);
         else switch (message.command) {
             case "SINK_SHARE":
-                storeSinkShare(message.sinkID, message.keyShare);
+                storeSinkShare(message.group, message.sinkID, message.share, message.ref);
                 break;
             case "SEND_SHARE":
-                sendSinkShare(message.sinkID, message.pubKey);
+                sendSinkShare(message.group, message.sinkID, message.pubKey);
                 break;
             case "REQUEST_ERROR":
                 console.log(message.error);
@@ -150,30 +156,26 @@ function processDataFromMaster(message) {
     }
 }
 
-function storeSinkShare(sinkID, keyShare, decrypt = true) {
-    if (decrypt)
-        keyShare = floCrypto.decryptData(keyShare, global.myPrivKey)
-    let encryptedShare = Crypto.AES.encrypt(keyShare, global.myPrivKey);
-    console.debug(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
-    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?) ON DUPLICATE KEY UPDATE share=?", [[sinkID, encryptedShare], encryptedShare])
+function storeSinkShare(group, sinkID, share, ref) {
+    share = floCrypto.decryptData(share, keys.node_priv);
+    keys.addShare(group, sinkID, ref, share)
         .then(_ => null).catch(error => console.error(error));
 }
 
-function sendSinkShare(sinkID, pubKey) {
-    DB.query("SELECT share FROM sinkShares WHERE floID=?", [sinkID]).then(result => {
-        if (!result.length)
-            return console.warn(`key-shares for ${sinkID} not found in database!`);
-        let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
-        let response = {
-            type: "SINK_SHARE",
-            sinkID: sinkID,
-            share: floCrypto.encryptData(share, pubKey),
-            floID: global.myFloID,
-            pubKey: global.myPubKey,
-            req_time: Date.now()
-        }
-        response.sign = floCrypto.signData(response.type + "|" + response.req_time, global.myPrivKey); //TODO: strengthen signature
-        masterWS.send(JSON.stringify(response));
+function sendSinkShare(group, sinkID, pubKey) {
+    keys.getShares(group, sinkID).then(({ ref, shares }) => {
+        shares.forEach(s => {
+            let response = {
+                type: "SINK_SHARE",
+                sinkID, ref,
+                share: floCrypto.encryptData(s, pubKey),
+                floID: keys.node_id,
+                pubKey: keys.node_pub,
+                req_time: Date.now()
+            }
+            response.sign = floCrypto.signData(response.type + "|" + response.req_time, keys.node_priv); //TODO: strengthen signature
+            masterWS.send(JSON.stringify(response));
+        })
     }).catch(error => console.error(error));
 }
 
@@ -356,13 +358,13 @@ function requestHash(tables) {
     //TODO: resync only necessary data (instead of entire table)
     let self = requestInstance;
     let request = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
+        floID: keys.node_id,
+        pubKey: keys.node_pub,
         type: "HASH_SYNC",
         tables: tables,
         req_time: Date.now()
     };
-    request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+    request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
     self.ws.send(JSON.stringify(request));
     self.request = request;
     self.checksum = null;
@@ -411,13 +413,13 @@ function verifyHash(hashes) {
 
 function requestTableChunks(tables, ws) {
     let request = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
+        floID: keys.node_id,
+        pubKey: keys.node_pub,
         type: "RE_SYNC",
         tables: tables,
         req_time: Date.now()
     };
-    request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+    request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
     ws.send(JSON.stringify(request));
 }
 
@@ -427,6 +429,5 @@ module.exports = {
     },
     start: startSlaveProcess,
     stop: stopSlaveProcess,
-    storeShare: storeSinkShare,
     syncRequest: ws => requestInstance.open(ws)
 }

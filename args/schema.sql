@@ -285,7 +285,7 @@ CREATE TABLE DirectConvert(
     PRIMARY KEY(id)
 );
 
-CREATE TABLE RefundTransact(
+CREATE TABLE RefundConvert(
     id INT NOT NULL AUTO_INCREMENT,
     floID CHAR(34) NOT NULL,
     asset_type TINYINT NOT NULL,
@@ -317,11 +317,26 @@ CREATE table _backupCache(
 );
 
 CREATE TABLE sinkShares(
-    floID CHAR(34) NOT NULL,
+    num INT NOT NULL AUTO_INCREMENT,
     share TEXT,
     time_stored TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(num)
+);
+
+CREATE TABLE discardedSinks(
+    id INT AUTO_INCREMENT,
+    floID CHAR(34) NOT NULL,
+    discard_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY(id),
     PRIMARY KEY(floID)
 );
+
+CREATE TRIGGER discardedSinks_I AFTER INSERT ON discardedSinks
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('discardedSinks', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
+CREATE TRIGGER discardedSinks_U AFTER UPDATE ON discardedSinks
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('discardedSinks', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
+CREATE TRIGGER discardedSinks_D AFTER DELETE ON discardedSinks
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('discardedSinks', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER RequestLog_I AFTER INSERT ON RequestLog
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RequestLog', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
@@ -400,12 +415,12 @@ FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', NEW.id) O
 CREATE TRIGGER DirectConvert_D AFTER DELETE ON DirectConvert
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('DirectConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
-CREATE TRIGGER RefundTransact_I AFTER INSERT ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
-CREATE TRIGGER RefundTransact_U AFTER UPDATE ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
-CREATE TRIGGER RefundTransact_D AFTER DELETE ON RefundTransact
-FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundTransact', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
+CREATE TRIGGER RefundConvert_I AFTER INSERT ON RefundConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
+CREATE TRIGGER RefundConvert_U AFTER UPDATE ON RefundConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundConvert', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;
+CREATE TRIGGER RefundConvert_D AFTER DELETE ON RefundConvert
+FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('RefundConvert', OLD.id) ON DUPLICATE KEY UPDATE mode=NULL, u_time=DEFAULT;
 
 CREATE TRIGGER UserTag_I AFTER INSERT ON UserTag
 FOR EACH ROW INSERT INTO _backup (t_name, id) VALUES ('UserTag', NEW.id) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=DEFAULT;

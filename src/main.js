@@ -13,6 +13,7 @@ global.btcOperator = require('../docs/scripts/btcOperator');
     floGlobals.application = application;
 })();
 
+const keys = require('./keys');
 const DB = require("./database");
 const App = require('./app');
 
@@ -178,17 +179,13 @@ module.exports = function startServer() {
             console.error('Password not entered!');
             process.exit(1);
         }
-        global.myPrivKey = Crypto.AES.decrypt(_tmp, _pass);
-        global.myPubKey = floCrypto.getPubKeyHex(global.myPrivKey);
-        global.myFloID = floCrypto.getFloID(global.myPubKey);
-        if (!global.myFloID || !global.myPubKey || !global.myPrivKey)
-            throw "Invalid Keys";
+        keys.node_priv = Crypto.AES.decrypt(_tmp, _pass);
     } catch (error) {
         console.error('Unable to load private key!');
         process.exit(1);
     }
 
-    console.log("Logged in as", global.myFloID);
+    console.log("Logged in as", keys.node_id);
 
     DB.connect(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(result => {
         app = new App(config['secret']);

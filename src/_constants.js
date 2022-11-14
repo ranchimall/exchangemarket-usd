@@ -6,10 +6,17 @@ module.exports = {
         SIGN_EXPIRE_TIME: 5 * 60 * 1000, //5 mins
         MAX_SESSION_TIMEOUT: 30 * 24 * 60 * 60 * 1000, //30 days
     },
-    market: {
+    background: {
         PERIOD_INTERVAL: 5 * 60 * 1000, //5 min,
         WAIT_TIME: 2 * 60 * 1000, //2 mins,
         REQUEST_TIMEOUT: 24 * 60 * 60 * 1000, //1 day
+    },
+    keys: {
+        SHARES_PER_NODE: 8,
+        SHARE_THRESHOLD: 50 / 100, //50%
+        DISCARD_COOLDOWN: 24 * 60 * 60 * 1000, //1 day
+    },
+    market: {
         LAUNCH_SELLER_TAG: "launch-seller",
         MAXIMUM_LAUNCH_SELL_CHIPS: 100000,
         TRADE_HASH_PREFIX: "z1",
@@ -29,7 +36,6 @@ module.exports = {
         MIN_FUND: 0.3 // 30%
     },
     backup: {
-        SHARE_THRESHOLD: 50 / 100, //50%
         HASH_N_ROW: 100,
         BACKUP_INTERVAL: 5 * 60 * 1000, //5 min
         BACKUP_SYNC_TIMEOUT: 10 * 60 * 1000, //10 mins

@@ -1,14 +1,12 @@
 'use strict';
 
 const coupling = require('./coupling');
+const price = require("./price");
 const background = require('./background');
 const DB = require("./database");
-
-const blockchain = background.blockchain;
+const blockchain = require('./blockchain');
 
 const {
-    PERIOD_INTERVAL,
-    WAIT_TIME,
     TRADE_HASH_PREFIX,
     TRANSFER_HASH_PREFIX
 } = require('./_constants')["market"];
@@ -41,7 +39,7 @@ function getRateHistory(asset, duration) {
         if (!asset || !assetList.includes(asset))
             reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid asset(${asset})`));
         else
-            coupling.price.getHistory(asset, duration)
+            price.getHistory(asset, duration)
                 .then(result => resolve(result))
                 .catch(error => reject(error))
     })
@@ -469,58 +467,14 @@ function checkDistributor(floID, asset) {
     })
 }
 
-//Periodic Process
-
-function periodicProcess_start() {
-    periodicProcess_stop();
-    periodicProcess();
-    assetList.forEach(asset => coupling.initiate(asset, true));
-    coupling.price.storeHistory.start();
-    periodicProcess.instance = setInterval(periodicProcess, PERIOD_INTERVAL);
-}
-
-function periodicProcess_stop() {
-    if (periodicProcess.instance !== undefined) {
-        clearInterval(periodicProcess.instance);
-        delete periodicProcess.instance;
-    }
-    coupling.stopAll();
-    coupling.price.storeHistory.stop();
-};
-
-var lastSyncBlockHeight = 0;
-
-function periodicProcess() {
-    if (periodicProcess.timeout !== undefined) {
-        clearTimeout(periodicProcess.timeout);
-        delete periodicProcess.timeout;
-    }
-    if (!blockchain.chests.list.length)
-        return periodicProcess.timeout = setTimeout(periodicProcess, WAIT_TIME);
-
-    floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
-        if (lastSyncBlockHeight < result.blocks[0].height) {
-            lastSyncBlockHeight = result.blocks[0].height;
-            background.process();
-            console.log("Last Block :", lastSyncBlockHeight);
-        }
-    }).catch(error => console.error(error));
-}
-
 module.exports = {
     login,
     logout,
     get rates() {
-        return coupling.price.currentRates;
+        return price.currentRates;
     },
     get priceCountDown() {
-        return coupling.price.lastTimes;
-    },
-    get chests() {
-        return blockchain.chests;
-    },
-    set chests(c) {
-        blockchain.chests = c;
+        return price.lastTimes;
     },
     addBuyOrder,
     addSellOrder,
@@ -539,18 +493,11 @@ module.exports = {
     removeTag,
     addDistributor,
     removeDistributor,
-    periodicProcess: {
-        start: periodicProcess_start,
-        stop: periodicProcess_stop
-    },
     set assetList(assets) {
         assetList = assets;
         background.assetList = assets;
     },
     get assetList() {
         return assetList
-    },
-    set collectAndCall(fn) {
-        blockchain.collectAndCall = fn;
-    },
+    }
 };

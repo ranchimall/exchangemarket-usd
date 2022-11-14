@@ -18,7 +18,7 @@ TRUNCATE CloseBondTransact;
 TRUNCATE CloseFundTransact;
 TRUNCATE ConvertFund;
 TRUNCATE DirectConvert;
-TRUNCATE RefundTransact;
+TRUNCATE RefundConvert;
 
 /* Blockchain data */
 TRUNCATE LastTx;

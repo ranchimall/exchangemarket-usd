@@ -1,17 +1,25 @@
 'use strict';
 
 const pCode = require('../docs/scripts/floExchangeAPI').processCode;
+const { collectAndCall } = require('./backup/head');
+const keys = require('./keys');
 const DB = require("./database");
-
-var collectAndCall; //container for collectAndCall function from backup module
-var chests; //container for blockchain ids (where assets are stored)
 
 const TYPE_VAULT = "VAULT",
     TYPE_CONVERT = "CONVERT",
     TYPE_CONVERT_POOL = "CONVERT_POOL",
-    TYPE_REFUND = "REFUND",
-    TYPE_BOND = "BOND",
-    TYPE_FUND = "BOB-FUND";
+    TYPE_CONVERT_REFUND = "REFUND",
+    TYPE_BLOCKCHAIN_BOND = "BOND",
+    TYPE_BOBS_FUND = "BOB-FUND";
+
+const SINK_GROUP = {
+    [TYPE_VAULT]: keys.sink_groups.EXCHANGE,
+    [TYPE_CONVERT]: keys.sink_groups.CONVERT,
+    [TYPE_CONVERT_POOL]: keys.sink_groups.CONVERT,
+    [TYPE_CONVERT_REFUND]: keys.sink_groups.CONVERT,
+    [TYPE_BLOCKCHAIN_BOND]: keys.sink_groups.BLOCKCHAIN_BONDS,
+    [TYPE_BOBS_FUND]: keys.sink_groups.BOBS_FUND
+}
 
 const balance_locked = {},
     balance_cache = {},
@@ -19,9 +27,9 @@ const balance_locked = {},
         [TYPE_VAULT]: {},
         [TYPE_CONVERT]: {},
         [TYPE_CONVERT_POOL]: {},
-        [TYPE_REFUND]: {},
-        [TYPE_BOND]: {},
-        [TYPE_FUND]: {}
+        [TYPE_CONVERT_REFUND]: {},
+        [TYPE_BLOCKCHAIN_BOND]: {},
+        [TYPE_BOBS_FUND]: {}
     };
 
 function getBalance(sinkID, asset) {
@@ -36,10 +44,10 @@ function getBalance(sinkID, asset) {
     }
 }
 
-function getSinkID(quantity, asset, sinkList = null) {
+function getSinkID(type, quantity, asset, sinkList = null) {
     return new Promise((resolve, reject) => {
         if (!sinkList)
-            sinkList = chests.list.map(s => [s, s in balance_cache ? balance_cache[s][asset] || 0 : 0]) //TODO: improve sorting
+            sinkList = keys.sink_chest.list(SINK_GROUP[type]).map(s => [s, s in balance_cache ? balance_cache[s][asset] || 0 : 0]) //TODO: improve sorting
                 .sort((a, b) => b[1] - a[1]).map(x => x[0]);
         if (!sinkList.length)
             return reject(`Insufficient balance in chests for asset(${asset})`);
@@ -51,12 +59,12 @@ function getSinkID(quantity, asset, sinkList = null) {
             if (balance > (quantity + (sinkID in balance_locked ? balance_locked[sinkID][asset] || 0 : 0)))
                 return resolve(sinkID);
             else
-                getSinkID(quantity, asset, sinkList)
+                getSinkID(type, quantity, asset, sinkList)
                     .then(result => resolve(result))
                     .catch(error => reject(error))
         }).catch(error => {
             console.error(error);
-            getSinkID(quantity, asset, sinkList)
+            getSinkID(type, quantity, asset, sinkList)
                 .then(result => resolve(result))
                 .catch(error => reject(error))
         });
@@ -67,9 +75,9 @@ const WITHDRAWAL_MESSAGE = {
     [TYPE_VAULT]: "(withdrawal from market)",
     [TYPE_CONVERT]: "(convert coin)",
     [TYPE_CONVERT_POOL]: "(convert fund)",
-    [TYPE_REFUND]: "(refund from market)",
-    [TYPE_BOND]: "(bond closing)",
-    [TYPE_FUND]: "(fund investment closing)"
+    [TYPE_CONVERT_REFUND]: "(refund from market)",
+    [TYPE_BLOCKCHAIN_BOND]: "(bond closing)",
+    [TYPE_BOBS_FUND]: "(fund investment closing)"
 }
 
 function sendTx(floID, asset, quantity, sinkID, sinkKey, message) {
@@ -89,14 +97,14 @@ const updateSyntax = {
     [TYPE_VAULT]: "UPDATE VaultTransactions SET r_status=?, txid=? WHERE id=?",
     [TYPE_CONVERT]: "UPDATE DirectConvert SET r_status=?, out_txid=? WHERE id=?",
     [TYPE_CONVERT_POOL]: "UPDATE ConvertFund SET r_status=?, txid=? WHERE id=?",
-    [TYPE_REFUND]: "UPDATE RefundTransact SET r_status=?, out_txid=? WHERE id=?",
-    [TYPE_BOND]: "UPDATE CloseBondTransact SET r_status=?, txid=? WHERE id=?",
-    [TYPE_FUND]: "UPDATE CloseFundTransact SET r_status=?, txid=? WHERE id=?"
+    [TYPE_CONVERT_REFUND]: "UPDATE RefundConvert SET r_status=?, out_txid=? WHERE id=?",
+    [TYPE_BLOCKCHAIN_BOND]: "UPDATE CloseBondTransact SET r_status=?, txid=? WHERE id=?",
+    [TYPE_BOBS_FUND]: "UPDATE CloseFundTransact SET r_status=?, txid=? WHERE id=?"
 };
 
 function sendAsset(floID, asset, quantity, type, id) {
     quantity = global.toStandardDecimal(quantity);
-    getSinkID(quantity, asset).then(sinkID => {
+    getSinkID(type, quantity, asset).then(sinkID => {
         let callback = (sinkKey) => {
             //Send asset to user via API
             sendTx(floID, asset, quantity, sinkID, sinkKey, WITHDRAWAL_MESSAGE[type]).then(txid => {
@@ -110,7 +118,7 @@ function sendAsset(floID, asset, quantity, type, id) {
                 balance_locked[sinkID][asset] -= quantity;
             });
         }
-        collectAndCall(sinkID, callback);
+        collectAndCall(sinkID, callback); //TODO: add timeout to prevent infinite wait
         callbackCollection[type][id] = callback;
         if (!(sinkID in balance_locked))
             balance_locked[sinkID] = {};
@@ -165,39 +173,30 @@ function convertFundWithdraw_retry(asset, amount, id) {
 }
 
 function bondTransact_retry(floID, amount, btc_rate, usd_rate, id) {
-    if (id in callbackCollection[TYPE_BOND])
+    if (id in callbackCollection[TYPE_BLOCKCHAIN_BOND])
         console.debug("A callback is already pending for this Bond closing");
-    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_BOND, id);
+    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_BLOCKCHAIN_BOND, id);
 }
 function fundTransact_retry(floID, amount, btc_rate, usd_rate, id) {
-    if (id in callbackCollection[TYPE_FUND])
+    if (id in callbackCollection[TYPE_BOBS_FUND])
         console.debug("A callback is already pending for this Fund investment closing");
-    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_FUND, id);
+    else sendAsset(floID, "BTC", amount / (btc_rate * usd_rate), TYPE_BOBS_FUND, id);
 }
 
-function refundTransact_init(floID, asset, amount, id) {
+function refundConvert_init(floID, asset, amount, id) {
     amount = global.toStandardDecimal(amount);
-    DB.query("UPDATE RefundTransact SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [amount, pCode.STATUS_PROCESSING, id])
-        .then(result => sendAsset(floID, asset, amount, TYPE_REFUND, id))
+    DB.query("UPDATE RefundConvert SET amount=?, r_status=?, locktime=DEFAULT WHERE id=?", [amount, pCode.STATUS_PROCESSING, id])
+        .then(result => sendAsset(floID, asset, amount, TYPE_CONVERT_REFUND, id))
         .catch(error => console.error(error))
 }
 
-function refundTransact_retry(floID, asset, amount, id) {
-    if (id in callbackCollection[TYPE_REFUND])
+function refundConvert_retry(floID, asset, amount, id) {
+    if (id in callbackCollection[TYPE_CONVERT_REFUND])
         console.debug("A callback is already pending for this Refund");
-    else sendAsset(floID, asset, amount, TYPE_REFUND, id);
+    else sendAsset(floID, asset, amount, TYPE_CONVERT_REFUND, id);
 }
 
 module.exports = {
-    set collectAndCall(fn) {
-        collectAndCall = fn;
-    },
-    get chests() {
-        return chests;
-    },
-    set chests(c) {
-        chests = c;
-    },
     withdrawAsset: {
         init: withdrawAsset_init,
         retry: withdrawAsset_retry
@@ -219,8 +218,8 @@ module.exports = {
     fundTransact: {
         retry: fundTransact_retry
     },
-    refundTransact: {
-        init: refundTransact_init,
-        retry: refundTransact_retry
+    refundConvert: {
+        init: refundConvert_init,
+        retry: refundConvert_retry
     }
 }
