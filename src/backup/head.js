@@ -218,11 +218,8 @@ function informLiveNodes(init) {
             } else if (!flag) {
                 console.log("Starting the exchange...");
                 //generate a sinkID for each group in starting list
-                keys.sink_groups.generate_list.forEach(group => {
-                    let newSink = floCrypto.generateNewID();
-                    console.debug("Generated sink:", group, newSink.floID);
-                    sendSharesToNodes(newSink.floID, group, generateShares(newSink.privKey));
-                })
+                keys.sink_groups.initial_list.forEach(group =>
+                    generateSink(group).then(_ => null).catch(e => console.error(e)));
             }
         }).catch(error => console.error(error));
     });
@@ -274,6 +271,63 @@ function slaveConnect(floID, pubKey, ws, sinks) {
                     .catch(error => console.error(error))
         }
     }
+}
+
+const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
+
+function generateSink(group) {
+    return new Promise((resolve, reject) => {
+        if (!keys.sink_groups.generate_list.includes(group))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid Group ${group}`));
+        try {
+            let newSink = floCrypto.generateNewID();
+            console.debug("Generated sink:", group, newSink.floID);
+            sendSharesToNodes(newSink.floID, group, generateShares(newSink.privKey));
+            resolve(`Generated ${newSink.floID} (${group})`);
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
+
+function reshareSink(id) {
+    return new Promise((resolve, reject) => {
+        if (!floCrypto.validateAddr(data.id))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
+        else {
+            let group = keys.sink_chest.find_group(id);
+            if (!group)
+                return reject(INVALID(eCode.NOT_FOUND, `ID ${id} not found`));
+            else keys.checkIfDiscarded(id).then(result => {
+                if (result)
+                    return reject(INVALID(eCode.NOT_FOUND, `ID is discarded`));
+                try {
+                    reconstructShares(group, id);
+                    resolve(`Resharing ${id} (${group})`);
+                } catch (error) {
+                    reject(error);
+                }
+            }).catch(error => reject(error))
+        }
+
+    })
+}
+
+function discardSink(id) {
+    return new Promise((resolve, reject) => {
+        if (!floCrypto.validateAddr(data.id))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
+        else if (!keys.sink_chest.find_group(id))
+            return reject(INVALID(eCode.NOT_FOUND, `ID ${id} not found`));
+        else keys.checkIfDiscarded(id).then(result => {
+            if (result)
+                return reject(INVALID(eCode.DUPLICATE_ENTRY, `ID already discarded`));
+            keys.discardSink(id).then(result => {
+                console.debug("Discarded sink:", id);
+                resolve(result);
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
 }
 
 function checkForDiscardedSinks() {
@@ -401,6 +455,11 @@ function initProcess(app) {
 module.exports = {
     init: initProcess,
     collectAndCall,
+    sink: {
+        generate: generateSink,
+        reshare: reshareSink,
+        discard: discardSink
+    },
     set nodeList(list) {
         nodeURL = list;
         nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));

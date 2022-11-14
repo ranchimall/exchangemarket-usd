@@ -519,6 +519,7 @@
         DUPLICATE_SIGNATURE: '017',
         SESSION_INVALID: '018',
         SESSION_EXPIRED: '019',
+        INVALID_VALUE: '020',
         INVALID_TOKEN_NAME: '021',
         INVALID_NUMBER: '022',
         INVALID_TYPE: '023',
@@ -610,7 +611,7 @@
     exchangeAPI.getSink = function (service = serviceList.EXCHANGE) {
         return new Promise((resolve, reject) => {
             if (!(service in serviceList))
-                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'service required', errorCode.INVALID_TYPE));
+                return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, 'service required', errorCode.INVALID_VALUE));
             fetch_api('/get-sink?service=' + service)
                 .then(result => {
                     responseParse(result, false)
@@ -1555,6 +1556,99 @@
                     .catch(error => reject(error))
             }).catch(error => reject(error))
         })
+    }
+
+    exchangeAPI.generateSink = function (group, floID, privKey) {
+        if (!floCrypto.verifyPrivKey(privKey, floID))
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+        if (floID !== DEFAULT.marketID)
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+        let request = {
+            floID: floID,
+            group: group,
+            timestamp: Date.now()
+        };
+        request.pubKey = floCrypto.getPubKeyHex(privKey);
+        request.sign = signRequest({
+            type: "generate_sink",
+            group: group,
+            timestamp: request.timestamp
+        }, privKey);
+        console.debug(request);
+
+        fetch_api('/generate-sink', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        }).then(result => {
+            responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error))
+        }).catch(error => reject(error))
+    }
+
+    exchangeAPI.reshareSink = function (sinkID, floID, privKey) {
+        if (!floCrypto.verifyPrivKey(privKey, floID))
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+        if (floID !== DEFAULT.marketID)
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+        let request = {
+            floID: floID,
+            id: sinkID,
+            timestamp: Date.now()
+        };
+        request.pubKey = floCrypto.getPubKeyHex(privKey);
+        request.sign = signRequest({
+            type: "reshare_sink",
+            id: sinkID,
+            timestamp: request.timestamp
+        }, privKey);
+        console.debug(request);
+
+        fetch_api('/reshare-sink', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        }).then(result => {
+            responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error))
+        }).catch(error => reject(error))
+    }
+
+    exchangeAPI.discardSink = function (sinkID, floID, privKey) {
+        if (!floCrypto.verifyPrivKey(privKey, floID))
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Invalid Private Key", errorCode.INVALID_PRIVATE_KEY));
+        if (floID !== DEFAULT.marketID)
+            return reject(ExchangeError(ExchangeError.BAD_REQUEST_CODE, "Access Denied", errorCode.ACCESS_DENIED));
+        let request = {
+            floID: floID,
+            id: sinkID,
+            timestamp: Date.now()
+        };
+        request.pubKey = floCrypto.getPubKeyHex(privKey);
+        request.sign = signRequest({
+            type: "discard_sink",
+            id: sinkID,
+            timestamp: request.timestamp
+        }, privKey);
+        console.debug(request);
+
+        fetch_api('/discard-sink', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        }).then(result => {
+            responseParse(result, false)
+                .then(result => resolve(result))
+                .catch(error => reject(error))
+        }).catch(error => reject(error))
     }
 
     exchangeAPI.init = function refreshDataFromBlockchain() {

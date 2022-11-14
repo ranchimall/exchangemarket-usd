@@ -6,6 +6,7 @@ const conversion = require('./services/conversion');
 const blockchain_bonds = require("./services/bonds");
 const bobs_fund = require("./services/bobs-fund");
 const background = require("./background");
+const sink = require("./backup/head").sink;
 const keys = require("./keys");
 
 const {
@@ -307,6 +308,47 @@ function RemoveDistributor(req, res) {
     }, () => market.removeDistributor(data.distributor, data.asset));
 }
 
+function GenerateSink(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Generate Sink", {
+        type: "generate_sink",
+        group: data.group,
+        timestamp: data.timestamp
+    }, () => sink.generate(group));
+}
+
+function ReshareSink(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else if (!floCrypto.validateAddr(data.id))
+        res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_VALUE, `Invalid ID ${data.id}`));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Reshare Sink", {
+        type: "reshare_sink",
+        id: data.id,
+        timestamp: data.timestamp
+    }, () => sink.reshare(id));
+}
+
+function DiscardSink(req, res) {
+    let data = req.body;
+    if (data.floID !== floGlobals.adminID)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else if (!data.pubKey)
+        res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Public key missing"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Discard Sink", {
+        type: "discard_sink",
+        id: data.id,
+        timestamp: data.timestamp
+    }, () => sink.discard(id));
+}
+
 function ConvertTo(req, res) {
     let data = req.body;
     processRequest(res, data.floID, data.pubKey, data.sign, "Conversion", {
@@ -518,7 +560,7 @@ function GetSink(req, res) {
         if (!service)
             res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Missing service parameter"));
         else if (!(service in serviceList))
-            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_TYPE, "Invalid service parameter"));
+            res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_VALUE, "Invalid service parameter"));
         else {
             let group;
             switch (service) {
@@ -640,6 +682,9 @@ module.exports = {
     RemoveUserTag,
     AddDistributor,
     RemoveDistributor,
+    GenerateSink,
+    ReshareSink,
+    DiscardSink,
     GetConvertValues,
     ConvertTo,
     ConvertFrom,

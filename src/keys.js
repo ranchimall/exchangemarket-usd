@@ -289,14 +289,25 @@ function checkIfDiscarded(id) {
     })
 }
 
+function discardSink(id) {
+    return new Promise((resolve, reject) => {
+        DB.query("INSERT INTO discardedSinks(floID) VALUE (?)", [id])
+            .then(result => resolve(`Discarded ${id}`))
+            .catch(error => reject(error))
+    })
+}
+
 //Sink groups and chest
 const sink_groups = {
     get EXCHANGE() { return "exchange" },
     get CONVERT() { return "convert" },
     get BLOCKCHAIN_BONDS() { return "blockchain_bonds" },
     get BOBS_FUND() { return "bobs_fund" },
-    get generate_list() { //list to generate when starting exchange
+    get initial_list() { //list to generate when starting exchange
         return [this.EXCHANGE, this.CONVERT]
+    },
+    get generate_list() { //list allowed to generate 
+        return [this.EXCHANGE, this.CONVERT, this.BLOCKCHAIN_BONDS, this.BOBS_FUND]
     }
 };
 
@@ -343,6 +354,14 @@ const sink_ids = {}, sink_chest = {
             i = floCrypto.randInt(0, ids.length);
         return ids[i];
     },
+    find_group(id) {
+        let group = null;
+        for (let g in sink_ids)
+            if (id in sink_ids[g]) {
+                group = g; break;
+            }
+        return group;
+    },
     get_all() {
         let ids = {};
         for (let g in sink_ids)
@@ -359,6 +378,7 @@ module.exports = {
     getStoredList,
     getDiscardedList,
     checkIfDiscarded,
+    discardSink,
     set node_priv(key) {
         _.node_priv = key;
     },

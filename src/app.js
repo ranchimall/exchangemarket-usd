@@ -88,6 +88,11 @@ module.exports = function App(secret) {
     app.post('/withdraw-token', Request.WithdrawToken);
     app.post('/get-transact', Request.GetUserTransacts);
 
+    //generate or discard sinks (admin only)
+    app.post('/generate-sink', Request.GenerateSink);
+    app.post('/reshare-sink', Request.DiscardSink);
+    app.post('/discard-sink', Request.DiscardSink);
+
     //convert from or to coin
     app.get('/get-convert-values', Request.GetConvertValues);
     app.post('/convert-to', Request.ConvertTo);
