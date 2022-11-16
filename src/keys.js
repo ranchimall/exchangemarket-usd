@@ -12,7 +12,11 @@ for (let arg of process.argv)
         break;
     }
 
-const { SHARES_PER_NODE, SHARE_THRESHOLD } = require("./_constants")["keys"];
+const {
+    SHARES_PER_NODE,
+    SHARE_THRESHOLD,
+    SHUFFLE_INTERVAL
+} = require("./_constants")["keys"];
 
 const PRIV_EKEY_MIN = 32,
     PRIV_EKEY_MAX = 48,
@@ -138,6 +142,7 @@ function initialize() {
             }
             if (cur_filename)
                 fs.unlink(path.join(_.index_dir, cur_filename + INDEX_FILE_EXT), err => err ? console.debug(err) : null);
+            shuffle.interval = setInterval(shuffle, SHUFFLE_INTERVAL);
             resolve("Key management initiated");
         })
     })
@@ -153,7 +158,7 @@ function shuffle() {
             let data_size = data.length;
             for (let file of files) {
                 let f_data, f_name = floCrypto.randString(INDEX_FILE_NAME_LENGTH);
-                if (file === cur_filename) {
+                if (file === cur_filename + INDEX_FILE_EXT) {
                     new_filename = f_name;
                     f_data = data;
                 } else {
@@ -162,14 +167,22 @@ function shuffle() {
                 }
                 f_data = Crypto.AES.encrypt(f_data, _.node_priv);
                 //rename and rewrite the file
-                fs.renameSync(path.join(_.args_dir, file + INDEX_FILE_EXT), path.join(_.index_dir, f_name + INDEX_FILE_EXT));
-                fs.writeFileSync(path.join(_.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
+                try {
+                    fs.renameSync(path.join(_.index_dir, file), path.join(_.index_dir, f_name + INDEX_FILE_EXT));
+                    fs.writeFileSync(path.join(_.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
+                } catch (error) {
+                    console.error(error)
+                }
             }
             //update prime file
             if (!new_filename)
-                throw Error("Index file has not been renamed");
+                return console.error("Index file has not been renamed");
             let en_filename = Crypto.AES.encrypt(new_filename, _.node_priv);
-            fs.writeFileSync(_.prime_file, en_filename, PRIME_FILE_TYPE);
+            try {
+                fs.writeFileSync(_.prime_file, en_filename, PRIME_FILE_TYPE);
+            } catch (error) {
+                console.error(error);
+            }
         })
     }).catch(error => console.error(error))
 }
@@ -379,7 +392,6 @@ const sink_ids = {}, sink_chest = {
         return ids[i];
     },
     active_pick(group) {
-        console.debug(sink_ids)
         let ids = this.active_list(group),
             i = floCrypto.randInt(0, ids.length - 1);
         return ids[i];

@@ -15,6 +15,7 @@ module.exports = {
         SHARES_PER_NODE: 8,
         SHARE_THRESHOLD: 50 / 100, //50%
         DISCARD_COOLDOWN: 24 * 60 * 60 * 1000, //1 day
+        SHUFFLE_INTERVAL: 12 * 60 * 60 * 1000, //12 hrs
     },
     market: {
         LAUNCH_SELLER_TAG: "launch-seller",
