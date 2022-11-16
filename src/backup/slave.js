@@ -21,14 +21,16 @@ function startSlaveProcess(ws, init) {
     //set masterWS
     ws.on('message', processDataFromMaster);
     masterWS = ws;
-    let sinks_stored = [];
+    let sinks_stored = {};
     Promise.all([keys.getStoredList(), keys.getDiscardedList()]).then(result => {
         let stored_list = result[0],
             discarded_list = result[1];
-        for (let g in stored_list)
-            for (let id in stored_list[g])
-                if (!(stored_list[g][id] in discarded_list))
-                    sinks_stored.push(id);
+        for (let group in stored_list) {
+            sinks_stored[group] = [];
+            for (let id of stored_list[group])
+                if (!(id in discarded_list))
+                    sinks_stored[group].push(id);
+        }
     }).catch(error => console.error(error)).finally(_ => {
         //inform master
         let message = {

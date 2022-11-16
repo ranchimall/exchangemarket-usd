@@ -55,7 +55,8 @@ function sendSharesToNodes(sinkID, group, shares) {
     let ref = Date.now();
     shares_pending[sinkID] = { shares, group, ref };
     if (keys.node_id in shares) {
-        shares.forEach(s => keys.addShare(group, sinkID, ref, s))
+        shares_pending[sinkID].shares[keys.node_id].forEach(s =>
+            keys.addShare(group, sinkID, ref, s).then(_ => null).catch(error => console.error(error)));
         delete shares_pending[sinkID].shares[keys.node_id];
     }
     for (let node in shares)
@@ -134,7 +135,7 @@ function collectShares(sinkID, ref, share) {
     if (_mode !== MASTER_MODE)
         return console.warn("Not serving as master");
     if (!(sinkID in shares_collected))
-        return console.error("Something is wrong! Slaves are sending sinkID thats not been collected");
+        return console.debug("Received shares for sink thats not been collected right now");
     if (shares_collected[sinkID].ref > ref)
         return console.debug("Received expired share");
     else if (shares_collected[sinkID].ref < ref) {
@@ -206,16 +207,19 @@ function informLiveNodes(init) {
                 console.warn(`Node(${nodes[i]}) is offline`);
         if (init && flag)
             syncRequest();
-        keys.getStoredList().then(result => {
-            if (Object.keys(result).length) {
+        keys.getStoredList().then(stored_list => {
+            if (Object.keys(stored_list).length) {
                 keys.getDiscardedList().then(discarded_list => {
-                    for (let group in result)
-                        result.group.forEach(id => {
+                    let cur_time = Date.now();
+                    for (let group in stored_list)
+                        stored_list[group].forEach(id => {
                             if (!(id in discarded_list))
-                                reconstructShares(group, id);
+                                reconstructShares(group, id)
+                            else if (cur_time - discarded_list[id] < DISCARD_COOLDOWN) //sinkID still in cooldown period
+                                keys.sink_chest.set_id(group, id, null);
                         });
                 }).catch(error => console.error(error))
-            } else if (!flag) {
+            } else if (init && !flag) {
                 console.log("Starting the exchange...");
                 //generate a sinkID for each group in starting list
                 keys.sink_groups.initial_list.forEach(group =>
@@ -248,7 +252,7 @@ function reconstructShares(group, sinkID) {
     collectAndCall(group, sinkID, sinkKey => sendSharesToNodes(sinkID, group, generateShares(sinkKey)));
 }
 
-function slaveConnect(floID, pubKey, ws, sinks) {
+function slaveConnect(floID, pubKey, ws, slave_sinks) {
     if (_mode !== MASTER_MODE)
         return console.warn("Not serving as master");
     ws.floID = floID;
@@ -263,17 +267,18 @@ function slaveConnect(floID, pubKey, ws, sinks) {
     for (let sinkID in shares_collected)
         requestShare(ws, shares_collected[sinkID].group, sinkID);
     //check if sinks in slaves are present
-    if (Array.isArray(sinks)) {
-        for (let sinkID of sinks) {
-            if (!keys.sink_chest.includes(shares_collected[sinkID].group, sinkID))
-                keys.checkIfDiscarded(sinkID)
-                    .then(result => result === false ? reconstructShares(shares_collected[sinkID].group, sinkID) : null)
-                    .catch(error => console.error(error))
-        }
+    if (slave_sinks instanceof Object) {
+        for (let group in slave_sinks)
+            for (let sinkID of slave_sinks[group]) {
+                if (!keys.sink_chest.includes(group, sinkID))
+                    keys.checkIfDiscarded(sinkID)
+                        .then(result => result === false ? reconstructShares(group, sinkID) : null)
+                        .catch(error => console.error(error))
+            }
     }
 }
 
-const eCode = require('../docs/scripts/floExchangeAPI').errorCode;
+const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 
 function generateSink(group) {
     return new Promise((resolve, reject) => {
@@ -292,7 +297,7 @@ function generateSink(group) {
 
 function reshareSink(id) {
     return new Promise((resolve, reject) => {
-        if (!floCrypto.validateAddr(data.id))
+        if (!floCrypto.validateAddr(id))
             return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
         else {
             let group = keys.sink_chest.find_group(id);
@@ -315,7 +320,7 @@ function reshareSink(id) {
 
 function discardSink(id) {
     return new Promise((resolve, reject) => {
-        if (!floCrypto.validateAddr(data.id))
+        if (!floCrypto.validateAddr(id))
             return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
         else if (!keys.sink_chest.find_group(id))
             return reject(INVALID(eCode.NOT_FOUND, `ID ${id} not found`));
@@ -341,8 +346,8 @@ function checkForDiscardedSinks() {
                     keys.sink_chest.rm_id(group, id);
                 else
                     keys.sink_chest.set_id(group, id, null);
-                if (sinkID in shares_collected && !discarded_sinks.includes(sinkID))
-                    discarded_sinks.push(sinkID);
+                if (id in shares_collected && !discarded_sinks.includes(id))
+                    discarded_sinks.push(id);
             }
         }).catch(error => console.debug(error)))
 }
