@@ -188,12 +188,15 @@ module.exports = function startServer() {
     console.log("Logged in as", keys.node_id);
 
     DB.connect(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(result => {
-        app = new App(config['secret']);
-        refreshData(true).then(_ => {
-            app.start(config['port']).then(result => {
-                console.log(result);
-                backup.init(app);
-                setInterval(refreshData, BLOCKCHAIN_REFRESH_INTERVAL)
+        keys.init().then(result => {
+            console.log(result);
+            app = new App(config['secret']);
+            refreshData(true).then(_ => {
+                app.start(config['port']).then(result => {
+                    console.log(result);
+                    backup.init(app);
+                    setInterval(refreshData, BLOCKCHAIN_REFRESH_INTERVAL)
+                }).catch(error => console.error(error))
             }).catch(error => console.error(error))
         }).catch(error => console.error(error))
     }).catch(error => console.error(error));

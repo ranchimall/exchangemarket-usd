@@ -237,9 +237,10 @@ function refreshBlockchainData(nodeList = []) {
                     }
                 });
                 Promise.allSettled(promises).then(results => {
-                    //console.debug(results.filter(r => r.status === "rejected"));
-                    if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0))
+                    if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0)) {
+                        console.debug(results.filter(r => r.status === "rejected"));
                         reject("Some fund data might not have been saved in database correctly");
+                    }
                     else
                         DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[bobsFund.config.adminID, result.totalTxs], result.totalTxs])
                             .then(_ => resolve(result.totalTxs))

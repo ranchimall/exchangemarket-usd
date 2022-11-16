@@ -114,16 +114,16 @@ function getConvertValues() {
                     result[pCode.CONVERT_MODE_GET] = { min: 0 };
                     result[pCode.CONVERT_MODE_GET].max = (!TO_MAX_VALUE || TO_MIN_VALUE >= coin_availability) ? coin_availability : TO_MAX_VALUE;
                 }
-            }
+            } else result[pCode.CONVERT_MODE_GET] = null;
             if (avail.cash > 0) {
                 let cash_availability = avail.cash / avail.rate; //convert to coin value
                 if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length)
-                    result[pCode.CONVERT_MODE_GET] = FROM_FIXED_VALUES.filter(a => a < cash_availability);
+                    result[pCode.CONVERT_MODE_PUT] = FROM_FIXED_VALUES.filter(a => a < cash_availability);
                 else if (!FROM_MIN_VALUE || FROM_MIN_VALUE <= cash_availability) {
-                    result[pCode.CONVERT_MODE_GET] = { min: 0 };
-                    result[pCode.CONVERT_MODE_GET].max = (!FROM_MAX_VALUE || FROM_MIN_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
+                    result[pCode.CONVERT_MODE_PUT] = { min: 0 };
+                    result[pCode.CONVERT_MODE_PUT].max = (!FROM_MAX_VALUE || FROM_MIN_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
                 }
-            }
+            } else result[pCode.CONVERT_MODE_PUT] = null;
             resolve(result)
         }).catch(error => reject(error))
     })

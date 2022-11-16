@@ -221,7 +221,7 @@ function verifyConvert() {
     //Set all timeout convert request to refund mode (thus, asset will be refund if tx gets confirmed later)
     let req_timeout = new Date(Date.now() - REQUEST_TIMEOUT),
         to_refund_sql = "INSERT INTO RefundConvert (floID, in_txid, asset_type, asset, r_status)" +
-            " SELECT floID, in_txid, ? AS asset_type, ? AS asset, r_status" +
+            " SELECT floID, in_txid, ? AS asset_type, ? AS asset, r_status FROM DirectConvert" +
             " WHERE r_status=? AND locktime<? AND mode=?";
     let txQueries = [];
     txQueries.push([to_refund_sql, [pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING, req_timeout, pCode.CONVERT_MODE_GET]]);

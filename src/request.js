@@ -318,11 +318,12 @@ function GenerateSink(req, res) {
         type: "generate_sink",
         group: data.group,
         timestamp: data.timestamp
-    }, () => sink.generate(group));
+    }, () => sink.generate(data.group));
 }
 
 function ReshareSink(req, res) {
     let data = req.body;
+    console.debug(data)
     if (data.floID !== floGlobals.adminID)
         res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
     else if (!data.pubKey)
@@ -333,7 +334,7 @@ function ReshareSink(req, res) {
         type: "reshare_sink",
         id: data.id,
         timestamp: data.timestamp
-    }, () => sink.reshare(id));
+    }, () => sink.reshare(data.id));
 }
 
 function DiscardSink(req, res) {
@@ -346,7 +347,7 @@ function DiscardSink(req, res) {
         type: "discard_sink",
         id: data.id,
         timestamp: data.timestamp
-    }, () => sink.discard(id));
+    }, () => sink.discard(data.id));
 }
 
 function ConvertTo(req, res) {
@@ -559,15 +560,15 @@ function GetSink(req, res) {
         let service = req.query.service;
         if (!service)
             res.status(INVALID.e_code).send(INVALID.str(eCode.MISSING_PARAMETER, "Missing service parameter"));
-        else if (!(service in serviceList))
+        else if (!(Object.values(serviceList).includes(service)))
             res.status(INVALID.e_code).send(INVALID.str(eCode.INVALID_VALUE, "Invalid service parameter"));
         else {
             let group;
             switch (service) {
-                case serviceList[EXCHANGE]: group = keys.sink_groups.EXCHANGE; break;
-                case serviceList[CONVERT]: group = keys.sink_groups.CONVERT; break;
-                case serviceList[BLOCKCHAIN_BOND]: group = keys.sink_groups.BLOCKCHAIN_BONDS; break;
-                case serviceList[BOBS_FUND]: group = keys.sink_groups.BOBS_FUND; break;
+                case serviceList.EXCHANGE: group = keys.sink_groups.EXCHANGE; break;
+                case serviceList.CONVERT: group = keys.sink_groups.CONVERT; break;
+                case serviceList.BLOCKCHAIN_BOND: group = keys.sink_groups.BLOCKCHAIN_BONDS; break;
+                case serviceList.BOBS_FUND: group = keys.sink_groups.BOBS_FUND; break;
             }
             res.send(keys.sink_chest.active_pick(group));
         }

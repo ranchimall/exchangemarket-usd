@@ -90,7 +90,7 @@ module.exports = function App(secret) {
 
     //generate or discard sinks (admin only)
     app.post('/generate-sink', Request.GenerateSink);
-    app.post('/reshare-sink', Request.DiscardSink);
+    app.post('/reshare-sink', Request.ReshareSink);
     app.post('/discard-sink', Request.DiscardSink);
 
     //convert from or to coin
