@@ -122,6 +122,6 @@ function configure() {
 }
 
 if (!module.parent)
-    configure().then(_ => null).catch(error => console.error(error));
+    configure().then(_ => null).catch(error => console.error(error)).finally(_ => process.exit(0));
 else
     module.exports = configure;

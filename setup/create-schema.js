@@ -40,6 +40,6 @@ function createSchema() {
 }
 
 if (!module.parent)
-    createSchema().then(_ => null).catch(_ => null);
+    createSchema().then(_ => null).catch(_ => null).finally(_ => process.exit(0));
 else
     module.exports = createSchema;

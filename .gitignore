@@ -3,6 +3,8 @@
 /args/config*.json
 /args/param.json
 /args/keys*.json
+/args/prime_index*.b
+/args/indexes*/
 /log.txt
 /bash_start*
 *test*

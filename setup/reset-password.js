@@ -89,6 +89,6 @@ function resetPassword() {
 }
 
 if (!module.parent)
-    resetPassword().then(_ => null).catch(error => console.error(error));
+    resetPassword().then(_ => null).catch(_ => null).finally(_ => process.exit(0));
 else
     module.exports = resetPassword;
