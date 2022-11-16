@@ -2,7 +2,15 @@
 
 const fs = require('fs');
 const path = require('path');
+const lockfile = require('proper-lockfile');
 const DB = require("./database");
+
+var _I = ""; //Instance support
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
 
 const { SHARES_PER_NODE, SHARE_THRESHOLD } = require("./_constants")["keys"];
 
@@ -10,15 +18,17 @@ const PRIV_EKEY_MIN = 32,
     PRIV_EKEY_MAX = 48,
     PRIME_FILE_TYPE = 'binary',
     INDEX_FILE_TYPE = 'utf-8',
-    INT_MIN = -2147483648,
-    INT_MAX = 2147483647,
+    UNSIGNED_INT_MIN = 0,
+    UNSIGNED_INT_MAX = 4294967295,
     INDEX_FILE_NAME_LENGTH = 16,
     INDEX_FILE_EXT = '.txt',
     MIN_DUMMY_FILES = 16,
     MAX_DUMMY_FILES = 24,
     MIN_DUMMY_SIZE_MUL = 0.5,
     MAX_DUMMY_SIZE_MUL = 1.5,
-    SIZE_FACTOR = 100;
+    SIZE_FACTOR = 100,
+    LOCK_RETRY_MIN_TIME = 1 * 1000,
+    LOCK_RETRY_MAX_TIME = 2 * 1000;
 
 var node_priv, e_key, node_id, node_pub; //containers for node-key wrapper
 const _ = {
@@ -36,9 +46,13 @@ const _ = {
         e_key = floCrypto.randString(n);
         node_priv = Crypto.AES.encrypt(key, e_key);
     },
-    args_dir: path.resolve(__dirname, '..', '..', 'args'),
-    index_dir: path.join(this.args_dir, 'indexes'),
-    prime_file: path.join(this.args_dir, 'prime_index.b'),
+    args_dir: path.resolve(__dirname, '..', 'args'),
+    get index_dir() {
+        return path.join(this.args_dir, `indexes${_I}`)
+    },
+    get prime_file() {
+        return path.join(this.args_dir, `prime_index${_I}.b`)
+    },
     get index_file() {
         try {
             let data = fs.readFileSync(this.prime_file, PRIME_FILE_TYPE),
@@ -78,6 +92,14 @@ function initialize() {
                     }
                 }
             }
+            try {
+                if (!fs.existsSync(_.index_dir)) {
+                    fs.mkdirSync(_.index_dir);
+                }
+            } catch (error) {
+                console.debug(error);
+                return reject("Index directory creation failed");
+            }
             try { //delete all old dummy files
                 let files = fs.readdirSync(_.index_dir);
                 for (const file of files)
@@ -115,7 +137,7 @@ function initialize() {
                 return reject("Update prime file failed");
             }
             if (cur_filename)
-                fs.unlink(path.join(_.index_dir, file), err => err ? console.debug(err) : null);
+                fs.unlink(path.join(_.index_dir, cur_filename + INDEX_FILE_EXT), err => err ? console.debug(err) : null);
             resolve("Key management initiated");
         })
     })
@@ -204,7 +226,7 @@ function getShares(group, id, ignoreDiscarded = true) {
 
 function storeShareAtRandom(share) {
     return new Promise((resolve, reject) => {
-        let rand = floCrypto.randInt(INT_MIN, INT_MAX);
+        let rand = floCrypto.randInt(UNSIGNED_INT_MIN, UNSIGNED_INT_MAX);
         DB.query("INSERT INTO sinkShares(num, share) VALUE (?)", [[rand, share]])
             .then(result => resolve(result.insertId)).catch(error => {
                 if (error.code === "ER_DUP_ENTRY")
@@ -222,26 +244,33 @@ function addShare(group, id, ref, share) {
         checkIfDiscarded(id).then(result => {
             if (result != false)
                 return reject("Trying to store share for discarded ID");
-            readIndexFile().then(data => {
-                if (!(group in data))
-                    data[group] = {};
-                if (!(id in data[group]))
-                    data[group][id] = [ref];
-                else if (ref < data[group][id][0])
-                    return reject("reference is lower than current");
-                else if (ref > data[group][id][0]) {
-                    let old_shares = data[group][id];
-                    data[group][id] = [ref];
-                    old_shares.shift();
-                    DB.query("DELETE FROM sinkShares WHERE num in (?", [old_shares])//delete old shares
-                        .then(_ => null).catch(error => console.error(error));
+            lockfile.lock(_.index_file, { retries: { forever: true, minTimeout: LOCK_RETRY_MIN_TIME, maxTimeout: LOCK_RETRY_MAX_TIME } }).then(release => {
+                const releaseAndReject = err => {
+                    release().then(_ => null).catch(error => console.error(error));
+                    reject(err);
                 }
-                let encrypted_share = Crypto.AES.encrypt(share, _.node_priv);
-                console.debug(ref, '|sinkID:', sinkID, '|EnShare:', encrypted_share);
-                storeShareAtRandom(encrypted_share).then(i => {
-                    data[group][id].push(i);
-                    writeIndexFile(data).then(_ => resolve(i)).catch(error => reject(error));
-                }).catch(error => reject(error))
+                readIndexFile().then(data => {
+                    if (!(group in data))
+                        data[group] = {};
+                    if (!(id in data[group]))
+                        data[group][id] = [ref];
+                    else if (ref < data[group][id][0])
+                        return reject("reference is lower than current");
+                    else if (ref > data[group][id][0]) {
+                        let old_shares = data[group][id];
+                        data[group][id] = [ref];
+                        old_shares.shift();
+                        DB.query("DELETE FROM sinkShares WHERE num in (?)", [old_shares])//delete old shares
+                            .then(_ => null).catch(error => console.error(error));
+                    }
+                    let encrypted_share = Crypto.AES.encrypt(share, _.node_priv);
+                    console.debug(ref, '|sinkID:', id, '|EnShare:', encrypted_share);
+                    storeShareAtRandom(encrypted_share).then(i => {
+                        data[group][id].push(i);
+                        writeIndexFile(data).then(_ => resolve(i)).catch(error => reject(error))
+                            .finally(_ => release().then(_ => null).catch(error => console.error(error)));
+                    }).catch(error => releaseAndReject(error))
+                }).catch(error => releaseAndReject(error))
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -266,7 +295,7 @@ function getStoredList(group = null) {
             } else {
                 let ids = {};
                 for (let group in data)
-                    ids[group] = Object.keys(data.group);
+                    ids[group] = Object.keys(data[group]);
                 resolve(ids);
             }
         }).catch(error => reject(error))
@@ -346,12 +375,13 @@ const sink_ids = {}, sink_chest = {
     },
     pick(group) {
         let ids = this.list(group),
-            i = floCrypto.randInt(0, ids.length);
+            i = floCrypto.randInt(0, ids.length - 1);
         return ids[i];
     },
     active_pick(group) {
+        console.debug(sink_ids)
         let ids = this.active_list(group),
-            i = floCrypto.randInt(0, ids.length);
+            i = floCrypto.randInt(0, ids.length - 1);
         return ids[i];
     },
     find_group(id) {
@@ -388,7 +418,7 @@ module.exports = {
     get node_id() {
         return node_id;
     },
-    get node_id() {
+    get node_pub() {
         return node_pub;
     },
     get sink_groups() {

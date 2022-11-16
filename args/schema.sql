@@ -317,7 +317,7 @@ CREATE table _backupCache(
 );
 
 CREATE TABLE sinkShares(
-    num INT NOT NULL AUTO_INCREMENT,
+    num INT UNSIGNED NOT NULL AUTO_INCREMENT,
     share TEXT,
     time_stored TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(num)
