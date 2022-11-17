@@ -1,4 +1,4 @@
-(function (EXPORTS) { //btcOperator v1.0.13
+(function (EXPORTS) { //btcOperator v1.0.13a
     /* BTC Crypto and API Operator */
     const btcOperator = EXPORTS;
 
@@ -713,7 +713,7 @@
     }
 
     btcOperator.getTx = txid => new Promise((resolve, reject) => {
-        fetch_api(`tx/BTC/${txid}`)
+        fetch_api(`get_tx/BTC/${txid}`)
             .then(result => resolve(result.data))
             .catch(error => reject(error))
     });

@@ -13,7 +13,7 @@ try {
         global[p] = param[p];
 }
 
-global.toStandardDecimal = num => (parseInt(num * 1e8) * 1e-8)
+global.toStandardDecimal = num => parseFloat((parseInt(num * 1e8) * 1e-8).toFixed(8))
 
 if (!process.argv.includes("--debug"))
     global.console.debug = () => null;

@@ -203,7 +203,7 @@ verifyTx.BTC = function (sender, txid, group) {
                 return reject([true, "Transaction not sent by the sender"]);
             if (vin_sender.length !== tx.inputs.length)
                 return reject([true, "Transaction input containes other floIDs"]);
-            if (!tx.block_no)
+            if (!tx.blockhash)
                 return reject([false, "Transaction not included in any block yet"]);
             if (!tx.confirmations)
                 return reject([false, "Transaction not confirmed yet"]);
