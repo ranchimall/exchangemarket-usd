@@ -1527,6 +1527,66 @@
         })
     }
 
+    exchangeAPI.checkBlockchainBond = function (prior_time, floID, proxySecret) {
+        return new Promise((resolve, reject) => {
+            let request = {
+                floID: floID,
+                prior_time,
+                timestamp: Date.now()
+            };
+            if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(proxySecret);
+            request.sign = signRequest({
+                type: "check_blockchain_bond",
+                prior_time,
+                timestamp: request.timestamp
+            }, proxySecret);
+            console.debug(request);
+
+            fetch_api('/check-blockchain-bond', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => {
+                responseParse(result)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
+    exchangeAPI.checkBobsFund = function (prior_time, floID, proxySecret) {
+        return new Promise((resolve, reject) => {
+            let request = {
+                floID: floID,
+                prior_time,
+                timestamp: Date.now()
+            };
+            if (floCrypto.getFloID(proxySecret) === floID) //Direct signing (without proxy)
+                request.pubKey = floCrypto.getPubKeyHex(proxySecret);
+            request.sign = signRequest({
+                type: "check_bobs_fund",
+                prior_time,
+                timestamp: request.timestamp
+            }, proxySecret);
+            console.debug(request);
+
+            fetch_api('/check-bobs-fund', {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(request)
+            }).then(result => {
+                responseParse(result)
+                    .then(result => resolve(result))
+                    .catch(error => reject(error))
+            }).catch(error => reject(error))
+        })
+    }
+
     exchangeAPI.closeBobsFundInvestment = function (fund_id, floID, privKey) {
         return new Promise((resolve, reject) => {
             if (!floCrypto.verifyPrivKey(privKey, floID))
@@ -1660,9 +1720,10 @@
 
     exchangeAPI.init = function refreshDataFromBlockchain() {
         return new Promise((resolve, reject) => {
-            let nodes, assets, tags, lastTx;
+            let nodes, trusted = new Set(), assets, tags, lastTx;
             try {
                 nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
+                trusted = new Set((localStorage.getItem('exchange-trusted') || "").split(','));
                 assets = new Set((localStorage.getItem('exchange-assets') || "").split(','));
                 tags = new Set((localStorage.getItem('exchange-tags') || "").split(','));
                 if (typeof nodes !== 'object' || nodes === null)
@@ -1671,6 +1732,7 @@
                     lastTx = parseInt(localStorage.getItem('exchange-lastTx')) || 0;
             } catch (error) {
                 nodes = {};
+                trusted = new Set();
                 assets = new Set();
                 tags = new Set();
                 lastTx = 0;
@@ -1691,6 +1753,15 @@
                             for (let n in content.Nodes.add)
                                 nodes[n] = content.Nodes.add[n];
                     }
+                    //Trusted List
+                    if (content.Trusted) {
+                        if (content.Trusted.remove)
+                            for (let id of content.Trusted.remove)
+                                trusted.delete(id);
+                        if (content.Trusted.add)
+                            for (let id of content.Trusted.add)
+                                trusted.add(id);
+                    }
                     //Asset List
                     if (content.Assets) {
                         for (let a in content.Assets)
@@ -1708,6 +1779,7 @@
                 });
                 localStorage.setItem('exchange-lastTx', result.totalTxs);
                 localStorage.setItem('exchange-nodes', JSON.stringify(nodes));
+                localStorage.setItem('exchange-trusted', Array.from(trusted).join(","));
                 localStorage.setItem('exchange-assets', Array.from(assets).join(","));
                 localStorage.setItem('exchange-tags', Array.from(tags).join(","));
                 nodeURL = nodes;
@@ -1718,8 +1790,21 @@
         })
     }
 
+    const config = exchangeAPI.config = {
+        get trustedList() {
+            return new Set((localStorage.getItem('exchange-trusted') || "").split(','));
+        },
+        get assetList() {
+            return new Set((localStorage.getItem('exchange-assets') || "").split(','));
+        },
+        get tagList() {
+            return new Set((localStorage.getItem('exchange-tags') || "").split(','));
+        }
+    }
+
     exchangeAPI.clearAllLocalData = function () {
         localStorage.removeItem('exchange-nodes');
+        localStorage.removeItem('exchange-trusted');
         localStorage.removeItem('exchange-assets');
         localStorage.removeItem('exchange-tags');
         localStorage.removeItem('exchange-lastTx');

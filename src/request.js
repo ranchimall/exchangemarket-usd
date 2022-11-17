@@ -104,10 +104,10 @@ function logRequest(floID, req_str, sign, proxy = false) {
         .then(_ => null).catch(error => console.error(error));
 }
 
-function processRequest(res, floID, pubKey, sign, rText, validateObj, marketFn) {
+function processRequest(res, floID, pubKey, sign, rText, validateObj, marketFn, log = true) {
     validateRequest(validateObj, sign, floID, pubKey).then(req_str => {
         marketFn().then(result => {
-            logRequest(floID, req_str, sign, !pubKey);
+            if (log) logRequest(floID, req_str, sign, !pubKey);
             res.send(result);
         }).catch(error => {
             if (error instanceof INVALID)
@@ -452,6 +452,28 @@ function CloseBobsFund(req, res) {
         }, () => bobs_fund.closeFund(data.fund_id, data.floID, `${data.timestamp}.${data.sign}`));
 }
 
+function CheckBlockchainBondBalance(req, res) {
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Check blockchain-bond", {
+        type: "check_blockchain_bond",
+        prior_time: data.prior_time,
+        timestamp: data.timestamp
+    }, () => blockchain_bonds.checkBondBalance(data.prior_time), false);
+}
+
+function CheckBobsFundBalance(req, res) {
+    let data = req.body;
+    if (!trustedIDs.includes(data.floID))
+        res.status(INVALID.e_code).send(INVALID.str(eCode.ACCESS_DENIED, "Access Denied"));
+    else processRequest(res, data.floID, data.pubKey, data.sign, "Check bobs-fund", {
+        type: "check_bobs_fund",
+        prior_time: data.prior_time,
+        timestamp: data.timestamp
+    }, () => bobs_fund.checkFundBalance(data.prior_time), false);
+}
+
 /* Public Requests */
 
 function GetLoginCode(req, res) {
@@ -695,6 +717,8 @@ module.exports = {
     WithdrawConvertCurrencyFund,
     CloseBlockchainBond,
     CloseBobsFund,
+    CheckBlockchainBondBalance,
+    CheckBobsFundBalance,
     set trustedIDs(ids) {
         trustedIDs = ids;
     },

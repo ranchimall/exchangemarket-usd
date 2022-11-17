@@ -1,6 +1,7 @@
 'use strict';
 
 const DB = require("../database");
+const { sink_chest, sink_groups } = require("../keys");
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 const getRate = require('./conversion').getRate;
@@ -210,7 +211,7 @@ function refreshBlockchainData(nodeList = []) {
                 tx: true,
                 filter: d => d.startsWith(bobsFund.productStr)
             }).then(result => {
-                let promises = [];
+                let txQueries = [];
                 result.data.reverse().forEach(d => {
                     let fund = bobsFund.parse(d.data);
                     if (d.senders.has(bobsFund.config.adminID) && !/close:/.test(d.data)) {
@@ -220,11 +221,11 @@ function refreshBlockchainData(nodeList = []) {
                             let values = [fund_id, fund.start_date, fund.BTC_base, fund.USD_base, fund.fee, fund.duration];
                             if (fund.tapoutInterval)
                                 values.push(fund.topoutWindow, fund.tapoutInterval.join(','));
-                            promises.push(DB.query(`INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration ${fund.tapoutInterval ? ", tapout_window, tapout_interval" : ""}) VALUES ? ON DUPLICATE KEY UPDATE fund_id=fund_id`, [[values]]));
+                            txQueries.push([`INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration ${fund.tapoutInterval ? ", tapout_window, tapout_interval" : ""}) VALUE (?) ON DUPLICATE KEY UPDATE fund_id=fund_id`, [values]])
                         } else
                             fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
                         let investments = Object.entries(fund.investments).map(a => [fund_id, a[0], a[1].amount]);
-                        promises.push(DB.query("INSERT INTO BobsFundInvestments(fund_id, floID, amount_in) VALUES ? ON DUPLICATE KEY UPDATE floID=floID", [investments]));
+                        txQueries.push(["INSERT INTO BobsFundInvestments(fund_id, floID, amount_in) VALUES ? ON DUPLICATE KEY UPDATE floID=floID", [investments]]);
                     }
                     else {
                         let fund_id = d.data.match(/close: [a-z0-9]{64}\|/);
@@ -232,20 +233,16 @@ function refreshBlockchainData(nodeList = []) {
                             fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
                             let closing_details = Object.entries(fund.investments).filter(a => typeof a[1].closed === "object" && a[1].closed.amountFinal).pop();   //only one close-fund will be there in a tx
                             if (closing_details)
-                                promises.push(DB.query("UPDATE BobsFundInvestments SET close_id=?, amount_out=? WHERE fund_id=? AND floID=?", [d.txid, closing_details[1].closed.amountFinal, fund_id, closing_details[0]]))
+                                txQueries.push(["UPDATE BobsFundInvestments SET close_id=?, amount_out=? WHERE fund_id=? AND floID=?",
+                                    [d.txid, closing_details[1].closed.amountFinal, fund_id, closing_details[0]]])
                         }
                     }
                 });
-                Promise.allSettled(promises).then(results => {
-                    if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0)) {
-                        console.debug(results.filter(r => r.status === "rejected"));
-                        reject("Some fund data might not have been saved in database correctly");
-                    }
-                    else
-                        DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[bobsFund.config.adminID, result.totalTxs], result.totalTxs])
-                            .then(_ => resolve(result.totalTxs))
-                            .catch(error => reject(error));
-                })
+                txQueries.push(["INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?",
+                    [[bobsFund.config.adminID, result.totalTxs], result.totalTxs]])
+                DB.transaction(txQueries)
+                    .then(_ => resolve(result.totalTxs))
+                    .catch(error => reject(["Bobs-Fund refresh data failed!", error]));
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -296,6 +293,59 @@ function closeFund(fund_id, floID, ref) {
     })
 }
 
+function checkFundBalance(prior_time) {
+    return new Promise((resolve, reject) => {
+        prior_time = new Date(prior_time);
+        let cur_date = Date.now();
+        if (isNaN(prior_time) || prior_time.toString() == "Invalid Date")
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid Date for prior_time`));
+        let sql_query = "SELECT bf.begin_date, bf.btc_base, bf.usd_base, bf.fee, bf.duration, fi.amount_in, cf.amount AS amount_close FROM BobsFund AS bf" +
+            " INNER JOIN BobsFundInvestments AS fi ON bf.fund_id = fi.fund_id" +
+            " LEFT JOIN CloseFundTransact AS cf ON fi.fund_id = cf.fund_id AND fi.floID = cf.floID" +
+            " WHERE fi.close_id IS NULL AND (cf.r_status IS NULL OR cf.r_status NOT IN (?))";
+        DB.query(sql_query, [[pCode.STATUS_SUCCESS, pCode.STATUS_CONFIRMATION]]).then(result => {
+            getRate.BTC_USD().then(btc_rate => {
+                getRate.USD_INR().then(usd_rate => {
+                    let pending = { require_amount_cash: 0, n_investment: 0 },
+                        ready = { require_amount_cash: 0, n_investment: 0 },
+                        upcoming = { require_amount_cash: 0, n_investment: 0 }
+                    result.forEach(i => {
+                        if (i.amount_close) {
+                            pending.require_amount_cash += i.amount_close;
+                            pending.n_investment++;
+                        } else {
+                            let end_date = bobsFund.dateAdder(i.begin_date, i.duration);
+                            if (end_date < prior_time) {
+                                let net_value = bobsFund.calcNetValue(i.btc_base, btc_rate, i.usd_base, usd_rate, i.amount_in, i.fee);
+                                if (end_date > cur_date) {
+                                    upcoming.require_amount_cash += net_value;
+                                    upcoming.n_investment++;
+                                } else {
+                                    ready.require_amount_cash += net_value;
+                                    ready.n_investment++;
+                                }
+                            }
+                        }
+                    })
+                    pending.require_amount_cash = global.toStandardDecimal(pending.require_amount_cash);
+                    ready.require_amount_cash = global.toStandardDecimal(ready.require_amount_cash);
+                    upcoming.require_amount_cash = global.toStandardDecimal(upcoming.require_amount_cash);
+                    pending.require_amount_btc = global.toStandardDecimal(pending.require_amount_cash / (btc_rate * usd_rate));
+                    ready.require_amount_btc = global.toStandardDecimal(ready.require_amount_cash / (btc_rate * usd_rate));
+                    upcoming.require_amount_btc = global.toStandardDecimal(upcoming.require_amount_cash / (btc_rate * usd_rate));
+                    Promise.allSettled(sink_chest.list(sink_groups.BOBS_FUND)
+                        .map(id => btcOperator.getBalance(btcOperator.convert.legacy2bech(id)))).then(result => {
+                            let balance = result.filter(r => r.status === 'fulfilled').reduce((a, bal) => a += bal, 0);
+                            resolve({ pending, ready, upcoming, balance });
+                        }).catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+
+
+    })
+}
+
 module.exports = {
     refresh(nodeList) {
         refreshBlockchainData(nodeList)
@@ -303,5 +353,6 @@ module.exports = {
             .catch(error => console.error(error));
     },
     util: bobsFund,
+    checkFundBalance,
     closeFund
 }

@@ -1,6 +1,7 @@
 'use strict';
 
 const DB = require("../database");
+const { sink_chest, sink_groups } = require("../keys");
 const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
 const pCode = require('../../docs/scripts/floExchangeAPI').processCode;
 const getRate = require('./conversion').getRate;
@@ -193,28 +194,24 @@ function refreshBlockchainData(nodeList = []) {
                 tx: true,
                 filter: d => d.startsWith(blockchainBond.productStr)
             }).then(result => {
-                let promises = [];
+                let txQueries = [];
                 result.data.reverse().forEach(d => {
                     let bond = d.senders.has(blockchainBond.config.adminID) ? blockchainBond.parse.main(d.data) : null;
                     if (bond && bond.amount)
-                        promises.push(DB.query("INSERT INTO BlockchainBonds(bond_id, floID, amount_in, begin_date, btc_base, usd_base, gain_cut, min_ipa, max_period, lockin_period) VALUES ? ON DUPLICATE KEY UPDATE bond_id=bond_id",
-                            [[[d.txid, bond.floID, bond.amount, bond.startDate, bond.BTC_base, bond.USD_base, bond.cut, bond.minIpa, bond.maxPeriod, bond.lockinPeriod]]]));
+                        txQueries.push(["INSERT INTO BlockchainBonds(bond_id, floID, amount_in, begin_date, btc_base, usd_base, gain_cut, min_ipa, max_period, lockin_period) VALUE (?) ON DUPLICATE KEY UPDATE bond_id=bond_id",
+                            [[d.txid, bond.floID, bond.amount, bond.startDate, bond.BTC_base, bond.USD_base, bond.cut, bond.minIpa, bond.maxPeriod, bond.lockinPeriod]]]);
                     else {
                         let details = blockchainBond.parse.end(d.data);
                         if (details.bondID && details.amountFinal)
-                            promises.push(DB.query("UPDATE BlockchainBonds SET close_id=?, amount_out=? WHERE bond_id=?", [d.txid, details.amountFinal, details.bondID]));
+                            txQueries.push(["UPDATE BlockchainBonds SET close_id=?, amount_out=? WHERE bond_id=?",
+                                [d.txid, details.amountFinal, details.bondID]]);
                     }
                 });
-                Promise.allSettled(promises).then(results => {
-                    if (results.reduce((a, r) => r.status === "rejected" ? ++a : a, 0)) {
-                        reject("Some bond data might not have been saved in database correctly");
-                        console.debug(results.filter(r => r.status === "rejected"));
-                    }
-                    else
-                        DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[blockchainBond.config.adminID, result.totalTxs], result.totalTxs])
-                            .then(_ => resolve(result.totalTxs))
-                            .catch(error => reject(error));
-                })
+                txQueries.push(["INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?",
+                    [[blockchainBond.config.adminID, result.totalTxs], result.totalTxs]])
+                DB.transaction(txQueries)
+                    .then(_ => resolve(result.totalTxs))
+                    .catch(error => reject(["Blockchain-bonds refresh data failed!", error]));
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })
@@ -249,6 +246,57 @@ function closeBond(bond_id, floID, ref) {
     })
 }
 
+function checkBondBalance(prior_time) {
+    return new Promise((resolve, reject) => {
+        prior_time = new Date(prior_time);
+        let cur_date = Date.now();
+        if (isNaN(prior_time) || prior_time.toString() == "Invalid Date")
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid Date for prior_time`));
+        let sql_query = "SELECT bb.*, cb.amount AS amount_close FROM BlockchainBonds AS bb" +
+            " LEFT JOIN CloseBondTransact AS cb ON bb.bond_id = cb.bond_id" +
+            " WHERE bb.close_id IS NULL AND (cb.r_status IS NULL OR cb.r_status NOT IN (?))";
+        DB.query(sql_query, [[pCode.STATUS_SUCCESS, pCode.STATUS_CONFIRMATION]]).then(result => {
+            getRate.BTC_USD().then(btc_rate => {
+                getRate.USD_INR().then(usd_rate => {
+                    let pending = { require_amount_cash: 0, n_bond: 0 },
+                        ready = { require_amount_cash: 0, n_bond: 0 },
+                        upcoming = { require_amount_cash: 0, n_bond: 0 }
+                    result.forEach(bond => {
+                        if (bond.amount_close) {
+                            pending.require_amount_cash += bond.amount_close;
+                            pending.n_bond++;
+                        } else {
+                            let end_date = blockchainBond.dateAdder(bond.begin_date, bond.lockin_period)
+                            if (end_date < prior_time) {
+                                let net_value = blockchainBond.calcNetValue(bond.btc_base, btc_rate, bond.begin_date, bond.min_ipa, bond.max_period, bond.gain_cut, bond.amount_in, bond.usd_base, usd_rate);
+                                if (end_date > cur_date) {
+                                    upcoming.require_amount_cash += net_value;
+                                    upcoming.n_bond++;
+                                } else {
+                                    ready.require_amount_cash += net_value;
+                                    ready.n_bond++;
+                                }
+                            }
+                        }
+
+                    });
+                    pending.require_amount_cash = global.toStandardDecimal(pending.require_amount_cash);
+                    ready.require_amount_cash = global.toStandardDecimal(ready.require_amount_cash);
+                    upcoming.require_amount_cash = global.toStandardDecimal(upcoming.require_amount_cash);
+                    pending.require_amount_btc = global.toStandardDecimal(pending.require_amount_cash / (btc_rate * usd_rate));
+                    ready.require_amount_btc = global.toStandardDecimal(ready.require_amount_cash / (btc_rate * usd_rate));
+                    upcoming.require_amount_btc = global.toStandardDecimal(upcoming.require_amount_cash / (btc_rate * usd_rate));
+                    Promise.allSettled(sink_chest.list(sink_groups.BLOCKCHAIN_BONDS)
+                        .map(id => btcOperator.getBalance(btcOperator.convert.legacy2bech(id)))).then(result => {
+                            let balance = result.filter(r => r.status === 'fulfilled').reduce((a, bal) => a += bal, 0);
+                            resolve({ pending, ready, upcoming, balance });
+                        }).catch(error => reject(error))
+                }).catch(error => reject(error))
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
 module.exports = {
     refresh(nodeList) {
         refreshBlockchainData(nodeList)
@@ -256,5 +304,6 @@ module.exports = {
             .catch(error => console.error(error));
     },
     util: blockchainBond,
+    checkBondBalance,
     closeBond
 }
