@@ -50,7 +50,7 @@ function getSinkID(type, quantity, asset, sinkList = null) {
             sinkList = keys.sink_chest.list(SINK_GROUP[type]).map(s => [s, s in balance_cache ? balance_cache[s][asset] || 0 : 0]) //TODO: improve sorting
                 .sort((a, b) => b[1] - a[1]).map(x => x[0]);
         if (!sinkList.length)
-            return reject(`Insufficient balance in chests for asset(${asset})`);
+            return reject(`Insufficient balance for asset(${asset}) in chest(${SINK_GROUP[type]})`);
         let sinkID = sinkList.shift();
         getBalance(sinkID, asset).then(balance => {
             if (!(sinkID in balance_cache))

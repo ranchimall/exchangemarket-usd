@@ -107,21 +107,21 @@ function getConvertValues() {
         getPoolAvailability("BTC").then(avail => {
             let result = {};
             if (avail.coin > 0) {
-                let coin_availability = avail.coin * avail.rate; //convert to currency value
+                let coin_availability = global.toStandardDecimal(avail.coin * avail.rate); //convert to currency value
                 if (Array.isArray(TO_FIXED_VALUES) && TO_FIXED_VALUES.length)
                     result[pCode.CONVERT_MODE_GET] = TO_FIXED_VALUES.filter(a => a < coin_availability);
                 else if (!TO_MIN_VALUE || TO_MIN_VALUE <= coin_availability) {
                     result[pCode.CONVERT_MODE_GET] = { min: 0 };
-                    result[pCode.CONVERT_MODE_GET].max = (!TO_MAX_VALUE || TO_MIN_VALUE >= coin_availability) ? coin_availability : TO_MAX_VALUE;
+                    result[pCode.CONVERT_MODE_GET].max = (!TO_MAX_VALUE || TO_MAX_VALUE >= coin_availability) ? coin_availability : TO_MAX_VALUE;
                 }
             } else result[pCode.CONVERT_MODE_GET] = null;
             if (avail.cash > 0) {
-                let cash_availability = avail.cash / avail.rate; //convert to coin value
+                let cash_availability = global.toStandardDecimal(avail.cash / avail.rate); //convert to coin value
                 if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length)
                     result[pCode.CONVERT_MODE_PUT] = FROM_FIXED_VALUES.filter(a => a < cash_availability);
                 else if (!FROM_MIN_VALUE || FROM_MIN_VALUE <= cash_availability) {
                     result[pCode.CONVERT_MODE_PUT] = { min: 0 };
-                    result[pCode.CONVERT_MODE_PUT].max = (!FROM_MAX_VALUE || FROM_MIN_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
+                    result[pCode.CONVERT_MODE_PUT].max = (!FROM_MAX_VALUE || FROM_MAX_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
                 }
             } else result[pCode.CONVERT_MODE_PUT] = null;
             resolve(result)
