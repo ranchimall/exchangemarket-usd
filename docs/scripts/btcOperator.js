@@ -1,4 +1,4 @@
-(function (EXPORTS) { //btcOperator v1.0.13a
+(function (EXPORTS) { //btcOperator v1.0.13c
     /* BTC Crypto and API Operator */
     const btcOperator = EXPORTS;
 
@@ -328,8 +328,8 @@
             let total_amount = parseFloat(amounts.reduce((t, a) => t + a, 0).toFixed(8));
             const tx = coinjs.transaction();
             let output_size = addOutputs(tx, receivers, amounts, change_address);
-            addInputs(tx, senders, redeemScripts, total_amount, fee, output_size).then(result => {
-                if (result.change_amount > 0)   //add change amount if any
+            addInputs(tx, senders, redeemScripts, total_amount, fee, output_size, fee_from_receiver).then(result => {
+                if (result.change_amount > 0) //add change amount if any
                     tx.outs[tx.outs.length - 1].value = parseInt(result.change_amount * SATOSHI_IN_BTC); //values are in satoshi
                 if (fee_from_receiver) { //deduce fee from receivers if fee_from_receiver
                     let fee_remaining = parseInt(result.fee * SATOSHI_IN_BTC);
@@ -344,10 +344,11 @@
                     }
                     if (fee_remaining > 0)
                         return reject("Send amount is less than fee");
+
                 }
-                tx.outs = tx.outs.filter(o => o.value !== 0); //remove all output with value 0
+                tx.outs = tx.outs.filter(o => o.value != 0); //remove all output with value 0
                 result.output_size = output_size;
-                result.output_amount = total_amount;
+                result.output_amount = total_amount - (fee_from_receiver ? result.fee : 0);
                 result.total_size = BASE_TX_SIZE + output_size + result.input_size;
                 result.transaction = tx;
                 resolve(result);
