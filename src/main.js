@@ -60,6 +60,9 @@ function refreshDataFromBlockchain() {
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
                                 promises.push(DB.query("INSERT INTO NodeList (floID, uri) VALUE (?) ON DUPLICATE KEY UPDATE uri=?", [[n, content.Nodes.add[n]], content.Nodes.add[n]]));
+                        if (content.Nodes.update)
+                            for (let n in content.Nodes.update)
+                                promises.push(DB.query("UPDATE NodeList SET uri=? WHERE floID=?", [content.Nodes.update[n], n]));
                     }
                     //Asset List
                     if (content.Assets) {
@@ -173,7 +176,7 @@ module.exports = function startServer() {
     }
     const config = require(`../args/config${_I}.json`);
     try {
-        var _tmp = require(`../args/keys${_I}.json`);
+        let _tmp = require(`../args/keys${_I}.json`);
         _tmp = floCrypto.retrieveShamirSecret(_tmp);
         if (!_pass) {
             console.error('Password not entered!');

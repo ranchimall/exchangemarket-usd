@@ -1752,6 +1752,9 @@
                         if (content.Nodes.add)
                             for (let n in content.Nodes.add)
                                 nodes[n] = content.Nodes.add[n];
+                        if (content.Nodes.update)
+                            for (let n in content.Nodes.update)
+                                nodes[n] = content.Nodes.update[n];
                     }
                     //Trusted List
                     if (content.Trusted) {
