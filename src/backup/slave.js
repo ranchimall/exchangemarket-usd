@@ -1,14 +1,15 @@
 'use strict';
 
+const keys = require("../keys");
+const DB = require("../database");
+
 const {
     BACKUP_INTERVAL,
     BACKUP_SYNC_TIMEOUT,
     CHECKSUM_INTERVAL,
-    SINK_KEY_INDICATOR,
     HASH_N_ROW
 } = require("../_constants")["backup"];
 
-var DB; //Container for Database connection
 var masterWS = null; //Container for Master websocket connection
 
 var intervalID = null;
@@ -20,19 +21,32 @@ function startSlaveProcess(ws, init) {
     //set masterWS
     ws.on('message', processDataFromMaster);
     masterWS = ws;
-    //inform master
-    let message = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
-        req_time: Date.now(),
-        type: "SLAVE_CONNECT"
-    }
-    message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
-    ws.send(JSON.stringify(message));
-    //start sync
-    if (init)
-        requestInstance.open();
-    intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
+    let sinks_stored = {};
+    Promise.all([keys.getStoredList(), keys.getDiscardedList()]).then(result => {
+        let stored_list = result[0],
+            discarded_list = result[1];
+        for (let group in stored_list) {
+            sinks_stored[group] = [];
+            for (let id of stored_list[group])
+                if (!(id in discarded_list))
+                    sinks_stored[group].push(id);
+        }
+    }).catch(error => console.error(error)).finally(_ => {
+        //inform master
+        let message = {
+            floID: keys.node_id,
+            pubKey: keys.node_pub,
+            sinks: sinks_stored,
+            req_time: Date.now(),
+            type: "SLAVE_CONNECT"
+        }
+        message.sign = floCrypto.signData(message.type + "|" + message.req_time, keys.node_priv);
+        ws.send(JSON.stringify(message));
+        //start sync
+        if (init)
+            requestInstance.open();
+        intervalID = setInterval(() => requestInstance.open(), BACKUP_INTERVAL);
+    })
 }
 
 function stopSlaveProcess() {
@@ -50,16 +64,16 @@ function stopSlaveProcess() {
 
 function requestBackupSync(checksum_trigger, ws) {
     return new Promise((resolve, reject) => {
-        DB.query('SELECT MAX(timestamp) as last_time FROM _backup').then(result => {
+        DB.query('SELECT MAX(u_time) as last_time FROM _backup').then(result => {
             let request = {
-                floID: global.myFloID,
-                pubKey: global.myPubKey,
+                floID: keys.node_id,
+                pubKey: keys.node_pub,
                 type: "BACKUP_SYNC",
                 last_time: result[0].last_time,
                 checksum: checksum_trigger,
                 req_time: Date.now()
             };
-            request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+            request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
             ws.send(JSON.stringify(request));
             resolve(request);
         }).catch(error => reject(error))
@@ -78,7 +92,7 @@ const requestInstance = {
     checksum_count_down: 0
 };
 
-requestInstance.open = function(ws = null) {
+requestInstance.open = function (ws = null) {
     const self = this;
     //Check if there is an active request 
     if (self.request) {
@@ -104,7 +118,7 @@ requestInstance.open = function(ws = null) {
     }).catch(error => console.error(error))
 }
 
-requestInstance.close = function() {
+requestInstance.close = function () {
     const self = this;
     if (self.onetime)
         self.ws.close();
@@ -128,10 +142,10 @@ function processDataFromMaster(message) {
             processBackupData(message);
         else switch (message.command) {
             case "SINK_SHARE":
-                storeSinkShare(message.sinkID, message.keyShare);
+                storeSinkShare(message.group, message.sinkID, message.share, message.ref);
                 break;
             case "SEND_SHARE":
-                sendSinkShare(message.pubKey);
+                sendSinkShare(message.group, message.sinkID, message.pubKey);
                 break;
             case "REQUEST_ERROR":
                 console.log(message.error);
@@ -144,30 +158,26 @@ function processDataFromMaster(message) {
     }
 }
 
-function storeSinkShare(sinkID, keyShare) {
-    let encryptedShare = Crypto.AES.encrypt(floCrypto.decryptData(keyShare, global.myPrivKey), global.myPrivKey);
-    console.log(Date.now(), '|sinkID:', sinkID, '|EnShare:', encryptedShare);
-    DB.query("INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?", [sinkID, encryptedShare, encryptedShare])
+function storeSinkShare(group, sinkID, share, ref) {
+    share = floCrypto.decryptData(share, keys.node_priv);
+    keys.addShare(group, sinkID, ref, share)
         .then(_ => null).catch(error => console.error(error));
 }
 
-function sendSinkShare(pubKey) {
-    DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
-        if (!result.length)
-            return console.warn("No key-shares in DB!");
-        let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
-        if (share.startsWith(SINK_KEY_INDICATOR))
-            console.warn("Key is stored instead of share!");
-        let response = {
-            type: "SINK_SHARE",
-            sinkID: result[0].floID,
-            share: floCrypto.encryptData(share, pubKey),
-            floID: global.myFloID,
-            pubKey: global.myPubKey,
-            req_time: Date.now()
-        }
-        response.sign = floCrypto.signData(response.type + "|" + response.req_time, global.myPrivKey); //TODO: strengthen signature
-        masterWS.send(JSON.stringify(response));
+function sendSinkShare(group, sinkID, pubKey) {
+    keys.getShares(group, sinkID).then(({ ref, shares }) => {
+        shares.forEach(s => {
+            let response = {
+                type: "SINK_SHARE",
+                sinkID, ref,
+                share: floCrypto.encryptData(s, pubKey),
+                floID: keys.node_id,
+                pubKey: keys.node_pub,
+                req_time: Date.now()
+            }
+            response.sign = floCrypto.signData(response.type + "|" + response.req_time, keys.node_priv); //TODO: strengthen signature
+            masterWS.send(JSON.stringify(response));
+        })
     }).catch(error => console.error(error));
 }
 
@@ -186,7 +196,7 @@ function processBackupData(response) {
                         console.log("Backup Sync completed successfully");
                         self.close();
                     } else
-                        console.log("Waiting for come re-sync data");
+                        console.log("Waiting for re-sync data");
                 }).catch(_ => {
                     console.warn("Backup Sync was not successful");
                     self.close();
@@ -247,8 +257,8 @@ function storeBackupData(cache_promises, checksum_ref) {
                                                     resolve(true);
                                                 else
                                                     verifyChecksum(checksum_ref)
-                                                    .then(result => resolve(result))
-                                                    .catch(error => reject(error))
+                                                        .then(result => resolve(result))
+                                                        .catch(error => reject(error))
                                             });
                                         })
                                     })
@@ -271,7 +281,7 @@ function storeBackupData(cache_promises, checksum_ref) {
 
 }
 
-storeBackupData.commit = function(data, result) {
+storeBackupData.commit = function (data, result) {
     let promises = [];
     for (let i = 0; i < data.length; i++)
         switch (result[i].status) {
@@ -280,7 +290,7 @@ storeBackupData.commit = function(data, result) {
                 break;
             case "rejected":
                 console.error(result[i].reason);
-                promises.push(DB.query("UPDATE _backupCache SET status=FALSE WHERE id=?", data[i].id));
+                promises.push(DB.query("UPDATE _backupCache SET fail=TRUE WHERE id=?", data[i].id));
                 break;
         }
     return Promise.allSettled(promises);
@@ -289,13 +299,13 @@ storeBackupData.commit = function(data, result) {
 function updateBackupTable(add_data, delete_data) {
     //update _backup table for added data
     DB.transaction(add_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, TRUE, ?) ON DUPLICATE KEY UPDATE mode=TRUE, timestamp=?",
-        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, u_time) VALUE (?, ?, TRUE, ?) ON DUPLICATE KEY UPDATE mode=TRUE, u_time=?",
+        [r.t_name, r.id, validateValue(r.u_time), validateValue(r.u_time)]
     ])).then(_ => null).catch(error => console.error(error));
     //update _backup table for deleted data
     DB.transaction(delete_data.map(r => [
-        "INSERT INTO _backup (t_name, id, mode, timestamp) VALUE (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, timestamp=?",
-        [r.t_name, r.id, validateValue(r.timestamp), validateValue(r.timestamp)]
+        "INSERT INTO _backup (t_name, id, mode, u_time) VALUE (?, ?, NULL, ?) ON DUPLICATE KEY UPDATE mode=NULL, u_time=?",
+        [r.t_name, r.id, validateValue(r.u_time), validateValue(r.u_time)]
     ])).then(_ => null).catch(error => console.error(error));
 }
 
@@ -314,16 +324,15 @@ function updateTableData(table, data) {
     return new Promise((resolve, reject) => {
         if (!data.length)
             return resolve(null);
-        let cols = Object.keys(data[0]),
-            _mark = "(" + Array(cols.length).fill('?') + ")";
-        let values = data.map(r => cols.map(c => validateValue(r[c]))).flat();
-        let statement = `INSERT INTO ${table} (${cols}) VALUES ${Array(data.length).fill(_mark)}` +
+        let cols = Object.keys(data[0]);
+        let values = data.map(r => cols.map(c => validateValue(r[c])));
+        let statement = `INSERT INTO ${table} (${cols}) VALUES ?` +
             " ON DUPLICATE KEY UPDATE " + cols.map(c => `${c}=VALUES(${c})`).join();
-        DB.query(statement, values).then(_ => resolve(true)).catch(error => reject(error));
+        DB.query(statement, [values]).then(_ => resolve(true)).catch(error => reject(error));
     })
 }
 
-const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? val.substring(0, val.length - 1) : val;
+const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) ? new Date(val) : val;
 
 function verifyChecksum(checksum_ref) {
     return new Promise((resolve, reject) => {
@@ -351,13 +360,13 @@ function requestHash(tables) {
     //TODO: resync only necessary data (instead of entire table)
     let self = requestInstance;
     let request = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
+        floID: keys.node_id,
+        pubKey: keys.node_pub,
         type: "HASH_SYNC",
         tables: tables,
         req_time: Date.now()
     };
-    request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+    request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
     self.ws.send(JSON.stringify(request));
     self.request = request;
     self.checksum = null;
@@ -394,7 +403,7 @@ function verifyHash(hashes) {
                     //Data to be deleted (incorrect data will be added by resync)
                     let id_end = result[t].value[1].map(i => i * HASH_N_ROW); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
                     Promise.allSettled(id_end.map(i =>
-                            DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
+                        DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
                         .then(_ => null);
                 } else
                     console.error(result[t].reason);
@@ -406,20 +415,17 @@ function verifyHash(hashes) {
 
 function requestTableChunks(tables, ws) {
     let request = {
-        floID: global.myFloID,
-        pubKey: global.myPubKey,
+        floID: keys.node_id,
+        pubKey: keys.node_pub,
         type: "RE_SYNC",
         tables: tables,
         req_time: Date.now()
     };
-    request.sign = floCrypto.signData(request.type + "|" + request.req_time, global.myPrivKey);
+    request.sign = floCrypto.signData(request.type + "|" + request.req_time, keys.node_priv);
     ws.send(JSON.stringify(request));
 }
 
 module.exports = {
-    set DB(db) {
-        DB = db;
-    },
     get masterWS() {
         return masterWS;
     },

@@ -1,65 +1,76 @@
 'use strict';
 
+const keys = require('../keys');
 const K_Bucket = require('../../docs/scripts/floExchangeAPI').K_Bucket;
 const slave = require('./slave');
 const sync = require('./sync');
 const WebSocket = require('ws');
 
-const {
-    SINK_KEY_INDICATOR,
-    SHARE_THRESHOLD
-} = require("../_constants")["backup"];
+const { BACKUP_INTERVAL } = require("../_constants")["backup"];
+const { DISCARD_COOLDOWN } = require("../_constants")["keys"];
 
-var DB, app, wss, tokenList; //Container for database and app
+var _app, _wss, tokenList; //Container for app and wss
 var nodeList, nodeURL, nodeKBucket; //Container for (backup) node list
-var nodeShares = null,
-    connectedSlaves = {},
-    mod = null;
+const connectedSlaves = {},
+    shares_collected = {},
+    shares_pending = {},
+    discarded_sinks = [];
+
+var _mode = null;
 const SLAVE_MODE = 0,
     MASTER_MODE = 1;
 
 //Shares
 function generateShares(sinkKey) {
-    let nextNodes = nodeKBucket.nextNode(global.myFloID, null),
+    let nextNodes = nodeKBucket.nextNode(keys.node_id, null),
         aliveNodes = Object.keys(connectedSlaves);
-    if (nextNodes.length == 0) //This is the last node in nodeList
-        return false;
-    else if (aliveNodes.length == 0) //This is the last node in nodeList
-        return null;
-    else {
-        let N = nextNodes.length + 1,
-            th = Math.ceil(aliveNodes.length * SHARE_THRESHOLD) + 1,
-            shares, refShare, mappedShares = {};
-        shares = floCrypto.createShamirsSecretShares(sinkKey, N, th);
-        refShare = shares.pop();
-        for (let i in nextNodes)
-            mappedShares[nextNodes[i]] = [refShare, shares[i]].join("|");
-        return mappedShares;
-    }
+    nextNodes.unshift(keys.node_id);
+    aliveNodes.unshift(keys.node_id);
+    let shares, mappedShares = {};
+    shares = keys.generateShares(sinkKey, nextNodes.length, aliveNodes.length);
+    for (let i in nextNodes)
+        mappedShares[nextNodes[i]] = shares[i];
+    return mappedShares;
 }
 
-function sendShare(ws, sinkID, keyShare) {
-    ws.send(JSON.stringify({
+function sendShares(ws, sinkID) {
+    if (!(sinkID in shares_pending) || !(ws.floID in shares_pending[sinkID].shares))
+        return;
+    let { ref, group } = shares_pending[sinkID],
+        shares = shares_pending[sinkID].shares[ws.floID];
+    delete shares_pending[sinkID].shares[ws.floID]; //delete the share after sending it to respective slave
+    shares.forEach(s => ws.send(JSON.stringify({
         command: "SINK_SHARE",
-        sinkID,
-        keyShare: floCrypto.encryptData(keyShare, ws.pubKey)
-    }));
+        sinkID, ref, group,
+        share: floCrypto.encryptData(s, ws.pubKey)
+    })));
 }
 
-function sendSharesToNodes(sinkID, shares) {
-    nodeShares = shares;
+function sendSharesToNodes(sinkID, group, shares) {
+    if (discarded_sinks.includes(sinkID)) { //sinkID is discarded, abort the new shares
+        let i = discarded_sinks.findIndex(sinkID);
+        discarded_sinks.splice(i, 1);
+        return;
+    }
+    let ref = Date.now();
+    shares_pending[sinkID] = { shares, group, ref };
+    if (keys.node_id in shares) {
+        shares_pending[sinkID].shares[keys.node_id].forEach(s =>
+            keys.addShare(group, sinkID, ref, s).then(_ => null).catch(error => console.error(error)));
+        delete shares_pending[sinkID].shares[keys.node_id];
+    }
     for (let node in shares)
         if (node in connectedSlaves)
-            sendShare(connectedSlaves[node], sinkID, shares[node]);
+            sendShares(connectedSlaves[node], sinkID);
+    keys.sink_chest.set_id(group, sinkID, ref);
 }
 
-function storeSink(sinkID, sinkPrivKey) {
-    global.sinkID = sinkID;
-    global.sinkPrivKey = sinkPrivKey;
-    let encryptedKey = Crypto.AES.encrypt(SINK_KEY_INDICATOR + sinkPrivKey, global.myPrivKey);
-    DB.query('INSERT INTO sinkShares (floID, share) VALUE (?, ?) ON DUPLICATE KEY UPDATE share=?', [sinkID, encryptedKey, encryptedKey])
-        .then(_ => console.log('SinkID:', sinkID, '|SinkEnKey:', encryptedKey))
-        .catch(error => console.error(error));
+function requestShare(ws, group, sinkID) {
+    ws.send(JSON.stringify({
+        command: "SEND_SHARE",
+        group, sinkID,
+        pubKey: keys.node_pub
+    }));
 }
 
 /*
@@ -97,40 +108,53 @@ function transferMoneyToNewSink(oldSinkID, oldSinkKey, newSink) {
 }
 */
 
-const collectShares = {};
-collectShares.retrive = function(floID, sinkID, share) {
-    const self = this;
-    if (!self.sinkID) {
-        self.sinkID = sinkID;
-        self.shares = {};
-    } else if (self.sinkID !== sinkID)
-        return console.error("Something is wrong! Slaves are sending different sinkID");
-    if (share.startsWith(SINK_KEY_INDICATOR)) {
-        let sinkKey = share.substring(SINK_KEY_INDICATOR.length);
-        console.debug("Received sink:", sinkID);
-        self.verify(sinkKey);
-    } else
-        self.shares[floID] = share.split("|");
+function collectAndCall(group, sinkID, callback, timeout = null) {
+    if (!(callback instanceof Function))
+        throw Error("callback should be a function");
+    if (!(sinkID in shares_collected)) { //if not already collecting shares for sinkID, then initiate collection
+        shares_collected[sinkID] = { group, ref: 0, callbacks: [], shares: {} };
+        for (let floID in connectedSlaves)
+            requestShare(connectedSlaves[floID], group, sinkID);
+        keys.getShares(group, sinkID)
+            .then(({ ref, shares }) => shares.forEach(s => collectShares(sinkID, ref, s)))
+            .catch(error => console.error(error))
+    }
+    shares_collected[sinkID].callbacks.push(callback);
+    if (timeout)
+        setTimeout(() => {
+            if (sinkID in shares_collected) {
+                let i = shares_collected[sinkID].callbacks.indexOf(callback);
+                delete shares_collected[sinkID].callbacks[i]; //deleting will empty the index, but space will be there so that order of other indexes are not affected
+            }
+        }, timeout);
+}
+
+collectAndCall.isAlive = (sinkID, callbackRef) => (sinkID in shares_collected && shares_collected[sinkID].callbacks.indexOf(callbackRef) != -1);
+
+function collectShares(sinkID, ref, share) {
+    if (_mode !== MASTER_MODE)
+        return console.warn("Not serving as master");
+    if (!(sinkID in shares_collected))
+        return console.debug("Received shares for sink thats not been collected right now");
+    if (shares_collected[sinkID].ref > ref)
+        return console.debug("Received expired share");
+    else if (shares_collected[sinkID].ref < ref) {
+        shares_collected[sinkID].ref = ref;
+        shares_collected[sinkID].shares = [];
+    }
+    if (shares_collected[sinkID].shares.includes(share))
+        return console.debug("Received duplicate share");
+    shares_collected[sinkID].shares.push(share);
     try {
-        let sinkKey = floCrypto.retrieveShamirSecret([].concat(...Object.values(self.shares)));
-        console.debug("Retrived sink:", sinkID);
-        self.verify(sinkKey);
+        let sinkKey = floCrypto.retrieveShamirSecret(shares_collected[sinkID].shares);
+        if (floCrypto.verifyPrivKey(sinkKey, sinkID)) {
+            console.debug("Shares collected successfully for", sinkID);
+            shares_collected[sinkID].callbacks.forEach(fn => fn instanceof Function ? fn(sinkKey) : null);
+            delete shares_collected[sinkID];
+        }
     } catch {
         //Unable to retrive sink private key. Waiting for more shares! Do nothing for now
     };
-}
-
-collectShares.verify = function(sinkKey) {
-    const self = this;
-    if (floCrypto.verifyPrivKey(sinkKey, self.sinkID)) {
-        let sinkID = self.sinkID;
-        console.log("Shares collected successfully for", sinkID);
-        self.active = false;
-        delete self.sinkID;
-        delete self.shares;
-        storeSink(sinkID, sinkKey);
-        sendSharesToNodes(sinkID, generateShares(sinkKey));
-    }
 }
 
 function connectWS(floID) {
@@ -144,11 +168,11 @@ function connectWS(floID) {
 
 function connectToMaster(i = 0, init = false) {
     if (i >= nodeList.length) {
-        console.error("No master is found, and myFloID is not in list. This should not happen!");
+        console.error("No master is found and Node not in list. This should not happen!");
         process.exit(1);
     }
     let floID = nodeList[i];
-    if (floID === myFloID)
+    if (floID === keys.node_id)
         serveAsMaster(init);
     else
         connectWS(floID).then(ws => {
@@ -161,32 +185,16 @@ function connectToMaster(i = 0, init = false) {
         });
 }
 
-//Node becomes master
-function serveAsMaster(init) {
-    console.debug('Starting master process');
-    slave.stop();
-    mod = MASTER_MODE;
-    informLiveNodes(init);
-    app.resume();
-}
-
-function serveAsSlave(ws, init) {
-    console.debug('Starting slave process');
-    app.pause();
-    slave.start(ws, init);
-    mod = SLAVE_MODE;
-}
-
 function informLiveNodes(init) {
     let message = {
-        floID: global.myFloID,
+        floID: keys.node_id,
         type: "UPDATE_MASTER",
-        pubKey: global.myPubKey,
+        pubKey: keys.node_pub,
         req_time: Date.now()
     };
-    message.sign = floCrypto.signData(message.type + "|" + message.req_time, global.myPrivKey);
+    message.sign = floCrypto.signData(message.type + "|" + message.req_time, keys.node_priv);
     message = JSON.stringify(message);
-    let nodes = nodeList.filter(n => n !== global.myFloID);
+    let nodes = nodeList.filter(n => n !== keys.node_id);
     Promise.allSettled(nodes.map(n => connectWS(n))).then(result => {
         let flag = false;
         for (let i in result)
@@ -199,45 +207,29 @@ function informLiveNodes(init) {
                 console.warn(`Node(${nodes[i]}) is offline`);
         if (init && flag)
             syncRequest();
-        //Check if sinkKey or share available in DB
-        DB.query("SELECT floID, share FROM sinkShares ORDER BY time_ DESC LIMIT 1").then(result => {
-            if (result.length) {
-                let share = Crypto.AES.decrypt(result[0].share, global.myPrivKey);
-                if (share.startsWith(SINK_KEY_INDICATOR)) {
-                    //sinkKey is already present in DB, use it directly
-                    collectShares.active = false;
-                    global.sinkPrivKey = share.substring(SINK_KEY_INDICATOR.length);
-                    global.sinkID = floCrypto.getFloID(global.sinkPrivKey);
-                    if (global.sinkID != result[0].floID) {
-                        console.warn("sinkID and sinkKey in DB are not pair!");
-                        storeSink(global.sinkID, global.sinkPrivKey);
-                    }
-                    console.debug("Loaded sink:", global.sinkID);
-                    sendSharesToNodes(global.sinkID, generateShares(global.sinkPrivKey))
-                } else {
-                    //Share is present in DB, try to collect remaining shares and retrive sinkKey
-                    collectShares.active = true;
-                    collectShares.retrive(global.myFloID, result[0].floID, share);
-                }
-            } else if (init) {
-                if (flag) //Other nodes online, try to collect shares and retrive sinkKey
-                    collectShares.active = true;
-                else {
-                    //No other node is active (possible 1st node to start exchange)
-                    console.log("Starting the exchange...");
-                    collectShares.active = false;
-                    let newSink = floCrypto.generateNewID();
-                    console.debug("Generated sink:", newSink.floID, newSink.privKey);
-                    storeSink(newSink.floID, newSink.privKey);
-                    sendSharesToNodes(newSink.floID, generateShares(newSink.privKey));
-                }
-            } else //This should not happen!
-                console.error("Something is wrong! Node is not starting and no key/share present in DB");
+        keys.getStoredList().then(stored_list => {
+            if (Object.keys(stored_list).length) {
+                keys.getDiscardedList().then(discarded_list => {
+                    let cur_time = Date.now();
+                    for (let group in stored_list)
+                        stored_list[group].forEach(id => {
+                            if (!(id in discarded_list))
+                                reconstructShares(group, id)
+                            else if (cur_time - discarded_list[id] < DISCARD_COOLDOWN) //sinkID still in cooldown period
+                                keys.sink_chest.set_id(group, id, null);
+                        });
+                }).catch(error => console.error(error))
+            } else if (init && !flag) {
+                console.log("Starting the exchange...");
+                //generate a sinkID for each group in starting list
+                keys.sink_groups.initial_list.forEach(group =>
+                    generateSink(group).then(_ => null).catch(e => console.error(e)));
+            }
         }).catch(error => console.error(error));
     });
 }
 
-function syncRequest(cur = global.myFloID) {
+function syncRequest(cur = keys.node_id) {
     //Sync data from next available node
     let nextNode = nodeKBucket.nextNode(cur);
     if (!nextNode)
@@ -248,33 +240,161 @@ function syncRequest(cur = global.myFloID) {
 }
 
 function updateMaster(floID) {
-    let currentMaster = mod === MASTER_MODE ? global.myFloID : slave.masterWS.floID;
+    let currentMaster = _mode === MASTER_MODE ? keys.node_id : slave.masterWS.floID;
     if (nodeList.indexOf(floID) < nodeList.indexOf(currentMaster))
         connectToMaster();
 }
 
-function slaveConnect(floID, pubKey, ws) {
+function reconstructShares(group, sinkID) {
+    if (_mode !== MASTER_MODE)
+        return console.warn("Not serving as master");
+    keys.sink_chest.set_id(group, sinkID, null);
+    collectAndCall(group, sinkID, sinkKey => sendSharesToNodes(sinkID, group, generateShares(sinkKey)));
+}
+
+function slaveConnect(floID, pubKey, ws, slave_sinks) {
+    if (_mode !== MASTER_MODE)
+        return console.warn("Not serving as master");
     ws.floID = floID;
     ws.pubKey = pubKey;
     connectedSlaves[floID] = ws;
-    if (collectShares.active)
-        ws.send(JSON.stringify({
-            command: "SEND_SHARE",
-            pubKey: global.myPubKey
-        }));
-    else if (nodeShares === null || //The 1st backup is connected
-        Object.keys(connectedSlaves).length < Math.pow(SHARE_THRESHOLD, 2) * Object.keys(nodeShares).length) //re-calib shares for better 
-        sendSharesToNodes(global.sinkID, generateShares(global.sinkPrivKey))
-    else if (nodeShares[floID])
-        sendShare(ws, global.sinkID, nodeShares[floID]);
+
+    //Send shares if need to be delivered
+    for (let sinkID in shares_pending)
+        if (floID in shares_pending[sinkID].shares)
+            sendShares(ws, sinkID);
+    //Request shares if any
+    for (let sinkID in shares_collected)
+        requestShare(ws, shares_collected[sinkID].group, sinkID);
+    //check if sinks in slaves are present
+    if (slave_sinks instanceof Object) {
+        for (let group in slave_sinks)
+            for (let sinkID of slave_sinks[group]) {
+                if (!keys.sink_chest.includes(group, sinkID))
+                    keys.checkIfDiscarded(sinkID)
+                        .then(result => result === false ? reconstructShares(group, sinkID) : null)
+                        .catch(error => console.error(error))
+            }
+    }
+}
+
+const eCode = require('../../docs/scripts/floExchangeAPI').errorCode;
+
+function generateSink(group) {
+    return new Promise((resolve, reject) => {
+        if (!keys.sink_groups.generate_list.includes(group))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid Group ${group}`));
+        try {
+            let newSink = floCrypto.generateNewID();
+            console.debug("Generated sink:", group, newSink.floID);
+            sendSharesToNodes(newSink.floID, group, generateShares(newSink.privKey));
+            resolve(`Generated ${newSink.floID} (${group})`);
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
+
+function reshareSink(id) {
+    return new Promise((resolve, reject) => {
+        if (!floCrypto.validateAddr(id))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
+        else {
+            let group = keys.sink_chest.find_group(id);
+            if (!group)
+                return reject(INVALID(eCode.NOT_FOUND, `ID ${id} not found`));
+            else keys.checkIfDiscarded(id).then(result => {
+                if (result)
+                    return reject(INVALID(eCode.NOT_FOUND, `ID is discarded`));
+                try {
+                    reconstructShares(group, id);
+                    resolve(`Resharing ${id} (${group})`);
+                } catch (error) {
+                    reject(error);
+                }
+            }).catch(error => reject(error))
+        }
+
+    })
+}
+
+function discardSink(id) {
+    return new Promise((resolve, reject) => {
+        if (!floCrypto.validateAddr(id))
+            return reject(INVALID(eCode.INVALID_VALUE, `Invalid ID ${id}`));
+        else if (!keys.sink_chest.find_group(id))
+            return reject(INVALID(eCode.NOT_FOUND, `ID ${id} not found`));
+        else keys.checkIfDiscarded(id).then(result => {
+            if (result)
+                return reject(INVALID(eCode.DUPLICATE_ENTRY, `ID already discarded`));
+            keys.discardSink(id).then(result => {
+                console.debug("Discarded sink:", id);
+                resolve(result);
+            }).catch(error => reject(error))
+        }).catch(error => reject(error))
+    })
+}
+
+function checkForDiscardedSinks() {
+    let cur_time = Date.now(),
+        all_sinks = keys.sink_chest.get_all();
+    for (let group in all_sinks)
+        all_sinks[group].forEach(id => keys.checkIfDiscarded(id).then(result => {
+            console.debug(group, id);   //Check if group is correctly mapped, or if its changed by loop
+            if (result != false) {
+                if (cur_time - result > DISCARD_COOLDOWN)
+                    keys.sink_chest.rm_id(group, id);
+                else
+                    keys.sink_chest.set_id(group, id, null);
+                if (id in shares_collected && !discarded_sinks.includes(id))
+                    discarded_sinks.push(id);
+            }
+        }).catch(error => console.debug(error)))
+}
+
+//Master interval process
+function intervalProcess() {
+    checkForDiscardedSinks();
+}
+
+intervalProcess.start = () => {
+    intervalProcess.stop();
+    intervalProcess.instance = setInterval(intervalProcess, BACKUP_INTERVAL);
+}
+
+intervalProcess.stop = () => {
+    if (intervalProcess.instance !== undefined) {
+        clearInterval(intervalProcess.instance);
+        delete intervalProcess.instance;
+    }
+}
+
+//Node becomes master
+function serveAsMaster(init) {
+    console.info('Starting master process');
+    slave.stop();
+    _mode = MASTER_MODE;
+    keys.sink_chest.reset();
+    intervalProcess.start();
+    informLiveNodes(init);
+    _app.resume();
+}
+
+//Node becomes slave
+function serveAsSlave(ws, init) {
+    console.info('Starting slave process');
+    intervalProcess.stop();
+    _app.pause();
+    slave.start(ws, init);
+    _mode = SLAVE_MODE;
 }
 
 //Transmistter
 function startBackupTransmitter(server) {
-    wss = new WebSocket.Server({
+    _wss = new WebSocket.Server({
         server
     });
-    wss.on('connection', ws => {
+    _wss.on('connection', ws => {
         ws.on('message', message => {
             //verify if from a backup node
             try {
@@ -302,10 +422,10 @@ function startBackupTransmitter(server) {
                         updateMaster(request.floID);
                         break;
                     case "SLAVE_CONNECT":
-                        slaveConnect(request.floID, request.pubKey, ws);
+                        slaveConnect(request.floID, request.pubKey, ws, request.sinks);
                         break;
                     case "SINK_SHARE":
-                        collectShares.retrive(request.floID, request.sinkID, floCrypto.decryptData(request.share, global.myPrivKey))
+                        collectShares(request.sinkID, request.ref, floCrypto.decryptData(request.share, keys.node_priv))
                     default:
                         invalid = "Invalid Request Type";
                 }
@@ -331,28 +451,32 @@ function startBackupTransmitter(server) {
     });
 }
 
-function initProcess(a) {
-    app = a;
-    startBackupTransmitter(app.server);
+function initProcess(app) {
+    _app = app;
+    startBackupTransmitter(_app.server);
     connectToMaster(0, true);
 }
 
 module.exports = {
     init: initProcess,
+    collectAndCall,
+    sink: {
+        generate: generateSink,
+        reshare: reshareSink,
+        discard: discardSink
+    },
     set nodeList(list) {
         nodeURL = list;
         nodeKBucket = new K_Bucket(floGlobals.adminID, Object.keys(nodeURL));
         nodeList = nodeKBucket.order;
     },
+    get nodeList() {
+        return nodeList;
+    },
     set assetList(assets) {
         tokenList = assets.filter(a => a.toUpperCase() !== "FLO");
     },
-    set DB(db) {
-        DB = db;
-        sync.DB = db;
-        slave.DB = db;
-    },
     get wss() {
-        return wss;
+        return _wss;
     }
 };

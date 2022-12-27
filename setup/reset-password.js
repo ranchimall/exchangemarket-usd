@@ -1,12 +1,18 @@
 const fs = require('fs');
 const getInput = require('./getInput');
 
-const floGlobals = require('../docs/scripts/floGlobals');
+global.floGlobals = require('../docs/scripts/floGlobals');
 require('../src/set_globals');
 require('../docs/scripts/lib');
-require('../docs/scripts/floCrypto');
+const floCrypto = require('../docs/scripts/floCrypto');
+const path = require('path');
 
-console.log(__dirname);
+let _I = "";
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
 
 function validateKey(privKey) {
     return new Promise((resolve, reject) => {
@@ -62,7 +68,7 @@ function resetPassword() {
                     let encrypted = Crypto.AES.encrypt(privKey, password);
                     let randNum = floCrypto.randInt(10, 15);
                     let splitShares = floCrypto.createShamirsSecretShares(encrypted, randNum, randNum);
-                    fs.writeFile(__dirname + `/../args/keys${process.env.I || ""}.json`, JSON.stringify(splitShares), 'utf8', (err) => {
+                    fs.writeFile(path.resolve(__dirname, '..', 'args', `keys${_I}.json`), JSON.stringify(splitShares), 'utf8', (err) => {
                         if (err) {
                             console.error(err);
                             return reject(false);
@@ -83,6 +89,6 @@ function resetPassword() {
 }
 
 if (!module.parent)
-    resetPassword().then(_ => null).catch(error => console.error(error));
+    resetPassword().then(_ => null).catch(_ => null).finally(_ => process.exit(0));
 else
     module.exports = resetPassword;

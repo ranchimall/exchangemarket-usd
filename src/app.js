@@ -3,15 +3,13 @@ const express = require('express');
 //const cookieParser = require("cookie-parser");
 //const sessions = require('express-session');
 const Request = require('./request');
+const path = require('path');
+const PUBLIC_DIR = path.resolve(__dirname, '..', 'docs');
 
-const {
-    PERIOD_INTERVAL
-} = require("./_constants")["app"];
-
-module.exports = function App(secret, DB) {
+module.exports = function App(secret) {
 
     if (!(this instanceof App))
-        return new App(secret, DB);
+        return new App(secret);
 
     var server = null;
     const app = express();
@@ -39,7 +37,7 @@ module.exports = function App(secret, DB) {
     }));
     */
 
-    app.use(function(req, res, next) {
+    app.use(function (req, res, next) {
         res.setHeader('Access-Control-Allow-Origin', "*");
         // Request methods you wish to allow
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
@@ -75,8 +73,10 @@ module.exports = function App(secret, DB) {
 
     //get rates, balance and tx
     app.get('/get-rates', Request.GetRates);
+    app.get('/rate-history', Request.GetRateHistory);
     app.get('/get-balance', Request.GetBalance);
     app.get('/get-transaction', Request.GetTransaction);
+    app.get('/get-sink', Request.GetSink);
 
     //get account details
     app.post('/account', Request.Account);
@@ -86,16 +86,39 @@ module.exports = function App(secret, DB) {
     app.post('/withdraw-flo', Request.WithdrawFLO);
     app.post('/deposit-token', Request.DepositToken);
     app.post('/withdraw-token', Request.WithdrawToken);
+    app.post('/get-transact', Request.GetUserTransacts);
 
-    //Manage user tags (Access to trusted IDs only)
+    //generate or discard sinks (admin only)
+    app.post('/generate-sink', Request.GenerateSink);
+    app.post('/reshare-sink', Request.ReshareSink);
+    app.post('/discard-sink', Request.DiscardSink);
+
+    //convert from or to coin
+    app.get('/get-convert-values', Request.GetConvertValues);
+    app.post('/convert-to', Request.ConvertTo);
+    app.post('/convert-from', Request.ConvertFrom);
+    app.post('/deposit-convert-coin-fund', Request.DepositConvertCoinFund);
+    app.post('/deposit-convert-currency-fund', Request.DepositConvertCurrencyFund);
+    app.post('/withdraw-convert-coin-fund', Request.WithdrawConvertCoinFund);
+    app.post('/withdraw-convert-currency-fund', Request.WithdrawConvertCurrencyFund);
+
+    //close blockchain-bond and bobs-fund-investment
+    app.post('/close-blockchain-bonds', Request.CloseBlockchainBond);
+    app.post('/close-bobs-fund-investment', Request.CloseBobsFund);
+
+    //check balance for blockchain-bond and bobs-fund (trusted IDs only)
+    app.post('/check-blockchain-bond', Request.CheckBlockchainBondBalance);
+    app.post('/check-bobs-fund', Request.CheckBobsFundBalance);
+
+    //Manage user tags (trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
     app.post('/remove-tag', Request.RemoveUserTag);
+    app.post('/add-distributor', Request.AddDistributor);
+    app.post('/remove-distributor', Request.RemoveDistributor);
 
-    Request.DB = DB;
     Request.secret = secret;
 
     //Properties
-    var periodInstance = null;
     let self = this;
 
     //return server, express-app
@@ -115,6 +138,9 @@ module.exports = function App(secret, DB) {
         set: (assets) => Request.assetList = assets
     });
 
+    //Refresh data (from blockchain)
+    self.refreshData = (nodeList) => Request.refreshData(nodeList);
+
     //Start (or) Stop servers
     self.start = (port) => new Promise(resolve => {
         server = app.listen(port, () => {
@@ -129,23 +155,8 @@ module.exports = function App(secret, DB) {
     });
 
     //(Node is not master) Pause serving the clients
-    self.pause = () => {
-        Request.pause();
-        if (periodInstance !== null) {
-            clearInterval(periodInstance);
-            periodInstance = null;
-        }
-    }
-
+    self.pause = () => Request.pause();
     //(Node is master) Resume serving the clients
-    self.resume = () => {
-        Request.resume();
-        Request.periodicProcess();
-        if (periodInstance === null)
-            periodInstance = setInterval(Request.periodicProcess, PERIOD_INTERVAL);
-    }
+    self.resume = () => Request.resume();
 
-    Object.defineProperty(self, "periodInstance", {
-        get: () => periodInstance
-    });
 }

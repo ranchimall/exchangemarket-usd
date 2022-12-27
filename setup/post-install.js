@@ -23,13 +23,16 @@ getInput.YesOrNo('Do you want to finish the setup now').then(value => {
                             .catch(_ => console.log('Reset the password later using: '))
                             .finally(_ => {
                                 console.log('npm run reset-password');
+                                process.exit(0);
                             })
-                    } else
+                    } else {
                         console.log('Reset the password later using:\n' + 'npm run reset-password');
+                        process.exit(0);
+                    }
                 })
             })
     } else {
         console.log('Finish the setup later using:\n' + 'npm run setup');
-        console.log('To configure for backup use:\n' + 'npm run configure-backup');
+        process.exit(0);
     }
 })

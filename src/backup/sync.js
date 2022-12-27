@@ -1,19 +1,19 @@
 'use strict';
 
+const DB = require("../database");
+
 const {
     HASH_N_ROW
 } = require("../_constants")["backup"];
 
-var DB; //Container for database
-
 //Backup Transfer
-function sendBackupData(timestamp, checksum, ws) {
-    if (!timestamp) timestamp = 0;
-    else if (typeof timestamp === "string" && /\.\d{3}Z$/.test(timestamp))
-        timestamp = timestamp.substring(0, timestamp.length - 1);
+function sendBackupData(last_time, checksum, ws) {
+    if (!last_time) last_time = 0;
+    else if (typeof last_time === "string" && /\.\d{3}Z$/.test(last_time))
+        last_time = last_time.substring(0, last_time.length - 1);
     let promises = [
-        backupSync_data(timestamp, ws),
-        backupSync_delete(timestamp, ws)
+        backupSync_data(last_time, ws),
+        backupSync_delete(last_time, ws)
     ];
     if (checksum)
         promises.push(backupSync_checksum(ws));
@@ -37,9 +37,9 @@ function sendBackupData(timestamp, checksum, ws) {
     });
 }
 
-function backupSync_delete(timestamp, ws) {
+function backupSync_delete(last_time, ws) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM _backup WHERE mode is NULL AND timestamp > ?", [timestamp]).then(result => {
+        DB.query("SELECT * FROM _backup WHERE mode is NULL AND u_time > ?", [last_time]).then(result => {
             ws.send(JSON.stringify({
                 command: "SYNC_DELETE",
                 delete_data: result
@@ -52,7 +52,7 @@ function backupSync_delete(timestamp, ws) {
     })
 }
 
-function backupSync_data(timestamp, ws) {
+function backupSync_data(last_time, ws) {
     const sendTable = (table, id_list) => new Promise((res, rej) => {
         DB.query(`SELECT * FROM ${table} WHERE id IN (${id_list})`)
             .then(data => {
@@ -68,7 +68,7 @@ function backupSync_data(timestamp, ws) {
             });
     });
     return new Promise((resolve, reject) => {
-        DB.query("SELECT * FROM _backup WHERE mode=TRUE AND timestamp > ?", [timestamp]).then(result => {
+        DB.query("SELECT * FROM _backup WHERE mode=TRUE AND u_time > ?", [last_time]).then(result => {
             let sync_needed = {};
             result.forEach(r => r.t_name in sync_needed ? sync_needed[r.t_name].push(r.id) : sync_needed[r.t_name] = [r.id]);
             ws.send(JSON.stringify({
@@ -263,8 +263,5 @@ function tableSync_checksum(tables, ws) {
 module.exports = {
     sendBackupData,
     sendTableHash,
-    sendTableData,
-    set DB(db) {
-        DB = db;
-    }
+    sendTableData
 }

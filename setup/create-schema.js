@@ -1,15 +1,23 @@
 const fs = require('fs');
-let Database = require('../src/database');
+const path = require('path');
+let DB = require('../src/database');
+
+let _I = "";
+for (let arg of process.argv)
+    if (/^-I=/.test(arg)) {
+        _I = arg.split(/=(.*)/s)[1];
+        break;
+    }
 
 function createSchema() {
-    const config = require(`../args/config${process.env.I || ""}.json`);
+    const config = require(`../args/config${_I}.json`);
     return new Promise((resolve, reject) => {
-        fs.readFile(__dirname + '/../args/schema.sql', 'utf8', (err, data) => {
+        fs.readFile(path.resolve(__dirname, '..', 'args', `schema.sql`), 'utf8', (err, data) => {
             if (err) {
                 console.error(err);
                 return reject(null);
             }
-            Database(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(DB => {
+            DB.connect(config["sql_user"], config["sql_pwd"], config["sql_db"], config["sql_host"]).then(_ => {
                 let txQueries = data.split(';');
                 txQueries.pop();
                 txQueries = txQueries.map(q => q.trim().replace(/\n/g, ' '));
@@ -32,6 +40,6 @@ function createSchema() {
 }
 
 if (!module.parent)
-    createSchema().then(_ => null).catch(_ => null);
+    createSchema().then(_ => null).catch(_ => null).finally(_ => process.exit(0));
 else
     module.exports = createSchema;
