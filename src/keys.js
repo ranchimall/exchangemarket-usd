@@ -35,7 +35,7 @@ const PRIV_EKEY_MIN = 32,
     LOCK_RETRY_MAX_TIME = 2 * 1000;
 
 var node_priv, e_key, node_id, node_pub; //containers for node-key wrapper
-const _ = {
+const _x = {
     get node_priv() {
         if (!node_priv || !e_key)
             throw Error("keys not set");
@@ -71,10 +71,10 @@ const _ = {
 
 function initialize() {
     return new Promise((resolve, reject) => {
-        fs.readFile(_.prime_file, PRIME_FILE_TYPE, (err, res) => {
+        fs.readFile(_x.prime_file, PRIME_FILE_TYPE, (err, res) => {
             var data, cur_filename, new_filename, priv_key;
             try {
-                priv_key = _.node_priv;
+                priv_key = _x.node_priv;
             } catch (error) {
                 return reject(error);
             }
@@ -86,7 +86,7 @@ function initialize() {
                         console.debug(error);
                         return reject("Prime file corrupted");
                     } try { //read data from index file
-                        let tmp = fs.readFileSync(path.join(_.index_dir, cur_filename + INDEX_FILE_EXT), INDEX_FILE_TYPE);
+                        let tmp = fs.readFileSync(path.join(_x.index_dir, cur_filename + INDEX_FILE_EXT), INDEX_FILE_TYPE);
                         tmp = Crypto.AES.decrypt(tmp, priv_key);
                         JSON.parse(tmp); //check if data is JSON parse-able
                         data = tmp;
@@ -97,18 +97,18 @@ function initialize() {
                 }
             }
             try {
-                if (!fs.existsSync(_.index_dir)) {
-                    fs.mkdirSync(_.index_dir);
+                if (!fs.existsSync(_x.index_dir)) {
+                    fs.mkdirSync(_x.index_dir);
                 }
             } catch (error) {
                 console.debug(error);
                 return reject("Index directory creation failed");
             }
             try { //delete all old dummy files
-                let files = fs.readdirSync(_.index_dir);
+                let files = fs.readdirSync(_x.index_dir);
                 for (const file of files)
                     if (!cur_filename || file !== cur_filename + INDEX_FILE_EXT)    //check if file is current file
-                        fs.unlinkSync(path.join(_.index_dir, file));
+                        fs.unlinkSync(path.join(_x.index_dir, file));
             } catch (error) {
                 console.debug(error);
                 return reject("Clear index directory failed");
@@ -128,20 +128,20 @@ function initialize() {
                         f_data = floCrypto.randString(d_size, false);
                     }
                     f_data = Crypto.AES.encrypt(f_data, priv_key);
-                    fs.writeFileSync(path.join(_.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
+                    fs.writeFileSync(path.join(_x.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
                 }
             } catch (error) {
                 console.debug(error);
                 return reject("Index file creation failed");
             } try { //update prime file
                 let en_filename = Crypto.AES.encrypt(new_filename, priv_key);
-                fs.writeFileSync(_.prime_file, en_filename, PRIME_FILE_TYPE);
+                fs.writeFileSync(_x.prime_file, en_filename, PRIME_FILE_TYPE);
             } catch (error) {
                 console.debug(error);
                 return reject("Update prime file failed");
             }
             if (cur_filename)
-                fs.unlink(path.join(_.index_dir, cur_filename + INDEX_FILE_EXT), err => err ? console.debug(err) : null);
+                fs.unlink(path.join(_x.index_dir, cur_filename + INDEX_FILE_EXT), err => err ? console.debug(err) : null);
             shuffle.interval = setInterval(shuffle, SHUFFLE_INTERVAL);
             resolve("Key management initiated");
         })
@@ -150,8 +150,8 @@ function initialize() {
 
 function shuffle() {
     readIndexFile().then(data => {
-        let new_filename, cur_filename = Crypto.AES.decrypt(fs.readFileSync(_.prime_file, PRIME_FILE_TYPE), _.node_priv);
-        fs.readdir(_.index_dir, (err, files) => {
+        let new_filename, cur_filename = Crypto.AES.decrypt(fs.readFileSync(_x.prime_file, PRIME_FILE_TYPE), _x.node_priv);
+        fs.readdir(_x.index_dir, (err, files) => {
             if (err)
                 return console.error(err);
             data = JSON.stringify(data);
@@ -165,11 +165,11 @@ function shuffle() {
                     let d_size = data_size * (floCrypto.randInt(MIN_DUMMY_SIZE_MUL * SIZE_FACTOR, MAX_DUMMY_SIZE_MUL * SIZE_FACTOR) / SIZE_FACTOR);
                     f_data = floCrypto.randString(d_size, false);
                 }
-                f_data = Crypto.AES.encrypt(f_data, _.node_priv);
+                f_data = Crypto.AES.encrypt(f_data, _x.node_priv);
                 //rename and rewrite the file
                 try {
-                    fs.renameSync(path.join(_.index_dir, file), path.join(_.index_dir, f_name + INDEX_FILE_EXT));
-                    fs.writeFileSync(path.join(_.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
+                    fs.renameSync(path.join(_x.index_dir, file), path.join(_x.index_dir, f_name + INDEX_FILE_EXT));
+                    fs.writeFileSync(path.join(_x.index_dir, f_name + INDEX_FILE_EXT), f_data, INDEX_FILE_TYPE);
                 } catch (error) {
                     console.error(error)
                 }
@@ -177,9 +177,9 @@ function shuffle() {
             //update prime file
             if (!new_filename)
                 return console.error("Index file has not been renamed");
-            let en_filename = Crypto.AES.encrypt(new_filename, _.node_priv);
+            let en_filename = Crypto.AES.encrypt(new_filename, _x.node_priv);
             try {
-                fs.writeFileSync(_.prime_file, en_filename, PRIME_FILE_TYPE);
+                fs.writeFileSync(_x.prime_file, en_filename, PRIME_FILE_TYPE);
             } catch (error) {
                 console.error(error);
             }
@@ -189,13 +189,13 @@ function shuffle() {
 
 function readIndexFile() {
     return new Promise((resolve, reject) => {
-        fs.readFile(_.index_file, INDEX_FILE_TYPE, (err, data) => {
+        fs.readFile(_x.index_file, INDEX_FILE_TYPE, (err, data) => {
             if (err) {
                 console.debug(err);
                 return reject('Unable to read Index file');
             }
             try {
-                data = JSON.parse(Crypto.AES.decrypt(data, _.node_priv));
+                data = JSON.parse(Crypto.AES.decrypt(data, _x.node_priv));
                 resolve(data);
             } catch {
                 reject("Index file corrupted");
@@ -206,8 +206,8 @@ function readIndexFile() {
 
 function writeIndexFile(data) {
     return new Promise((resolve, reject) => {
-        let en_data = Crypto.AES.encrypt(JSON.stringify(data), _.node_priv);
-        fs.writeFile(_.index_file, en_data, INDEX_FILE_TYPE, (err) => {
+        let en_data = Crypto.AES.encrypt(JSON.stringify(data), _x.node_priv);
+        fs.writeFile(_x.index_file, en_data, INDEX_FILE_TYPE, (err) => {
             if (err) {
                 console.debug(err);
                 return reject('Unable to write Index file');
@@ -229,7 +229,7 @@ function getShares(group, id, ignoreDiscarded = true) {
                 else {
                     let ref = data[group][id].shift();
                     DB.query("SELECT share FROM sinkShares WHERE num IN (?)", [data[group][id]])
-                        .then(result => resolve({ ref, shares: result.map(r => Crypto.AES.decrypt(r.share, _.node_priv)) }))
+                        .then(result => resolve({ ref, shares: result.map(r => Crypto.AES.decrypt(r.share, _x.node_priv)) }))
                         .catch(error => reject(error))
                 }
             }).catch(error => reject(error))
@@ -257,7 +257,7 @@ function addShare(group, id, ref, share) {
         checkIfDiscarded(id).then(result => {
             if (result != false)
                 return reject("Trying to store share for discarded ID");
-            lockfile.lock(_.index_file, { retries: { forever: true, minTimeout: LOCK_RETRY_MIN_TIME, maxTimeout: LOCK_RETRY_MAX_TIME } }).then(release => {
+            lockfile.lock(_x.index_file, { retries: { forever: true, minTimeout: LOCK_RETRY_MIN_TIME, maxTimeout: LOCK_RETRY_MAX_TIME } }).then(release => {
                 const releaseAndReject = err => {
                     release().then(_ => null).catch(error => console.error(error));
                     reject(err);
@@ -276,7 +276,7 @@ function addShare(group, id, ref, share) {
                         DB.query("DELETE FROM sinkShares WHERE num in (?)", [old_shares])//delete old shares
                             .then(_ => null).catch(error => console.error(error));
                     }
-                    let encrypted_share = Crypto.AES.encrypt(share, _.node_priv);
+                    let encrypted_share = Crypto.AES.encrypt(share, _x.node_priv);
                     console.debug(ref, '|sinkID:', id, '|EnShare:', encrypted_share);
                     storeShareAtRandom(encrypted_share).then(i => {
                         data[group][id].push(i);
@@ -422,10 +422,10 @@ module.exports = {
     checkIfDiscarded,
     discardSink,
     set node_priv(key) {
-        _.node_priv = key;
+        _x.node_priv = key;
     },
     get node_priv() {
-        return _.node_priv;
+        return _x.node_priv;
     },
     get node_id() {
         return node_id;
