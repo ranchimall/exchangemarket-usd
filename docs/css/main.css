@@ -71,6 +71,12 @@ a:focus-visible {
   box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
 }
 
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
 button,
 .button {
   -webkit-user-select: none;

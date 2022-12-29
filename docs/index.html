@@ -2839,7 +2839,7 @@
                     }
                     render.chart(pagesData.params.asset)
                     showSuggestedPrice()
-                }).catch(error => console.error(error.message))
+                }).catch(error => console.error(floGlobals.errorMessage[error]))
             }).catch(error => console.error(error))
         }
 
@@ -2952,12 +2952,12 @@
                 showPage(window.location.hash);
             }).catch(error => {
                 console.debug(error)
-                if (['015', '016', '018', '019'].includes(error.code)) {
+                if (['015', '016', '018', '019'].includes(error)) {
                     proxy.clear()
                     location.reload()
                 }
                 else
-                    notify(error.message, 'error')
+                    notify(floGlobals.errorMessage[error], 'error')
             })
                 .finally(() => {
                     hideProcess('login_button_wrapper')
@@ -2992,7 +2992,7 @@
                     delete floGlobals.loginDetails
                     account();
                 }).catch(error => {
-                    notify(error.message, 'error')
+                    notify(floGlobals.errorMessage[error], 'error')
                     hideProcess('login_button_wrapper')
                 })
             }
@@ -3006,6 +3006,38 @@
                 refresh(true);
             }).catch(error => console.error(error))
         })
+
+        floGlobals.errorMessage = {
+            "000": 'Incorrect server',
+            "001": 'Invalid request format',
+            "002": 'access denied',
+            "011": 'Invalid FLO address',
+            "012": 'Invalid login code',
+            "013": 'Invalid private key',
+            "014": 'Invalid public key',
+            "015": 'Invalid signature',
+            "016": 'Expired signature',
+            "017": 'Duplicate signature',
+            "018": 'Session invalid',
+            "019": 'Session expired',
+            "020": 'Invalid value',
+            "021": 'Invalid token name',
+            "022": 'Invalid number',
+            "023": 'Invalid type',
+            "024": 'Invalid transaction ID',
+            "025": 'Invalid tag',
+            "099": 'Missing parameter',
+            "101": 'Not found',
+            "102": 'Not owner',
+            "103": 'Duplicate entry',
+            "201": 'Insufficient balance',
+            "203": 'Insufficient sell chips',
+            "204": 'Greater sell chip base',
+            "206": 'Insufficient period',
+            "207": 'Insufficient fund',
+            "404": 'Node offline',
+            "500": 'Internal server error',
+        }
     </script>
 </body>
 
