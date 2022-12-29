@@ -37,9 +37,9 @@
     <sm-popup id="confirmation_popup">
         <h4 id="confirm_title"></h4>
         <p id="confirm_message"></p>
-        <div class="flex align-center">
-            <sm-button variant="no-outline" class="cancel-btn">Cancel</sm-button>
-            <sm-button variant="no-outline" class="submit-btn">OK</sm-button>
+        <div class="flex align-center gap-0-5 margin-left-auto">
+            <button class="button cancel-button">Cancel</button>
+            <button class="button button--primary confirm-button">OK</button>
         </div>
     </sm-popup>
     <sm-popup id="prompt_popup">
@@ -47,9 +47,9 @@
         <p id="prompt_message"></p>
         <sm-form>
             <sm-input id="prompt_input"></sm-input>
-            <div class="flex align-center">
-                <sm-button variant="no-outline" class="cancel-btn">Cancel</sm-button>
-                <sm-button variant="no-outline" class="submit-btn" type="submit">OK</sm-button>
+            <div class="flex align-center gap-0-5 margin-left-auto">
+                <button class="button cancel-button">Cancel</button>
+                <button class="button confirm-button button--primary" type="submit">OK</button>
             </div>
         </sm-form>
     </sm-popup>
@@ -60,7 +60,7 @@
                 <h4>RanchiMall Exchange</h4>
                 <p>Getting everything ready</p>
             </div>
-            <sm-button onclick="floExchangeAPI.clearAllLocalData()">Reset</sm-button>
+            <button class="button" onclick="floExchangeAPI.clearAllLocalData()">Reset</button>
         </div>
     </div>
     <article id="home" class="page hide">
@@ -102,13 +102,13 @@
                         </span>
                     </sm-checkbox>
                     <div id="login_button_wrapper" class="stateful-button-wrapper">
-                        <sm-button variant="primary" onclick="UI_evt.login();">Log in</sm-button>
+                        <button class="button button--primary" onclick="UI_evt.login();" type="submit">Log in</button>
                     </div>
                     <div class="grid gap-0-5">
                         <p>Don't have FLO credentials?</p>
-                        <sm-button id="sign_up_button">Generate FLO credentials</sm-button>
+                        <button class="button" id="sign_up_button">Generate FLO credentials</button>
                     </div>
-                    <sm-button onclick="floExchangeAPI.clearAllLocalData()">Reset</sm-button>
+                    <button class="button" onclick="floExchangeAPI.clearAllLocalData()">Reset</button>
                 </sm-form>
                 <section id="exchange_wrapper" class="hide user-content">
                     <div id="asset_list_wrapper" class="grid gap-1 align-start">
@@ -135,11 +135,11 @@
                             <div id="price_chart_container" class="flex flex-direction-column gap-0-5 hide-on-mobile">
                                 <div id="chart_header" class="flex align-center space-between">
                                     <H4 id="chart_asset"></H4>
-                                    <strip-select id="price_duration_selector">
-                                        <strip-option value="hour" title="1 Hour price interval" selected>Hour
-                                        </strip-option>
-                                        <strip-option value="day" title="1 Day price interval">Day</strip-option>
-                                    </strip-select>
+                                    <sm-chips id="price_duration_selector">
+                                        <sm-chip value="hour" title="1 Hour price interval" selected>Hour
+                                        </sm-chip>
+                                        <sm-chip value="day" title="1 Day price interval">Day</sm-chip>
+                                    </sm-chips>
                                 </div>
                                 <div id="price_chart_wrapper" class="flex" style="position: relative; flex: 1">
                                     <div id="price_history_chart"></div>
@@ -148,10 +148,10 @@
                             <sm-form id="trade_form">
                                 <div class="flex space-between align-center">
                                     <h4 id="traded_asset">Trade FLO</h4>
-                                    <strip-select id="trade_type_selector" class="tab">
-                                        <strip-option value="buy" selected>Buy</strip-option>
-                                        <strip-option value="sell">Sell</strip-option>
-                                    </strip-select>
+                                    <sm-chips id="trade_type_selector" class="tab">
+                                        <sm-chip value="buy" selected>Buy</sm-chip>
+                                        <sm-chip value="sell">Sell</sm-chip>
+                                    </sm-chips>
                                 </div>
                                 <div id="get_price" class="flex align-center space-between"></div>
                                 <sm-input id="get_quantity" placeholder="Quantity" type="number" step="0.00000001"
@@ -188,8 +188,8 @@
                                 </div>
                                 <div id="trade_button_wrapper"
                                     class="stateful-button-wrapper flex align-center justify-center">
-                                    <sm-button id="trade_button" class="uppercase w-100" variant="primary">BUY FLO
-                                    </sm-button>
+                                    <button id="trade_button" class="uppercase w-100 button button--primary"
+                                        type="submit">BUY FLO </button>
                                 </div>
                             </sm-form>
                         </div>
@@ -235,10 +235,10 @@
                         <h4 id="my_orders__title">
                             My orders
                         </h4>
-                        <strip-select id="my_orders_category_selector" class="tab">
-                            <strip-option value="open" selected>Live</strip-option>
-                            <strip-option value="completed">Trades</strip-option>
-                        </strip-select>
+                        <sm-chips id="my_orders_category_selector" class="tab">
+                            <sm-chip value="open" selected>Live</sm-chip>
+                            <sm-chip value="completed">Trades</sm-chip>
+                        </sm-chips>
                     </div>
                     <div id="orders_section__header--secondary" class="flex w-100 align-center space-between hide">
                         <button class="" onclick="clearSelection()" title="Clear all selection">
@@ -292,10 +292,10 @@
                                     d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
                             </svg>
                         </button>
-                        <strip-select id="market_orders_category_selector" class="tab justify-right">
-                            <strip-option value="open" selected>Live</strip-option>
-                            <strip-option value="completed">Trades</strip-option>
-                        </strip-select>
+                        <sm-chips id="market_orders_category_selector" class="tab justify-right">
+                            <sm-chip value="open" selected>Live</sm-chip>
+                            <sm-chip value="completed">Trades</sm-chip>
+                        </sm-chips>
                     </div>
                     <div id="market_orders_wrapper">
                         <div class="grid gap-1">
@@ -331,10 +331,10 @@
             <div id="portfolio" class="mobile-page hide">
                 <div class="grid gap-1-5">
                     <div class="flex align-center space-between">
-                        <strip-select id="portfolio_pages_selector">
-                            <strip-option value="exchange" selected>Exchange</strip-option>
-                            <strip-option value="personal">On-chain</strip-option>
-                        </strip-select>
+                        <sm-chips id="portfolio_pages_selector">
+                            <sm-chip value="exchange" selected>Exchange</sm-chip>
+                            <sm-chip value="personal">On-chain</sm-chip>
+                        </sm-chips>
                         <div class="multi-state-button">
                             <button id="portfolio_balance_refresh_button" class="button button--small"
                                 onclick="refresh(false,this);" title="Refresh">
@@ -745,7 +745,7 @@
         </header>
         <section class="grid gap-1-5">
             <div id="confirm_trade__details" class="grid gap-1-5"></div>
-            <sm-button variant="primary" onclick="tradeAsset()" autofocus>Confirm</sm-button>
+            <button class="button button--primary" onclick="tradeAsset()" autofocus>Confirm</button>
         </section>
     </sm-popup>
     <sm-popup id="user_popup">
@@ -772,9 +772,9 @@
                         private key.
                     </p>
                 </div>
-                <sm-button onclick="proxy.lock();">Add password</sm-button>
+                <button class="button" onclick="proxy.lock();">Add password</button>
             </div>
-            <sm-button class="danger" onclick="UI_evt.logout();">Log out</sm-button>
+            <button class="button button--danger" onclick="UI_evt.logout();">Log out</button>
         </section>
     </sm-popup>
     <sm-popup id="sign_up_popup">
@@ -837,7 +837,7 @@
                 error-text="Invalid private key" data-private-key="" animate>
             </sm-input>
             <div id="portfolio_popup__cta_wrapper" class="stateful-button-wrapper">
-                <sm-button id="portfolio_popup__cta" class="uppercase" variant="primary"></sm-button>
+                <button id="portfolio_popup__cta" class="button button--primary uppercase" type="submit"></button>
             </div>
         </sm-form>
         <div id="portfolio_result" class="grid gap-2 hide">
@@ -1103,25 +1103,16 @@
         const relativeTime = new RelativeTime('en', { style: 'short' });
 
         //Checks for internet connection status
-        if (!navigator.onLine) {
-            notify(
-                "There seems to be a problem connecting to the internet. Please check your internet connection.",
-                "error",
-                { pinned: true }
-            );
-        }
-        window.addEventListener("offline", () => {
-            notify(
-                "There seems to be a problem connecting to the internet. Please check your internet connection.",
-                "error",
-                { pinned: true }
-            );
+        if (!navigator.onLine)
+            floGlobals.connectionErrorNotification = notify('There seems to be a problem connecting to the internet, Please check you internet connection.', 'error')
+        window.addEventListener('offline', () => {
+            floGlobals.connectionErrorNotification = notify('There seems to be a problem connecting to the internet, Please check you internet connection.', 'error')
+        })
+        window.addEventListener('online', () => {
+            getRef('notification_drawer').remove(floGlobals.connectionErrorNotification)
+            notify('We are back online.', 'success')
             location.reload()
-        });
-        window.addEventListener("online", () => {
-            getRef("notification_drawer").clearAll();
-            notify("We are back online.", "success");
-        });
+        })
 
         // Use instead of document.getElementById
         function getRef(elementId) {
@@ -1187,72 +1178,82 @@
             return Array.from(document.querySelectorAll(selector));
         }
 
-        let zIndex = 10
+        let zIndex = 50
         // function required for popups or modals to appear
         function openPopup(popupId, pinned) {
             zIndex++
             getRef(popupId).setAttribute('style', `z-index: ${zIndex}`)
-            getRef(popupId).show({ pinned })
-            return getRef(popupId);
+            return getRef(popupId).show({ pinned })
         }
 
         // hides the popup or modal
-        function closePopup() {
+        function closePopup(options = {}) {
             if (popupStack.peek() === undefined)
                 return;
-            popupStack.peek().popup.hide()
+            popupStack.peek().popup.hide(options)
         }
 
         // displays a popup for asking permission. Use this instead of JS confirm
         const getConfirmation = (title, options = {}) => {
             return new Promise(resolve => {
-                const { message, cancelText = 'Cancel', confirmText = 'OK' } = options
-                openPopup('confirmation_popup', true)
-                getRef('confirm_title').textContent = title;
-                getRef('confirm_message').textContent = message;
-                let cancelButton = getRef('confirmation_popup').children[2].children[0],
-                    submitButton = getRef('confirmation_popup').children[2].children[1]
-                submitButton.textContent = confirmText
+                const { message = '', cancelText = 'Cancel', confirmText = 'OK', danger = false } = options
+                getRef('confirm_title').innerText = title;
+                getRef('confirm_message').innerText = message;
+                const cancelButton = getRef('confirmation_popup').querySelector('.cancel-button');
+                const confirmButton = getRef('confirmation_popup').querySelector('.confirm-button')
+                confirmButton.textContent = confirmText
                 cancelButton.textContent = cancelText
-                submitButton.onclick = () => {
-                    closePopup()
-                    resolve(true);
+                if (danger)
+                    confirmButton.classList.add('button--danger')
+                else
+                    confirmButton.classList.remove('button--danger')
+                const { opened, closed } = openPopup('confirmation_popup')
+                confirmButton.onclick = () => {
+                    closePopup({ payload: true })
                 }
                 cancelButton.onclick = () => {
                     closePopup()
-                    resolve(false);
                 }
+                closed.then((payload) => {
+                    confirmButton.onclick = null
+                    cancelButton.onclick = null
+                    if (payload)
+                        resolve(true)
+                    else
+                        resolve(false)
+                })
             })
         }
-
         // displays a popup for asking user input. Use this instead of JS prompt
         function getPromptInput(title, message = '', options = {}) {
-            const { isPassword = true, cancelText = 'Cancel', confirmText = 'OK' } = options
-            openPopup('prompt_popup', true)
-            getRef('prompt_title').textContent = title;
-            getRef('prompt_message').textContent = message;
-            let buttons = getRef('prompt_popup').querySelectorAll("sm-button");
-            if (isPassword)
+            let { placeholder = '', isPassword = false, cancelText = 'Cancel', confirmText = 'OK' } = options
+            getRef('prompt_title').innerText = title;
+            getRef('prompt_message').innerText = message;
+            const cancelButton = getRef('prompt_popup').querySelector('.cancel-button');
+            const confirmButton = getRef('prompt_popup').querySelector('.confirm-button')
+            if (isPassword) {
+                placeholder = 'Password'
                 getRef('prompt_input').setAttribute("type", "password")
+            }
+            getRef('prompt_input').setAttribute("placeholder", placeholder)
             getRef('prompt_input').focusIn()
-            buttons[0].textContent = cancelText;
-            buttons[1].textContent = confirmText;
+            cancelButton.textContent = cancelText;
+            confirmButton.textContent = confirmText;
+            openPopup('prompt_popup', true)
             return new Promise((resolve, reject) => {
-                buttons[0].onclick = () => {
+                cancelButton.addEventListener('click', () => {
                     closePopup()
-                    return (null);
-                }
-                buttons[1].onclick = () => {
-                    const value = getRef('prompt_input').value;
+                    return null
+                }, { once: true })
+                confirmButton.addEventListener('click', () => {
                     closePopup()
-                    resolve(value)
-                }
+                    resolve(getRef('prompt_input').value)
+                }, { once: true })
             })
         }
 
         //Function for displaying toast notifications. pass in error for mode param if you want to show an error.
         function notify(message, mode, options = {}) {
-            const { pinned = false, sound = false } = options
             let icon
             switch (mode) {
                 case 'success':
@@ -1260,14 +1261,14 @@
                     break;
                 case 'error':
                     icon = `<svg class="icon icon--error" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z"/></svg>`
+                    options.pinned = true
                     break;
             }
-            getRef("notification_drawer").push(message, { pinned, icon });
             if (mode === 'error') {
                 console.error(message)
             }
+            return getRef("notification_drawer").push(message, { icon, ...options });
         }
-
         function getFormattedTime(time, format) {
             try {
                 let [day, month, date, year] = new Date(time).toString().split(' '),
@@ -1312,8 +1313,8 @@
                 notify('copied', 'success')
             })
             document.addEventListener("pointerdown", (e) => {
-                if (e.target.closest("button:not([disabled]), sm-button:not([disabled]), .interact")) {
-                    createRipple(e, e.target.closest("button, sm-button, .interact"));
+                if (e.target.closest("button:not([disabled]), .interact")) {
+                    createRipple(e, e.target.closest("button, .interact"));
                 }
             });
             document.querySelectorAll('.popup__header__close, .close-popup-on-click').forEach(elem => {

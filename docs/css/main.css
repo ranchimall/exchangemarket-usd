@@ -71,21 +71,8 @@ a:focus-visible {
   box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
 }
 
-a.button {
-  display: flex;
-  align-items: center;
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.3rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--accent-color);
-}
-
-fieldset {
-  border: none;
-}
-
-button {
+button,
+.button {
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
@@ -97,38 +84,62 @@ button {
   color: inherit;
   -webkit-tap-highlight-color: transparent;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: inherit;
   font-weight: 500;
   white-space: nowrap;
   padding: 0.8rem;
   border-radius: 0.3rem;
   justify-content: center;
+  flex-shrink: 0;
 }
-button:focus-visible {
+button:focus-visible,
+.button:focus-visible {
   outline: var(--accent-color) solid medium;
 }
-button:not(:disabled) {
+button:not(:disabled),
+.button:not(:disabled) {
   cursor: pointer;
 }
 
 .button {
-  color: var(--accent-color);
-  background-color: rgba(var(--text-color), 0.06);
-}
-.button--primary, .button--danger {
-  color: rgba(var(--background-color), 1) !important;
-}
-.button--primary .icon, .button--danger .icon {
-  fill: rgba(var(--background-color), 1);
+  background-color: rgba(var(--text-color), 0.02);
+  border: solid thin rgba(var(--text-color), 0.06);
 }
 .button--primary {
+  color: rgba(var(--background-color), 1);
   background-color: var(--accent-color);
 }
+.button--primary .icon {
+  fill: rgba(var(--background-color), 1);
+}
+.button--colored {
+  color: var(--accent-color);
+}
+.button--colored .icon {
+  fill: var(--accent-color);
+}
 .button--danger {
-  background-color: var(--danger-color);
+  background-color: rgba(255, 115, 115, 0.062745098);
+  color: var(--danger-color);
+}
+.button--danger .icon {
+  fill: var(--danger-color);
 }
 .button--small {
   padding: 0.4rem 0.6rem;
+}
+.button--outlined {
+  border: solid rgba(var(--text-color), 0.3) 0.1rem;
+  background-color: rgba(var(--foreground-color), 1);
+}
+.button--transparent {
+  background-color: transparent;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: saturate(0);
 }
 
 .cta {
@@ -496,32 +507,32 @@ details[open] summary .icon {
   transform: rotate(180deg);
 }
 
-strip-select {
+sm-chips {
   --gap: 0;
   background-color: rgba(var(--text-color), 0.06);
   border-radius: 0.2rem;
 }
 
-strip-option {
-  font-weight: 500;
+sm-chip {
+  position: relative;
   font-size: 0.9rem;
+  --border-radius: 0.5rem;
+  --padding: 0.5rem 0.8rem;
+  --background: rgba(var(--text-color), 0.06);
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
-  --border-radius: 0;
-  --active-option-color: rgba(var(--background-color), 1);
-  --active-option-background-color: var(--accent-color);
+  font-weight: 500;
 }
-strip-option:first-of-type {
-  --border-radius: 0.2rem 0 0 0.2rem;
+sm-chip[selected] {
+  --background: var(--accent-color);
+  color: rgba(var(--background-color), 1);
 }
-strip-option:last-of-type {
-  --border-radius: 0 0.2rem 0.2rem 0;
+sm-chip:first-of-type {
+  --border-radius: 0.3rem 0 0 0.3rem;
 }
-
-sm-select,
-sm-option {
-  font-size: 0.9rem;
+sm-chip:last-of-type {
+  --border-radius: 0 0.3rem 0.3rem 0;
 }
 
 sm-checkbox {

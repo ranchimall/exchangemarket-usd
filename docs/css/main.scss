@@ -71,19 +71,8 @@ a {
     box-shadow: 0 0 0 0.1rem rgba(var(--text-color), 1) inset;
   }
 }
-a.button {
-  display: flex;
-  align-items: center;
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.3rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--accent-color);
-}
-fieldset {
-  border: none;
-}
-button {
+button,
+.button {
   user-select: none;
   position: relative;
   display: inline-flex;
@@ -93,39 +82,65 @@ button {
   color: inherit;
   -webkit-tap-highlight-color: transparent;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: inherit;
   font-weight: 500;
   white-space: nowrap;
   padding: 0.8rem;
   border-radius: 0.3rem;
   justify-content: center;
+  flex-shrink: 0;
   &:focus-visible {
     outline: var(--accent-color) solid medium;
   }
+
   &:not(:disabled) {
     cursor: pointer;
   }
 }
+
 .button {
-  color: var(--accent-color);
-  background-color: rgba(var(--text-color), 0.06);
-  &--primary,
-  &--danger {
-    color: rgba(var(--background-color), 1) !important;
+  background-color: rgba(var(--text-color), 0.02);
+  border: solid thin rgba(var(--text-color), 0.06);
+  &--primary {
+    color: rgba(var(--background-color), 1);
+    background-color: var(--accent-color);
+
     .icon {
       fill: rgba(var(--background-color), 1);
     }
   }
-  &--primary {
-    background-color: var(--accent-color);
+  &--colored {
+    color: var(--accent-color);
+    .icon {
+      fill: var(--accent-color);
+    }
   }
   &--danger {
-    background-color: var(--danger-color);
+    background-color: #ff737310;
+    color: var(--danger-color);
+    .icon {
+      fill: var(--danger-color);
+    }
   }
+
   &--small {
     padding: 0.4rem 0.6rem;
   }
+
+  &--outlined {
+    border: solid rgba(var(--text-color), 0.3) 0.1rem;
+    background-color: rgba(var(--foreground-color), 1);
+  }
+  &--transparent {
+    background-color: transparent;
+  }
 }
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: saturate(0);
+}
+
 .cta {
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -471,28 +486,30 @@ details {
     }
   }
 }
-strip-select {
+sm-chips {
   --gap: 0;
   background-color: rgba(var(--text-color), 0.06);
   border-radius: 0.2rem;
 }
-strip-option {
-  font-weight: 500;
+
+sm-chip {
+  position: relative;
   font-size: 0.9rem;
+  --border-radius: 0.5rem;
+  --padding: 0.5rem 0.8rem;
+  --background: rgba(var(--text-color), 0.06);
   user-select: none;
-  --border-radius: 0;
-  --active-option-color: rgba(var(--background-color), 1);
-  --active-option-background-color: var(--accent-color);
+  font-weight: 500;
+  &[selected] {
+    --background: var(--accent-color);
+    color: rgba(var(--background-color), 1);
+  }
   &:first-of-type {
-    --border-radius: 0.2rem 0 0 0.2rem;
+    --border-radius: 0.3rem 0 0 0.3rem;
   }
   &:last-of-type {
-    --border-radius: 0 0.2rem 0.2rem 0;
+    --border-radius: 0 0.3rem 0.3rem 0;
   }
-}
-sm-select,
-sm-option {
-  font-size: 0.9rem;
 }
 sm-checkbox {
   --height: 1rem;
