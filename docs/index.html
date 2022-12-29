@@ -1272,8 +1272,7 @@
             try {
                 let [day, month, date, year] = new Date(time).toString().split(' '),
                     minutes = new Date(time).getMinutes(),
-                    hours = new Date(time).getHours(),
-                    currentTime = new Date().toString().split(' ')
+                    hours = new Date(time).getHours();
 
                 minutes = minutes < 10 ? `0${minutes}` : minutes
                 let finalHours = ``;
@@ -1487,24 +1486,17 @@
                                     </div>`: ''}
                             `)
                             getRef('portfolio_asset__history').innerHTML = `                        
-                            <div class="flex" style="padding: 1.5rem; justify-content: center;">
-                                <sm-spinner></sm-spinner>
-                            </div>`
-                            // load asset specific blockchain txs
-                            floBlockchainAPI.readAllTxs(accountDetails.floID).then(async transactions => {
-                                floGlobals.allTxs = {}
-                                transactions.forEach(({ txid, time }) => { floGlobals.allTxs[txid] = { time } })
-                                floExchangeAPI.getUserTransacts(accountDetails.floID, await proxy.secret).then(exchangeTxs => {
-                                    exchangeTxs = exchangeTxs.filter(tx => tx.token === params.asset).sort((a, b) => floGlobals.allTxs[b.txid].time - floGlobals.allTxs[a.txid].time)
-                                    if (portfolioAssetHistoryLazyLoader) {
-                                        portfolioAssetHistoryLazyLoader.update(exchangeTxs)
-                                    } else {
-                                        portfolioAssetHistoryLazyLoader = new LazyLoader('#portfolio_asset__history', exchangeTxs, render.historyEntry)
-                                    }
-                                    portfolioAssetHistoryLazyLoader.init()
-                                }).catch(err => {
-                                    console.error(err)
-                                })
+                                <div class="flex" style="padding: 1.5rem; justify-content: center;">
+                                    <sm-spinner></sm-spinner>
+                                </div>`
+                            floExchangeAPI.getUserTransacts(accountDetails.floID, await proxy.secret).then(exchangeTxs => {
+                                exchangeTxs = exchangeTxs.filter(tx => tx.asset === params.asset).sort((a, b) => new Date(b.locktime).getTime() - new Date(a.locktime).getTime())
+                                if (portfolioAssetHistoryLazyLoader) {
+                                    portfolioAssetHistoryLazyLoader.update(exchangeTxs)
+                                } else {
+                                    portfolioAssetHistoryLazyLoader = new LazyLoader('#portfolio_asset__history', exchangeTxs, render.historyEntry)
+                                }
+                                portfolioAssetHistoryLazyLoader.init()
                             }).catch(err => {
                                 console.error(err)
                             })
@@ -1523,21 +1515,15 @@
                             <sm-spinner></sm-spinner>
                         </div>
                         `
-                        // load all blockchain txs
-                        floBlockchainAPI.readAllTxs(accountDetails.floID).then(async transactions => {
-                            floGlobals.allTxs = {}
-                            transactions.forEach(({ txid, time }) => { floGlobals.allTxs[txid] = { time } })
-                            floExchangeAPI.getUserTransacts(accountDetails.floID, await proxy.secret).then(exchangeTxs => {
-                                exchangeTxs = exchangeTxs.sort((a, b) => floGlobals.allTxs[b.txid].time - floGlobals.allTxs[a.txid].time)
-                                if (historyLazyLoader) {
-                                    historyLazyLoader.update(exchangeTxs)
-                                } else {
-                                    historyLazyLoader = new LazyLoader('#exchange_history', exchangeTxs, render.historyEntry)
-                                }
-                                historyLazyLoader.init()
-                            }).catch(err => {
-                                console.error(err)
-                            })
+                        floExchangeAPI.getUserTransacts(accountDetails.floID, await proxy.secret).then(exchangeTxs => {
+                            console.log(exchangeTxs)
+                            exchangeTxs = exchangeTxs.sort((a, b) => new Date(b.locktime).getTime() - new Date(a.locktime).getTime())
+                            if (historyLazyLoader) {
+                                historyLazyLoader.update(exchangeTxs)
+                            } else {
+                                historyLazyLoader = new LazyLoader('#exchange_history', exchangeTxs, render.historyEntry)
+                            }
+                            historyLazyLoader.init()
                         }).catch(err => {
                             console.error(err)
                         })
@@ -2077,8 +2063,17 @@
                 }
             },
             historyEntry(details) {
-                const { amount, status, token, txid, type } = details
+                const { amount, r_status, asset, txid, mode, locktime } = details
+                const type = mode === 1 ? 'Deposit' : 'Withdraw'
                 const entry = getRef('history_entry').content.cloneNode(true).firstElementChild
+                let status
+                if (r_status === 0) {
+                    status = 'PENDING'
+                } else if (r_status === 100) {
+                    status = 'SUCCESS'
+                } else if (r_status === -1) {
+                    status = 'FAILED'
+                }
                 entry.dataset.status = status
                 entry.dataset.type = type
                 if (status === 'SUCCESS') {
@@ -2086,9 +2081,9 @@
                 } else {
                     entry.querySelector('.history-entry__status').innerHTML = `<svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px" viewBox="0 0 24 24" width="24px" fill="#000000"><g><rect fill="none" height="24" width="24" x="0"/></g><g><g><path d="M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z M12,20c-4.41,0-8-3.59-8-8s3.59-8,8-8s8,3.59,8,8 S16.41,20,12,20z M12.5,7H11v6l5.2,3.2l0.8-1.3l-4.5-2.7V7z"/></g></g></svg>`
                 }
-                entry.querySelector('.history-entry__token-action').textContent = `${type} ${token}`
+                entry.querySelector('.history-entry__token-action').textContent = `${type} ${asset}`
                 entry.querySelector('.history-entry__amount').textContent = amount
-                entry.querySelector('.history-entry__time').textContent = floGlobals.allTxs.hasOwnProperty(txid) ? getFormattedTime(floGlobals.allTxs[txid].time * 1000) : ''
+                entry.querySelector('.history-entry__time').textContent = getFormattedTime(locktime)
                 entry.querySelector('.history-entry__txid').href = `https://flosight.duckdns.org/tx/${txid}`
                 return entry;
             }
@@ -2790,58 +2785,61 @@
         }
 
         function updateRate(init = false) {
-            floExchangeAPI.getRates().then(({ rates, countDown }) => {
-                console.debug(rates);
-                floGlobals.exchangeRates = rates
-                if (init) {
-                    Object.entries(rates).sort((a, b) => a[1] < b[1] ? 1 : -1).forEach(([asset, rate]) => {
-                        if (!allTokens.hasOwnProperty(asset)) {
-                            allTokens[asset] = {
-                                total: 0,
-                                locked: 0,
-                                net: 0
+            return new Promise((resolve, reject) => {
+                floExchangeAPI.getRates().then(({ rates, countDown }) => {
+                    console.debug(rates);
+                    floGlobals.exchangeRates = rates
+                    if (init) {
+                        Object.entries(rates).sort((a, b) => a[1] < b[1] ? 1 : -1).forEach(([asset, rate]) => {
+                            if (!allTokens.hasOwnProperty(asset)) {
+                                allTokens[asset] = {
+                                    total: 0,
+                                    locked: 0,
+                                    net: 0
+                                }
+                            }
+                            // dynamically render listed assets if not already rendered
+                            getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate)), countDown[asset]));
+                            getRef('market_asset_rates').append(createElement('li', {
+                                className: 'listed-asset grid align-center',
+                                innerHTML: `
+                                    <div class="listed-asset__icon">${getIcon(asset)}</div>
+                                    <h4 class="listed-asset__name">${asset}</h4>
+                                    <b class="listed-asset__rate">${formatAmount(rate)}</b>
+                                `
+                            }))
+                        })
+                        resolve();
+                    } else {
+                        // update rates in UI
+                        for (const asset in rates) {
+                            const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
+                            if (listedAsset) {
+                                listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rates[asset]))
+                                if (floGlobals.countDowns.intervals.hasOwnProperty(asset)) {
+                                    clearInterval(floGlobals.countDowns.intervals[asset]);
+                                }
+                                floGlobals.countDowns.intervals[asset] = setInterval(() => {
+                                    const [timeLeft, minutes] = getTimeLeft(countDown[asset])
+                                    listedAsset.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
+                                    const pathLength = 63 - Math.ceil((minutes / 60) * 63)
+                                    listedAsset.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
+                                }, 1000)
+                                if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
+                                    clearTimeout(floGlobals.countDowns.timeouts[asset]);
+                                    delete floGlobals.countDowns.timeouts[asset]
+                                }
+                                floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
+                                    updateRate()
+                                }, countDown[asset] - Date.now());
                             }
                         }
-                        // dynamically render listed assets if not already rendered
-                        getRef('listed_assets').append(render.listedAsset(asset, formatAmount(parseFloat(rate)), countDown[asset]));
-                        getRef('market_asset_rates').append(createElement('li', {
-                            className: 'listed-asset grid align-center',
-                            innerHTML: `
-                                <div class="listed-asset__icon">${getIcon(asset)}</div>
-                                <h4 class="listed-asset__name">${asset}</h4>
-                                <b class="listed-asset__rate">${formatAmount(rate)}</b>
-                            `
-                        }))
-                    })
-
-                } else {
-                    // update rates in UI
-                    for (const asset in rates) {
-                        const listedAsset = getRef(`listed_assets`).querySelector(`[data-listed-asset="${asset}"]`)
-                        if (listedAsset) {
-                            listedAsset.querySelector('.listed-asset__rate').textContent = formatAmount(parseFloat(rates[asset]))
-                            if (floGlobals.countDowns.intervals.hasOwnProperty(asset)) {
-                                clearInterval(floGlobals.countDowns.intervals[asset]);
-                            }
-                            floGlobals.countDowns.intervals[asset] = setInterval(() => {
-                                const [timeLeft, minutes] = getTimeLeft(countDown[asset])
-                                listedAsset.querySelector('.listed-asset__countdown').firstChild.textContent = timeLeft;
-                                const pathLength = 63 - Math.ceil((minutes / 60) * 63)
-                                listedAsset.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
-                            }, 1000)
-                            if (floGlobals.countDowns.timeouts.hasOwnProperty(asset)) {
-                                clearTimeout(floGlobals.countDowns.timeouts[asset]);
-                                delete floGlobals.countDowns.timeouts[asset]
-                            }
-                            floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
-                                updateRate()
-                            }, countDown[asset] - Date.now());
-                        }
+                        resolve();
                     }
-                }
-                render.chart(pagesData.params.asset)
-                showSuggestedPrice()
-            }).catch(error => console.error(error.message))
+                    render.chart(pagesData.params.asset)
+                    showSuggestedPrice()
+                }).catch(error => console.error(error.message))
+            }).catch(error => console.error(error))
         }
 
         async function refresh(init = false, refreshButton) {
@@ -2867,12 +2865,13 @@
             } else
                 console.info("refresh");
             render.marketOrders();
-            updateRate(init)
-            if (proxy.userID) {
-                await account();
-                if (refreshButton)
-                    buttonLoader('portfolio_balance_refresh_button', false);
-            }
+            updateRate(init).then(async () => {
+                if (proxy.userID) {
+                    await account();
+                    if (refreshButton)
+                        buttonLoader('portfolio_balance_refresh_button', false);
+                }
+            })
         }
 
         let accountDetails = {}

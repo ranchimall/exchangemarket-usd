@@ -88,7 +88,6 @@ fieldset {
 button {
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
   position: relative;
   display: inline-flex;
@@ -207,7 +206,6 @@ ul {
   word-wrap: break-word;
   -ms-word-break: break-all;
   word-break: break-word;
-  -ms-hyphens: auto;
   -webkit-hyphens: auto;
   hyphens: auto;
 }
@@ -484,7 +482,6 @@ details summary {
   justify-content: space-between;
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
   cursor: pointer;
   padding: 1rem 0;
@@ -510,7 +507,6 @@ strip-option {
   font-size: 0.9rem;
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
   --border-radius: 0;
   --active-option-color: rgba(var(--background-color), 1);
@@ -724,7 +720,6 @@ sm-checkbox {
   transition: background-color 0.3s;
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
   color: inherit;
   grid-template-columns: auto 1fr auto auto;
@@ -869,7 +864,6 @@ sm-checkbox {
   outline: none;
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
   align-items: center;
   gap: 0.5rem;
@@ -1058,10 +1052,10 @@ sm-checkbox {
   margin-bottom: 0.5rem;
 }
 .live-order[data-type=buy] {
-  background-color: #00fa9a10;
+  background-color: rgba(0, 250, 154, 0.062745098);
 }
 .live-order[data-type=sell] {
-  background-color: #e2135110;
+  background-color: rgba(226, 19, 81, 0.062745098);
 }
 
 #portfolio {
@@ -1238,21 +1232,21 @@ sm-checkbox {
   margin-right: 0.5rem;
 }
 .personal-asset-balance:nth-of-type(1) {
-  background: url("bg-art2.svg") no-repeat bottom right, #c2ffd7;
+  background: url("bg-art2.svg") no-repeat bottom right, hsl(141deg, 100%, 88%);
   background-size: contain;
 }
 .personal-asset-balance:nth-of-type(1) .icon {
-  background-color: rgba(102, 255, 156, 0.5);
+  background-color: hsla(141deg, 100%, 70%, 0.5);
 }
 .personal-asset-balance:nth-of-type(1) .button {
-  border: solid thin rgba(102, 255, 156, 0.5);
+  border: solid thin hsla(141deg, 100%, 70%, 0.5);
 }
 .personal-asset-balance:nth-of-type(2) {
-  background: url("back.svg") no-repeat top right, #fcffa8;
+  background: url("back.svg") no-repeat top right, hsl(62deg, 100%, 83%);
   background-size: contain;
 }
 .personal-asset-balance:nth-of-type(2) .icon {
-  background-color: rgba(255, 234, 0, 0.5);
+  background-color: hsla(55deg, 100%, 50%, 0.5);
 }
 .personal-asset-balance > .flex {
   margin-bottom: 0.3rem;
@@ -1477,15 +1471,12 @@ sm-checkbox {
   sm-button {
     --padding: 0.9rem 1.6rem;
   }
-
   .empty-state {
     align-self: center;
   }
-
   #user_popup_button {
     width: 100%;
   }
-
   .main_navbar__item--active .item__title {
     transform: translateY(100%);
     opacity: 0;
@@ -1493,42 +1484,33 @@ sm-checkbox {
   .main_navbar__item--active .icon {
     transform: translateY(50%) scale(1.2);
   }
-
   #asset_list_wrapper {
     padding: 0 1.5rem;
   }
-
   .listed-asset {
     border-radius: 0;
     border-bottom: solid thin rgba(var(--text-color), 0.1);
   }
-
   #exchange {
     margin: 0;
     padding: 0;
   }
-
   #login_form {
     padding: 0 1.5rem;
   }
-
   #asset_page__header {
     display: flex;
     padding: 1rem 1.5rem 0.5rem 0.8rem;
   }
-
   #chart_header {
     padding: 0 1.5rem 0.5rem 1.5rem;
   }
-
   #trade_form {
     padding: 0 1.5rem;
   }
-
   #price_chart_container {
     flex: 1;
   }
-
   #asset_page__footer button {
     display: flex;
     flex-direction: column;
@@ -1550,7 +1532,6 @@ sm-checkbox {
   #asset_page__footer button.active .icon {
     fill: var(--accent-color);
   }
-
   .hide-on-mobile {
     display: none !important;
   }
@@ -1559,53 +1540,43 @@ sm-checkbox {
   sm-popup {
     --width: 24rem;
   }
-
   .popup__header {
     grid-column: 1/-1;
     padding: 1rem 1.5rem 0 1.5rem;
   }
-
   #confirmation_popup {
     --width: 24rem;
   }
-
   .page-layout {
     grid-template-columns: 1fr 90vw 1fr;
   }
-
   .mobile-page {
     align-self: flex-start;
     padding: 2rem;
     border-radius: 0.5rem;
     background-color: rgba(var(--foreground-color), 1);
   }
-
   .hide-on-desktop {
     display: none !important;
   }
-
   #home {
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas: "header header" "nav pages";
   }
-
   #main_header {
     grid-area: header;
   }
-
   #user_popup_button {
     justify-self: flex-end;
   }
-
   #main_navbar {
     grid-area: nav;
     flex-direction: column;
     height: 100%;
     padding-left: 0.5rem;
   }
-
   .main_navbar__item {
     padding: 1.5rem 2rem 1.5rem 1rem;
     width: 100%;
@@ -1624,7 +1595,6 @@ sm-checkbox {
   .main_navbar__item--active {
     background-color: rgba(var(--text-color), 0.06);
   }
-
   #pages_container {
     grid-area: pages;
   }
@@ -1632,7 +1602,6 @@ sm-checkbox {
     margin: 0 1.5rem;
     padding: 2rem;
   }
-
   .is-signed-in #exchange {
     display: flex;
     width: 100%;
@@ -1645,15 +1614,12 @@ sm-checkbox {
     grid-template-columns: 17rem minmax(0, 1fr);
     align-items: flex-start;
   }
-
   #price_history_chart {
     height: 20rem;
   }
-
   #asset_list_wrapper {
     grid-row: 1/3;
   }
-
   .listed-asset {
     padding: 1rem;
   }
@@ -1669,16 +1635,13 @@ sm-checkbox {
     height: 2rem;
     background-color: var(--accent-color);
   }
-
   .order-card {
     grid-template-columns: auto 1fr 1fr 1fr auto;
     grid-template-areas: "checkbox quantity price amount time cancel";
   }
-
   .orders_section__header {
     background-color: rgba(var(--foreground-color), 1);
   }
-
   #history .sticky,
 #portfolio_asset_page .sticky {
     background-color: rgba(var(--foreground-color), 1);
@@ -1701,7 +1664,6 @@ sm-checkbox {
     width: 100%;
     grid-template-columns: 18rem 1fr;
   }
-
   .completed-trade {
     grid-template-columns: 1fr 1fr 1fr 8rem;
     grid-template-areas: "quantity price amount info";
@@ -1723,7 +1685,6 @@ sm-checkbox {
   #home {
     grid-template-columns: auto 1fr;
   }
-
   #asset_page_wrapper {
     display: grid;
     gap: 1.5rem;
@@ -1745,7 +1706,6 @@ sm-checkbox {
     width: 0.5rem;
     height: 0.5rem;
   }
-
   ::-webkit-scrollbar-thumb {
     background: rgba(var(--text-color), 0.3);
     border-radius: 1rem;
@@ -1753,7 +1713,6 @@ sm-checkbox {
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(var(--text-color), 0.5);
   }
-
   .order-card .cancel-order {
     justify-self: flex-end;
     overflow: hidden;
