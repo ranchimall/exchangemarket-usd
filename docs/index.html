@@ -2840,7 +2840,7 @@
                     render.chart(pagesData.params.asset)
                     showSuggestedPrice()
                 }).catch(error => {
-                    console.error(error.message)
+                    notify(error.message, 'error');
                 })
             }).catch(error => console.error(error))
         }
