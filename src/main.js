@@ -198,7 +198,11 @@ module.exports = function startServer() {
                 app.start(config['port']).then(result => {
                     console.log(result);
                     backup.init(app);
-                    setInterval(refreshData, BLOCKCHAIN_REFRESH_INTERVAL)
+                    setInterval(() => {
+                        refreshData()
+                            .then(result => console.log(result))
+                            .catch(error => console.error(error))
+                    }, BLOCKCHAIN_REFRESH_INTERVAL);
                 }).catch(error => console.error(error))
             }).catch(error => console.error(error))
         }).catch(error => console.error(error))
