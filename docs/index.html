@@ -2839,7 +2839,9 @@
                     }
                     render.chart(pagesData.params.asset)
                     showSuggestedPrice()
-                }).catch(error => console.error(floGlobals.errorMessage[error]))
+                }).catch(error => {
+                    console.error(error.message)
+                })
             }).catch(error => console.error(error))
         }
 
@@ -2957,7 +2959,7 @@
                     location.reload()
                 }
                 else
-                    notify(floGlobals.errorMessage[error], 'error')
+                    notify(error.message, 'error')
             })
                 .finally(() => {
                     hideProcess('login_button_wrapper')
@@ -2992,7 +2994,7 @@
                     delete floGlobals.loginDetails
                     account();
                 }).catch(error => {
-                    notify(floGlobals.errorMessage[error], 'error')
+                    notify(error.message, 'error')
                     hideProcess('login_button_wrapper')
                 })
             }
