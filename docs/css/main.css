@@ -605,6 +605,15 @@ sm-checkbox {
   align-items: flex-start;
 }
 
+#loading .rm-logo {
+  height: 3rem;
+  width: 3rem;
+  padding: 0.8rem;
+  background-color: rgba(var(--text-color), 0.06);
+  border-radius: 5rem;
+  justify-self: center;
+}
+
 #landing {
   grid-template-rows: auto 1fr;
 }
