@@ -20,6 +20,7 @@
     "configure": "node setup/configure-settings.js",
     "reset-password": "node setup/reset-password.js",
     "create-schema": "node setup/create-schema.js",
+    "checksum-db": "node debug/checksum-db.js",
     "start": "node start.js"
   },
   "repository": {
