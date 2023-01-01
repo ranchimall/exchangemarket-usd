@@ -245,9 +245,21 @@ function updateMaster(floID) {
         connectToMaster();
 }
 
+function reconstructAllActiveShares() {
+    if (_mode !== MASTER_MODE)
+        return console.debug("Not serving as master");
+    console.debug("Reconstructing shares for all active IDs")
+    let group_list = keys.sink_groups.list;
+    group_list.forEach(g => {
+        //active ids also ignore ids that are in queue for reconstructing shares
+        let active_ids = keys.sink_chest.active_list(g);
+        active_ids.forEach(id => reconstructShares(g, id));
+    });
+}
+
 function reconstructShares(group, sinkID) {
     if (_mode !== MASTER_MODE)
-        return console.warn("Not serving as master");
+        return console.warn(`Not serving as master, but reconstruct-shares is called for ${sinkID}(${group})`);
     keys.sink_chest.set_id(group, sinkID, null);
     collectAndCall(group, sinkID, sinkKey => sendSharesToNodes(sinkID, group, generateShares(sinkKey)));
 }
@@ -460,6 +472,7 @@ function initProcess(app) {
 module.exports = {
     init: initProcess,
     collectAndCall,
+    reconstructAllActiveShares,
     sink: {
         generate: generateSink,
         reshare: reshareSink,

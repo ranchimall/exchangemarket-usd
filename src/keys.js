@@ -345,6 +345,9 @@ const sink_groups = {
     get CONVERT() { return "convert" },
     get BLOCKCHAIN_BONDS() { return "blockchain_bonds" },
     get BOBS_FUND() { return "bobs_fund" },
+    get list() { //total list
+        return [this.EXCHANGE, this.CONVERT, this.BLOCKCHAIN_BONDS, this.BOBS_FUND]
+    },
     get initial_list() { //list to generate when starting exchange
         return [this.EXCHANGE, this.CONVERT]
     },

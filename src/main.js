@@ -27,8 +27,10 @@ var app;
 
 function refreshData(startup = false) {
     return new Promise((resolve, reject) => {
-        refreshDataFromBlockchain().then(result => {
-            loadDataFromDB(result, startup).then(_ => {
+        refreshDataFromBlockchain().then(changes => {
+            loadDataFromDB(changes, startup).then(_ => {
+                if (!startup && changes.nodes)
+                    backup.reconstructAllActiveShares();
                 app.refreshData(backup.nodeList);
                 resolve("Data refresh successful")
             }).catch(error => reject(error))
