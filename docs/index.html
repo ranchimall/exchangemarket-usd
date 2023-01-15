@@ -1943,8 +1943,9 @@
                 card.appendChild(assetBalance)
                 return card
             },
-            chart(asset = 'FLO', duration = '48 weeks') {
+            chart(asset = 'FLO') {
                 if (pagesData.currentPage !== 'exchange') return
+                const duration = getRef('price_duration_selector').value === 'hour' ? '48 weeks' : 'all-time' || '48 weeks'
                 floExchangeAPI.getRateHistory(asset, duration).then(data => {
                     data = data.map(({ time, rate }) => {
                         return {
@@ -2183,7 +2184,7 @@
 
         let tradeType = 'buy'
         getRef('trade_type_selector').addEventListener('change', e => {
-            tradeType = e.detail.value
+            tradeType = e.target.value
             const selectedAsset = pagesData.params.asset
             showSuggestedPrice()
             getRef('get_total').setAttribute('placeholder', tradeType === 'buy' ? `Locked amount (₹)` : `Min amount received (₹)`)
@@ -2192,7 +2193,7 @@
             updateTooltip(selectedAsset, tradeType)
         })
         getRef('price_duration_selector').addEventListener('change', e => {
-            render.chart(pagesData.params.asset, e.detail.value === 'hour' ? '48 weeks' : 'all-time')
+            render.chart(pagesData.params.asset)
         })
         async function tradeAsset() {
             closePopup()
