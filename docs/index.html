@@ -32,7 +32,7 @@
     </script>
 </head>
 
-<body class="hide">
+<body class="hidden">
     <sm-notifications id="notification_drawer"></sm-notifications>
     <sm-popup id="confirmation_popup">
         <h4 id="confirm_title"></h4>
@@ -69,7 +69,7 @@
             <button class="button" onclick="floExchangeAPI.clearAllLocalData()">Reset</button>
         </div>
     </div>
-    <article id="home" class="page hide">
+    <article id="home" class="page hidden">
         <header id="main_header">
             <div class="logo">
                 <svg class="main-logo" viewBox="0 0 27.25 32">
@@ -82,7 +82,7 @@
                 </div>
             </div>
             <theme-toggle id="theme_toggle"></theme-toggle>
-            <button id="user_popup_button" class="hide user-content button--small">
+            <button id="user_popup_button" class="hidden user-content button--small">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon margin-right-0-5" height="24px" viewBox="0 0 24 24"
                     width="24px" fill="#000000">
                     <path d="M0 0h24v24H0V0z" fill="none" />
@@ -93,30 +93,75 @@
             </button>
         </header>
         <section id="pages_container">
-            <div id="exchange" class="mobile-page hide">
-                <sm-form id="login_form">
-                    <div class="grid gap-0-5">
-                        <h2>Login</h2>
-                        <p>Please login for exchange.</p>
-                    </div>
-                    <sm-input type="password" id="login_form__priv_key" placeholder="Private key"
-                        error-text="Invalid private key" data-private-key autofocus animate required>
-                    </sm-input>
-                    <sm-checkbox id="remember_me" checked>
-                        <span class="margin-left-0-5">
-                            Remember me
-                        </span>
-                    </sm-checkbox>
-                    <div id="login_button_wrapper" class="stateful-button-wrapper">
-                        <button class="button button--primary" onclick="UI_evt.login();" type="submit">Log in</button>
-                    </div>
-                    <div class="grid gap-0-5">
-                        <p>Don't have FLO credentials?</p>
-                        <button class="button" id="sign_up_button">Generate FLO credentials</button>
-                    </div>
-                    <button class="button" onclick="floExchangeAPI.clearAllLocalData()">Reset</button>
-                </sm-form>
-                <section id="exchange_wrapper" class="hide user-content">
+            <div id="exchange" class="mobile-page hidden">
+                <div id="login_section">
+                    <sm-form id="login_form">
+                        <div class="grid gap-0-5">
+                            <h2>Login</h2>
+                            <p>Enter your FLO private key to login</p>
+                        </div>
+                        <sm-input type="password" id="login_form__priv_key" placeholder="Private key"
+                            error-text="Invalid private key" data-private-key autofocus animate required>
+                        </sm-input>
+                        <!-- <sm-checkbox id="remember_me" checked>
+                            <span class="margin-left-0-5">
+                                Remember me
+                            </span>
+                        </sm-checkbox> -->
+                        <div class="loader-button-wrapper">
+                            <button id="login_button" class="button button--primary" onclick="UI_evt.login('login');"
+                                type="submit">Log
+                                in</button>
+                        </div>
+                        <p>
+                            New here? <a href="#/exchange/generate">get your FLO login credentials</a>
+                        </p>
+                        <button class="button" onclick="floExchangeAPI.clearAllLocalData()">Reset</button>
+                    </sm-form>
+                    <section class="grid gap-1-5 hidden">
+                        <a class="button margin-right-auto" href="#/exchange/login">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                                width="24px" fill="#000000">
+                                <path d="M0 0h24v24H0V0z" fill="none" />
+                                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+                            </svg>
+                        </a>
+                        <div id="flo_id_warning" class="flex gap-1">
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
+                                width="24px" fill="#000000">
+                                <path d="M0 0h24v24H0z" fill="none" />
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+                            </svg>
+                            <div class="grid gap-0-5">
+                                <strong>
+                                    <h3>
+                                        Keep your keys safe!
+                                    </h3>
+                                </strong>
+                                <p>Don't share with anyone. Once lost private key can't be
+                                    recovered.</p>
+                            </div>
+                        </div>
+                        <div class="grid gap-1-5 generated-keys-wrapper">
+                            <div class="grid gap-0-5">
+                                <h5>FLO address</h5>
+                                <sm-copy id="generated_flo_address"></sm-copy>
+                            </div>
+                            <div class="grid gap-0-5">
+                                <h5>Private key</h5>
+                                <sm-copy id="generated_private_key"></sm-copy>
+                            </div>
+                        </div>
+                        <div class="loader-button-wrapper">
+                            <button id="sign_in_with_credentials" onclick="signInWithCredentials()"
+                                class="button button--primary w-100">Sign in with these
+                                credentials</button>
+                        </div>
+                        <p class="margin-top-1">You can use these FLO credentials with other RanchiMall apps
+                            too. </p>
+                    </section>
+                </div>
+                <section id="exchange_wrapper" class="hidden user-content">
                     <div id="asset_list_wrapper" class="grid gap-1 align-start">
                         <div class="grid gap-0-3">
                             <div class="flex align-center space-between">
@@ -125,7 +170,7 @@
                             </div>
                             <p>Countdown shows est. time until asset prices are updated</p>
                         </div>
-                        <ul id="listed_assets" class="user-content hide"></ul>
+                        <ul id="listed_assets" class="user-content hidden"></ul>
                     </div>
                     <div id="asset_page" class="hide-on-mobile">
                         <nav id="asset_page__header" class="hide-on-desktop">
@@ -192,8 +237,7 @@
                                         </p>
                                     </div>
                                 </div>
-                                <div id="trade_button_wrapper"
-                                    class="stateful-button-wrapper flex align-center justify-center">
+                                <div class="loader-button-wrapper flex align-center justify-center">
                                     <button id="trade_button" class="uppercase w-100 button button--primary"
                                         type="submit">BUY FLO </button>
                                 </div>
@@ -235,7 +279,7 @@
                     </div>
                 </section>
             </div>
-            <div id="my_orders" class="grid gap-1 hide mobile-page">
+            <div id="my_orders" class="grid gap-1 hidden mobile-page">
                 <div id="my_orders_section__header" class="orders_section__header flex">
                     <div id="orders_section__header--primary" class="flex w-100 align-center space-between">
                         <h4 id="my_orders__title">
@@ -246,7 +290,7 @@
                             <sm-chip value="completed">Trades</sm-chip>
                         </sm-chips>
                     </div>
-                    <div id="orders_section__header--secondary" class="flex w-100 align-center space-between hide">
+                    <div id="orders_section__header--secondary" class="flex w-100 align-center space-between hidden">
                         <button class="" onclick="clearSelection()" title="Clear all selection">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon margin-right-0-5" height="24px"
                                 viewBox="0 0 24 24" width="24px">
@@ -277,7 +321,7 @@
                     <p>My orders will only show completed orders</p>
                 </div>
             </div>
-            <div id="market" class="grid gap-1-5 hide mobile-page">
+            <div id="market" class="grid gap-1-5 hidden mobile-page">
                 <div class="grid gap-1 align-start">
                     <div class="flex align-center space-between">
                         <h5>ASSETS</h5>
@@ -325,7 +369,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="hide">
+                        <div class="hidden">
                             <ul id="market_trades" class="observe-empty-state"></ul>
                             <p class="empty-state">
                                 No trades happened
@@ -334,14 +378,14 @@
                     </div>
                 </div>
             </div>
-            <div id="portfolio" class="mobile-page hide">
+            <div id="portfolio" class="mobile-page hidden">
                 <div class="grid gap-1-5">
                     <div class="flex align-center space-between">
                         <sm-chips id="portfolio_pages_selector">
                             <sm-chip value="exchange" selected>Exchange</sm-chip>
                             <sm-chip value="personal">On-chain</sm-chip>
                         </sm-chips>
-                        <div class="multi-state-button">
+                        <div class="loader-button-wrapper">
                             <button id="portfolio_balance_refresh_button" class="button button--small"
                                 onclick="refresh(false,this);" title="Refresh">
                                 Refresh
@@ -391,7 +435,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="grid gap-1 hide">
+                        <div class="grid gap-1 hidden">
                             <div class="flex align-center space-between">
                                 <h4>Assets in <span class="my-flo-id"></span></h4>
                                 <div class="tooltip">
@@ -464,7 +508,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="portfolio_asset_page" class="hide grid gap-1-5">
+                <div id="portfolio_asset_page" class="hidden grid gap-1-5">
                     <div class="flex align-center sticky top-0">
                         <a href="#/portfolio" class="button icon-only">
                             <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
@@ -497,7 +541,7 @@
 
                 </div>
             </div>
-            <div id="history" class="mobile-page hide">
+            <div id="history" class="mobile-page hidden">
                 <div class="flex align-center sticky top-0">
                     <a href="#/portfolio" class="button icon-only">
                         <svg class="icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24"
@@ -513,7 +557,7 @@
                     <p>No exchange transactions</p>
                 </div>
             </div>
-            <div id="help" class="mobile-page hide grid gap-2">
+            <div id="help" class="mobile-page hidden grid gap-2">
                 <h1>Hey there! How can we help you today?</h1>
                 <div class="grid gap-0-5">
                     <h5>F.A.Qs</h5>
@@ -683,7 +727,7 @@
                 </svg>
                 <div class="item__title">Exchange</div>
             </a>
-            <a href="#/my_orders" class="main_navbar__item user-content hide interact">
+            <a href="#/my_orders" class="main_navbar__item user-content hidden interact">
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
                     viewBox="0 0 24 24" width="24px" fill="#000000">
                     <path d="M0,0h24v24H0V0z" fill="none" />
@@ -714,7 +758,7 @@
                 </svg>
                 <div class="item__title">Market</div>
             </a>
-            <a href="#/portfolio" class="main_navbar__item user-content hide interact">
+            <a href="#/portfolio" class="main_navbar__item user-content hidden interact">
                 <svg class="icon" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24px"
                     viewBox="0 0 24 24" width="24px" fill="#000000">
                     <rect fill="none" height="24" width="24" />
@@ -783,34 +827,6 @@
             <button class="button button--danger" onclick="UI_evt.logout();">Log out</button>
         </section>
     </sm-popup>
-    <sm-popup id="sign_up_popup">
-        <header slot="header" class="popup__header">
-            <button class="popup__header__close">
-                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="none" d="M0 0h24v24H0z" />
-                    <path
-                        d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" />
-                </svg>
-            </button>
-            <h4>Get credentials</h4>
-        </header>
-        <section id="sign_up_section" class="grid gap-1-5">
-            <div class="grid gap-1-5">
-                <div class="grid gap-0-5">
-                    <h5>FLO ID</h5>
-                    <sm-copy id="generated_flo_id"></sm-copy>
-                </div>
-                <div class="grid gap-0-5">
-                    <h5>Private key</h5>
-                    <sm-copy id="generated_private_key"></sm-copy>
-                </div>
-            </div>
-            <strong class="warning">
-                Keep your private key secure and don't share with anyone.
-                Once lost there is no way to recover private key.
-            </strong>
-        </section>
-    </sm-popup>
     <sm-popup id="portfolio_popup">
         <header slot="header" class="popup__header">
             <button class="popup__header__close">
@@ -836,23 +852,24 @@
                 <button class="button" value="0.75">75%</button>
                 <button class="button" value="1">100%</button>
             </div>
-            <p id="withdraw_flo_tip" class="hide">*While withdrawing 100% of balance FLO, <b>0.1 FLO</b> is reserved for
+            <p id="withdraw_flo_tip" class="hidden">*While withdrawing 100% of balance FLO, <b>0.1 FLO</b> is reserved
+                for
                 future transactions on blockchain.
             </p>
             <sm-input id="get_private_key" placeholder="FLO private key" type="password" required
                 error-text="Invalid private key" data-private-key="" animate>
             </sm-input>
-            <div id="portfolio_popup__cta_wrapper" class="stateful-button-wrapper">
+            <div class="loader-button-wrapper">
                 <button id="portfolio_popup__cta" class="button button--primary uppercase" type="submit"></button>
             </div>
         </sm-form>
-        <div id="portfolio_result" class="grid gap-2 hide">
+        <div id="portfolio_result" class="grid gap-2 hidden">
             <div id="portfolio_result__icon"></div>
             <div class="grid gap-0-5">
                 <h4 id="portfolio_result__title"></h4>
                 <p id="portfolio_result__description"></p>
             </div>
-            <div id="portfolio_result__cta" class="hide grid gap-1-5">
+            <div id="portfolio_result__cta" class="hidden grid gap-1-5">
                 <div class="grid gap-0-5">
                     <h4>Low on rupee balance?</h4>
                     <p>Visit RanchiMall Pay to deposit rupee in your FLO ID.</p>
@@ -1304,10 +1321,10 @@
             }
         }
 
-        window.addEventListener('hashchange', e => showPage(window.location.hash))
+        window.addEventListener('hashchange', e => routeTo(window.location.hash))
         window.addEventListener("load", () => {
-            showPage(window.location.hash, { firstLoad: true });
-            document.body.classList.remove('hide')
+            routeTo(window.location.hash, { firstLoad: true });
+            document.body.classList.remove('hidden')
             document.querySelectorAll('sm-input[data-flo-id]').forEach(input => input.customValidation = floCrypto.validateAddr)
             document.querySelectorAll('sm-input[data-private-key]').forEach(input => input.customValidation = floCrypto.getPubKeyHex)
             document.addEventListener('keyup', (e) => {
@@ -1362,27 +1379,19 @@
             currentPage: '',
             params: {}
         }
-        async function showPage(targetPage, options = {}) {
+        async function routeTo(targetPage, options = {}) {
             const { firstLoad, hashChange } = options
             let pageId
-            let subPageId
+            let subPageId1
             let params = {}
             let searchParams
             if (targetPage === '') {
                 pageId = 'exchange'
             } else {
                 if (targetPage.includes('/')) {
-                    if (targetPage.includes('?')) {
-                        const splitAddress = targetPage.split('?')
-                        searchParams = splitAddress.pop()
-                        const pages = splitAddress.pop().split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    } else {
-                        const pages = targetPage.split('/')
-                        pageId = pages[1]
-                        subPageId = pages[2]
-                    }
+                    let path;
+                    [path, searchParams] = targetPage.split('?');
+                    [, pageId, subPageId1] = path.split('/')
                 } else {
                     pageId = targetPage
                 }
@@ -1399,71 +1408,86 @@
             if (!firstLoad) {
                 switch (pageId) {
                     case 'exchange':
-                        if (!document.body.classList.contains('is-signed-in')) break;
-                        if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
-                            if (getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`))
-                                getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`).click()
-                        }
-                        if (params.hasOwnProperty('asset') && params.asset !== '') {
-                            if (getRef('listed_assets').querySelector('.listed-asset--active'))
-                                getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
-                            getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
-                            getRef('chart_asset').textContent = `${params.asset}/INR`
-                            showSuggestedPrice(params.asset)
-                            getRef('traded_asset').textContent = `Trade ${params.asset}`
-                            getRef('trade_button').textContent = `${tradeType} ${params.asset}`
-                            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
-                            updateTooltip(params.asset, tradeType)
-                        }
-                        const animOptions = {
-                            duration: 150,
-                            easing: 'ease',
-                            fill: 'forwards',
-                        }
-                        if (params.hasOwnProperty('asset') && params.asset !== '') {
-                            if (isMobileView) {
-                                if (!getRef('asset_list_wrapper').classList.contains('hide-on-mobile')) {
-                                    animateTo(getRef('main_header'), slideOutLeft, animOptions)
-                                    animateTo(getRef('main_navbar'), slideOutLeft, animOptions)
-                                    animateTo(getRef('asset_list_wrapper'), slideOutLeft, animOptions).onfinish = () => {
-                                        addClass(['#main_header', '#asset_list_wrapper', '#main_navbar'], 'hide-on-mobile')
-                                        removeClass(['#asset_page'], 'hide-on-mobile')
-                                        animateTo(getRef('asset_page'), slideInLeft, animOptions)
-                                    }
-                                }
-                            } else {
-                                addClass(['#main_header', '#asset_list_wrapper', '#main_navbar'], 'hide-on-mobile')
-                                removeClass(['#asset_page'], 'hide-on-mobile')
+                        if (document.body.classList.contains('is-signed-in')) {
+                            getRef('login_section').classList.add('hidden')
+                            if (!isMobileView && !params.hasOwnProperty('asset') || params.asset === '') {
+                                if (getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`))
+                                    getRef('listed_assets').querySelector(`[href="#/exchange?asset=FLO"]`).click()
                             }
+                            if (params.hasOwnProperty('asset') && params.asset !== '') {
+                                if (getRef('listed_assets').querySelector('.listed-asset--active'))
+                                    getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
+                                getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
+                                getRef('chart_asset').textContent = `${params.asset}/INR`
+                                showSuggestedPrice(params.asset)
+                                getRef('traded_asset').textContent = `Trade ${params.asset}`
+                                getRef('trade_button').textContent = `${tradeType} ${params.asset}`
+                                getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.rupee.net, true) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
+                                updateTooltip(params.asset, tradeType)
+                            }
+                            const animOptions = {
+                                duration: 150,
+                                easing: 'ease',
+                                fill: 'forwards',
+                            }
+                            if (params.hasOwnProperty('asset') && params.asset !== '') {
+                                if (isMobileView) {
+                                    if (!getRef('asset_list_wrapper').classList.contains('hide-on-mobile')) {
+                                        animateTo(getRef('main_header'), slideOutLeft, animOptions)
+                                        animateTo(getRef('main_navbar'), slideOutLeft, animOptions)
+                                        animateTo(getRef('asset_list_wrapper'), slideOutLeft, animOptions).onfinish = () => {
+                                            addClass(['#main_header', '#asset_list_wrapper', '#main_navbar'], 'hide-on-mobile')
+                                            removeClass(['#asset_page'], 'hide-on-mobile')
+                                            animateTo(getRef('asset_page'), slideInLeft, animOptions)
+                                        }
+                                    }
+                                } else {
+                                    addClass(['#main_header', '#asset_list_wrapper', '#main_navbar'], 'hide-on-mobile')
+                                    removeClass(['#asset_page'], 'hide-on-mobile')
+                                }
 
-                            if (!chart) {
-                                chart = LightweightCharts.createChart(getRef('price_history_chart'), {
-                                    width: 800, height: 600,
-                                    timeScale: {
-                                        timeVisible: true,
-                                    },
-                                });
-                                lineSeries = chart.addLineSeries();
-                                setChartTheme()
-                                chartObserver.observe(getRef('price_chart_wrapper'))
-                            }
-                            render.chart(params.asset)
-                        } else {
-                            if (isMobileView) {
-                                if (!getRef('asset_page').classList.contains('hide-on-mobile')) {
-                                    animateTo(getRef('asset_page'), slideOutRight, animOptions).onfinish = () => {
-                                        getRef('asset_page').classList.add('hide-on-mobile')
-                                        getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
-                                        animateTo(getRef('asset_list_wrapper'), slideInRight, animOptions)
-                                        getRef('main_header').classList.remove('hide-on-mobile')
-                                        getRef('main_navbar').classList.remove('hide-on-mobile')
-                                        animateTo(getRef('main_header'), slideInRight, animOptions)
-                                        animateTo(getRef('main_navbar'), slideInRight, animOptions)
-                                    }
+                                if (!chart) {
+                                    chart = LightweightCharts.createChart(getRef('price_history_chart'), {
+                                        width: 800, height: 600,
+                                        timeScale: {
+                                            timeVisible: true,
+                                        },
+                                    });
+                                    lineSeries = chart.addLineSeries();
+                                    setChartTheme()
+                                    chartObserver.observe(getRef('price_chart_wrapper'))
                                 }
+                                render.chart(params.asset)
                             } else {
-                                getRef('asset_page').classList.add('hide-on-mobile')
-                                getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                                if (isMobileView) {
+                                    if (!getRef('asset_page').classList.contains('hide-on-mobile')) {
+                                        animateTo(getRef('asset_page'), slideOutRight, animOptions).onfinish = () => {
+                                            getRef('asset_page').classList.add('hide-on-mobile')
+                                            getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                                            animateTo(getRef('asset_list_wrapper'), slideInRight, animOptions)
+                                            getRef('main_header').classList.remove('hide-on-mobile')
+                                            getRef('main_navbar').classList.remove('hide-on-mobile')
+                                            animateTo(getRef('main_header'), slideInRight, animOptions)
+                                            animateTo(getRef('main_navbar'), slideInRight, animOptions)
+                                        }
+                                    }
+                                } else {
+                                    getRef('asset_page').classList.add('hide-on-mobile')
+                                    getRef('asset_list_wrapper').classList.remove('hide-on-mobile')
+                                }
+                            }
+                        } else {
+                            getRef('login_section').classList.remove('hidden')
+                            if (subPageId1 === 'generate') {
+                                const { floID, privKey } = floCrypto.generateNewID()
+                                getRef('generated_flo_address').value = floID
+                                getRef('generated_private_key').value = privKey
+                                showChildElement('login_section', 1)
+                            } else {
+                                showChildElement('login_section', 0)
+                                getRef('generated_flo_address').value = ''
+                                getRef('generated_private_key').value = ''
+                                history.replaceState({}, '', '#/exchange/login')
                             }
                         }
                         break;
@@ -1546,8 +1570,8 @@
                     portfolioAssetHistoryLazyLoader.clear()
             }
             if (pagesData.lastPage !== pageId) {
-                document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hide'))
-                getRef(pageId).classList.remove('hide')
+                document.querySelectorAll('.mobile-page').forEach(elem => elem.classList.add('hidden'))
+                getRef(pageId).classList.remove('hidden')
                 document.querySelectorAll('.main_navbar__item').forEach(elem => elem.classList.remove('main_navbar__item--active'))
                 if (document.querySelector(`.main_navbar__item[href="#/${pageId}"]`)) {
                     document.querySelector(`.main_navbar__item[href="#/${pageId}"]`).classList.add('main_navbar__item--active')
@@ -1700,22 +1724,22 @@
                 easing: 'ease',
                 fill: 'forwards'
             }
-            const visibleElement = [...getRef(id).children].find(elem => !elem.classList.contains(mobileView ? 'hide-on-mobile' : 'hide'));
+            const visibleElement = [...getRef(id).children].find(elem => !elem.classList.contains(mobileView ? 'hide-on-mobile' : 'hidden'));
             if (visibleElement === getRef(id).children[index]) return;
             if (visibleElement) {
                 if (exit) {
                     visibleElement.animate(exit, animOptions).onfinish = () => {
-                        visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hide')
-                        getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                        visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hidden')
+                        getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hidden')
                         if (entry)
                             getRef(id).children[index].animate(entry, animOptions)
                     }
                 } else {
-                    visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hide')
-                    getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                    visibleElement.classList.add(mobileView ? 'hide-on-mobile' : 'hidden')
+                    getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hidden')
                 }
             } else {
-                getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hide')
+                getRef(id).children[index].classList.remove(mobileView ? 'hide-on-mobile' : 'hidden')
                 getRef(id).children[index].animate(entry, animOptions)
             }
         }
@@ -1737,10 +1761,7 @@
                     {
                         clipPath: 'circle(0)',
                     },
-                ], animOptions).onfinish = e => {
-                    e.target.commitStyles()
-                    e.target.cancel()
-                }
+                ], animOptions)
             } else {
                 getRef(id).animate([
                     {
@@ -1749,10 +1770,7 @@
                     {
                         clipPath: 'circle(100%)',
                     },
-                ], animOptions).onfinish = e => {
-                    e.target.commitStyles()
-                    e.target.cancel()
-                }
+                ], animOptions)
                 getRef(id).style = ''
                 const potentialTarget = getRef(id).parentNode.querySelector('sm-spinner')
                 if (potentialTarget) potentialTarget.remove();
@@ -2097,17 +2115,6 @@
             }
         }
 
-        function showProcess(id) {
-            getRef(id).children[0].classList.add('clip')
-            getRef(id).children[0].disabled = true
-            getRef(id).append(document.createElement('sm-spinner'))
-        }
-        function hideProcess(id) {
-            getRef(id).children[0].classList.remove('clip')
-            getRef(id).children[0].disabled = false
-            getRef(id).querySelector('sm-spinner')?.remove()
-        }
-
         const chartObserver = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && chart) {
                 const { width, height } = entries[0].target.getBoundingClientRect()
@@ -2207,19 +2214,19 @@
                 closePopup()
                 return notify('You have an open buy order for this asset. Please close it before selling.', 'error')
             }
-            showProcess('trade_button_wrapper')
+            buttonLoader('trade_button', true)
             try {
                 if (tradeType === 'buy') {
                     await floExchangeAPI.buy(asset, quantity, price, proxy.userID, await proxy.secret)
                 } else {
                     await floExchangeAPI.sell(asset, quantity, price, proxy.userID, await proxy.secret)
                 }
-                getRef('trade_button_wrapper').append(getRef('success_template').content.cloneNode(true))
+                getRef('trade_button').append(getRef('success_template').content.cloneNode(true))
                 notify(`Placed ${tradeType} order`, 'success')
                 refresh()
             }
             catch (err) {
-                getRef('trade_button_wrapper').append(getRef('failure_template').content.cloneNode(true))
+                getRef('trade_button').append(getRef('failure_template').content.cloneNode(true))
                 if (err.message === 'Insufficient rupee') {
                     notify(`Insufficient balance to ${tradeType} ${asset}. Please deposit rupee to portfolio first.`, 'error', { pinned: true })
                 } else {
@@ -2231,10 +2238,10 @@
                 getRef('get_quantity').value = 0
                 getRef('get_total').value = 0
                 setTimeout(() => {
-                    hideProcess('trade_button_wrapper')
+                    buttonLoader('trade_button', false)
                     getRef('trade_button').disabled = true
                     setTimeout(() => {
-                        getRef('trade_button_wrapper').querySelector('.stateful-result').remove()
+                        getRef('trade_button').querySelector('.stateful-result').remove()
                     }, 100);
                 }, 4000);
             }
@@ -2298,24 +2305,24 @@
                 getRef('portfolio_popup__title').textContent = `${type} ${asset}`
                 // default form element state
                 getRef('get_receiver_id').removeAttribute('required')
-                getRef('get_receiver_id').classList.add('hide')
+                getRef('get_receiver_id').classList.add('hidden')
                 getRef('get_private_key').removeAttribute('required')
-                getRef('get_private_key').classList.add('hide')
-                getRef('portfolio_quantity_selector').classList.remove('hide')
+                getRef('get_private_key').classList.add('hidden')
+                getRef('portfolio_quantity_selector').classList.remove('hidden')
                 switch (type) {
                     case 'withdraw':
                         if (asset === 'FLO') {
-                            getRef('withdraw_flo_tip').classList.remove('hide')
+                            getRef('withdraw_flo_tip').classList.remove('hidden')
                         }
                         break;
                     case 'deposit':
                         getRef('get_private_key').setAttribute('required', '')
-                        getRef('get_private_key').classList.remove('hide')
-                        getRef('portfolio_quantity_selector').classList.add('hide')
+                        getRef('get_private_key').classList.remove('hidden')
+                        getRef('portfolio_quantity_selector').classList.add('hidden')
                         break;
                     case 'transfer':
                         getRef('get_receiver_id').setAttribute('required', '')
-                        getRef('get_receiver_id').classList.remove('hide')
+                        getRef('get_receiver_id').classList.remove('hidden')
                         break;
                 }
                 getRef('portfolio_form').elementsChanged()
@@ -2347,14 +2354,14 @@
             getRef('portfolio_result__description').textContent = description
             getRef('portfolio_form').animate(slideOutLeft, animOptions)
                 .onfinish = () => {
-                    getRef('portfolio_form').classList.add('hide')
-                    getRef('portfolio_result').classList.remove('hide')
+                    getRef('portfolio_form').classList.add('hidden')
+                    getRef('portfolio_result').classList.remove('hidden')
                     getRef('portfolio_result').animate(slideInLeft, animOptions)
                 }
-            getRef('portfolio_result__cta').classList.add('hide')
+            getRef('portfolio_result__cta').classList.add('hidden')
             switch (cta) {
                 case 'open-upi':
-                    getRef('portfolio_result__cta').classList.remove('hide')
+                    getRef('portfolio_result__cta').classList.remove('hidden')
                     break;
                 default:
                     break;
@@ -2368,8 +2375,8 @@
             }
             getRef('portfolio_result').animate(slideOutRight, animOptions)
                 .onfinish = () => {
-                    getRef('portfolio_result').classList.add('hide')
-                    getRef('portfolio_form').classList.remove('hide')
+                    getRef('portfolio_result').classList.add('hidden')
+                    getRef('portfolio_form').classList.remove('hidden')
                     getRef('portfolio_form').animate(slideInRight, animOptions)
                 }
         }
@@ -2391,7 +2398,7 @@
             const type = e.target.getAttribute('value')
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
-                showProcess('portfolio_popup__cta_wrapper')
+                buttonLoader('portfolio_popup__cta', true)
                 const proxySecret = await proxy.secret;
                 let response
                 switch (type) {
@@ -2433,7 +2440,7 @@
                 }
             }
             finally {
-                hideProcess('portfolio_popup__cta_wrapper')
+                buttonLoader('portfolio_popup__cta', false)
                 refresh()
             }
         })
@@ -2514,14 +2521,14 @@
                 selectedOrders.delete(target.dataset.id)
             }
             getRef('selected_orders').textContent = `${selectedOrders.size} selected`
-            if (selectedOrders.size === 1 && !getRef('my_orders_section__header').children[0].classList.contains('hide')) {
+            if (selectedOrders.size === 1 && !getRef('my_orders_section__header').children[0].classList.contains('hidden')) {
                 getRef('my_orders_section__header').children[0].animate(slideOutLeft, animOptions)
                     .onfinish = () => {
-                        getRef('my_orders_section__header').children[0].classList.add('hide')
-                        getRef('my_orders_section__header').children[1].classList.remove('hide')
+                        getRef('my_orders_section__header').children[0].classList.add('hidden')
+                        getRef('my_orders_section__header').children[1].classList.remove('hidden')
                         getRef('my_orders_section__header').children[1].animate(slideInLeft, animOptions)
                     }
-            } else if (selectedOrders.size === 0 && getRef('my_orders_section__header').children[0].classList.contains('hide')) {
+            } else if (selectedOrders.size === 0 && getRef('my_orders_section__header').children[0].classList.contains('hidden')) {
                 hideMyOrdersOptions()
             }
         })
@@ -2533,8 +2540,8 @@
             }
             getRef('my_orders_section__header').children[1].animate(slideOutRight, animOptions)
                 .onfinish = () => {
-                    getRef('my_orders_section__header').children[1].classList.add('hide')
-                    getRef('my_orders_section__header').children[0].classList.remove('hide')
+                    getRef('my_orders_section__header').children[1].classList.add('hidden')
+                    getRef('my_orders_section__header').children[0].classList.remove('hidden')
                     getRef('my_orders_section__header').children[0].animate(slideInRight, animOptions)
                 }
         }
@@ -2651,11 +2658,6 @@
 
         document.addEventListener('popupopened', e => {
             switch (e.target.id) {
-                case 'sign_up_popup':
-                    const { floID, privKey } = floCrypto.generateNewID()
-                    getRef('generated_flo_id').value = floID
-                    getRef('generated_private_key').value = privKey
-                    break;
                 case 'confirm_trade_popup':
                     const asset = pagesData.params.asset;
                     const quantity = parseFloat(getRef('get_quantity').value)
@@ -2693,7 +2695,7 @@
             switch (e.target.id) {
                 case 'portfolio_popup':
                     hideWalletResult()
-                    getRef('withdraw_flo_tip').classList.add('hide')
+                    getRef('withdraw_flo_tip').classList.add('hidden')
                     break;
             }
         })
@@ -2859,17 +2861,14 @@
                 console.info("init");
                 if (!proxy.userID) {
                     floExchangeAPI.getLoginCode().then(({ code, hash }) => {
-                        getRef("login_form").classList.remove('hide');
-                        document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hide'))
+                        document.querySelectorAll(".user-content").forEach(elem => elem.classList.add('hidden'))
                         floGlobals.loginDetails = { code, hash }
                         proxy.clear();
-                        setTimeout(() => {
-                            getRef('login_form__priv_key').focusIn()
-                        }, 0);
+                        location.hash = `#/exchange/login`
                     }).catch(error => console.error(error))
                         .finally(() => {
-                            getRef('loading').classList.add('hide')
-                            getRef('home').classList.remove('hide')
+                            getRef('loading').classList.add('hidden')
+                            getRef('home').classList.remove('hidden')
                         })
                 }
             } else
@@ -2890,13 +2889,13 @@
             floExchangeAPI.getAccount(proxy.userID, await proxy.secret).then(async acc => {
                 document.body.classList.add('is-signed-in');
                 getRef('market_asset_rates').parentNode.remove()
-                getRef("login_form").classList.add('hide')
+                location.hash = `#/exchange`
                 getRef('user_popup_button').addEventListener('click', () => openPopup('user_popup'));
                 getRef('trade_button').addEventListener('click', () => openPopup('confirm_trade_popup'));
                 accountDetails = acc
                 console.debug(acc);
                 //Element display
-                document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hide'))
+                document.querySelectorAll(".user-content").forEach(elem => elem.classList.remove('hidden'))
                 document.querySelectorAll(".my-flo-id").forEach(elem => elem.textContent = acc.floID)
                 getRef("user_id").value = acc.floID;
                 getRef("sink_id").value = acc.sinkID;
@@ -2958,7 +2957,7 @@
                     getRef('personal_rupee_balance').innerHTML = `<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`
                 })
                 proxy.secret.then(_ => null).catch(_ => null);
-                showPage(window.location.hash);
+                routeTo(window.location.hash);
             }).catch(error => {
                 console.debug(error)
                 if (['015', '016', '018', '019'].includes(error)) {
@@ -2969,9 +2968,10 @@
                     notify(error.message, 'error')
             })
                 .finally(() => {
-                    hideProcess('login_button_wrapper')
-                    getRef('loading').classList.add('hide')
-                    getRef('home').classList.remove('hide')
+                    buttonLoader('login_button', false)
+                    buttonLoader('sign_in_with_credentials', false)
+                    getRef('loading').classList.add('hidden')
+                    getRef('home').classList.remove('hidden')
                 })
         };
 
@@ -2988,11 +2988,14 @@
                 })
             },
 
-            login() {
-                showProcess('login_button_wrapper')
+            login(type) {
+                if (type === 'login')
+                    buttonLoader('login_button', true)
+                else
+                    buttonLoader('sign_in_with_credentials', true)
                 let privKey = getRef('login_form__priv_key').value;
                 const { code, hash } = floGlobals.loginDetails;
-                let rememberMe = getRef('remember_me').checked;
+                // let rememberMe = getRef('remember_me').checked;
                 let tmpKey = floCrypto.generateNewID();
                 floExchangeAPI.login(privKey, tmpKey.pubKey, code, hash).then(result => {
                     console.log(result);
@@ -3002,19 +3005,26 @@
                     account();
                 }).catch(error => {
                     notify(error.message, 'error')
-                    hideProcess('login_button_wrapper')
+                    if (type === 'login')
+                        buttonLoader('login_button', false)
+                    else
+                        buttonLoader('sign_in_with_credentials', false)
                 })
             }
 
         };
         window.addEventListener('load', e => {
-            getRef('sign_up_button').addEventListener('click', () => openPopup('sign_up_popup'))
             floExchangeAPI.init().then(nodes => {
                 floGlobals.exchangeApiLoaded = true
                 console.log(nodes);
                 refresh(true);
             }).catch(error => console.error(error))
         })
+        function signInWithCredentials() {
+            const privKey = getRef('generated_private_key').value
+            getRef('login_form__priv_key').value = privKey
+            UI_evt.login()
+        }
 
         floGlobals.errorMessage = {
             "000": 'Incorrect server',

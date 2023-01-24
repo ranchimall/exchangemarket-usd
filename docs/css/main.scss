@@ -164,28 +164,6 @@ sm-input {
   font-size: 0.9rem;
   --border-radius: 0.3rem;
 }
-sm-button {
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-weight: 700;
-  font-size: 0.9rem;
-  --padding: 0.7rem 1rem;
-  &[variant="primary"] {
-    .icon {
-      fill: rgba(var(--background-color), 1);
-    }
-  }
-
-  &[disabled] {
-    .icon {
-      fill: rgba(var(--text-color), 0.6);
-    }
-  }
-  &.danger {
-    --background: var(--danger-color);
-    color: rgba(var(--background-color), 1);
-  }
-}
 sm-form {
   --gap: 1rem;
 }
@@ -196,7 +174,7 @@ ul {
   list-style: none;
 }
 
-.hide {
+.hidden {
   display: none !important;
 }
 
@@ -365,8 +343,14 @@ ul {
 .margin-right-0-5 {
   margin-right: 0.5rem;
 }
+.margin-right-auto {
+  margin-right: auto;
+}
 .margin-left-0-5 {
   margin-left: 0.5rem;
+}
+.margin-left-auto {
+  margin-left: auto;
 }
 .icon-only {
   padding: 0.5rem;
@@ -411,19 +395,12 @@ ul {
 #prompt_popup {
   flex-direction: column;
   h4 {
-    font-weight: 500;
-    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
   }
-  sm-button {
-    margin: 0;
-  }
+
   .flex {
-    padding: 0;
     margin-top: 1rem;
-    sm-button:first-of-type {
-      margin-right: 0.6rem;
-      margin-left: auto;
-    }
   }
 }
 #prompt_message {
@@ -617,15 +594,18 @@ sm-checkbox {
     margin-top: 2rem;
   }
 }
-.multi-state-button {
+.loader-button-wrapper {
   display: grid;
   text-align: center;
-  align-items: center;
   & > * {
     grid-area: 1/1/2/2;
   }
   button {
     z-index: 1;
+  }
+  sm-spinner {
+    justify-self: center;
+    align-self: center;
   }
 }
 #home {
@@ -635,12 +615,24 @@ sm-checkbox {
   align-items: flex-start;
   align-content: flex-start;
 }
-#login_form {
-  width: min(24rem, 100%);
-  margin: 0 auto;
+#login_section {
+  display: flex;
+  width: 100%;
 }
 #login_form__priv_key {
   margin-top: 1rem;
+}
+#flo_id_warning {
+  padding-bottom: 1.5rem;
+  .icon {
+    height: 3rem;
+    width: 3rem;
+    padding: 0.8rem;
+    overflow: visible;
+    background-color: #ffc107;
+    border-radius: 3rem;
+    fill: rgba(0, 0, 0, 0.8);
+  }
 }
 
 #main_header {
@@ -1268,26 +1260,6 @@ sm-checkbox {
   border-radius: 0.5rem;
   background-color: rgba(var(--text-color), 0.06);
 }
-.stateful-button-wrapper {
-  display: flex;
-  position: relative;
-  justify-content: center;
-  align-items: center;
-  sm-button,
-  slide-button {
-    width: 100%;
-    z-index: 1;
-    transition: clip-path 0.3s;
-    clip-path: circle(100%);
-    &.clip {
-      pointer-events: none;
-      clip-path: circle(0);
-    }
-  }
-  sm-spinner {
-    position: absolute;
-  }
-}
 .stateful-result {
   overflow: hidden;
   position: absolute;
@@ -1372,9 +1344,6 @@ sm-checkbox {
   }
 }
 @media screen and (max-width: 40rem) {
-  sm-button {
-    --padding: 0.9rem 1.6rem;
-  }
   .empty-state {
     align-self: center;
   }
@@ -1401,8 +1370,11 @@ sm-checkbox {
     margin: 0;
     padding: 0;
   }
-  #login_form {
+  #login_section {
     padding: 0 1.5rem;
+  }
+  #login_form {
+    margin-top: 3rem;
   }
   #asset_page__header {
     display: flex;
@@ -1509,6 +1481,9 @@ sm-checkbox {
       margin: 0 1.5rem;
       padding: 2rem;
     }
+  }
+  #login_section {
+    width: 24rem;
   }
   .is-signed-in {
     #exchange {

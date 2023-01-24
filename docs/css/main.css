@@ -177,24 +177,6 @@ sm-input {
   --border-radius: 0.3rem;
 }
 
-sm-button {
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-weight: 700;
-  font-size: 0.9rem;
-  --padding: 0.7rem 1rem;
-}
-sm-button[variant=primary] .icon {
-  fill: rgba(var(--background-color), 1);
-}
-sm-button[disabled] .icon {
-  fill: rgba(var(--text-color), 0.6);
-}
-sm-button.danger {
-  --background: var(--danger-color);
-  color: rgba(var(--background-color), 1);
-}
-
 sm-form {
   --gap: 1rem;
 }
@@ -207,7 +189,7 @@ ul {
   list-style: none;
 }
 
-.hide {
+.hidden {
   display: none !important;
 }
 
@@ -377,8 +359,16 @@ ul {
   margin-right: 0.5rem;
 }
 
+.margin-right-auto {
+  margin-right: auto;
+}
+
 .margin-left-0-5 {
   margin-left: 0.5rem;
+}
+
+.margin-left-auto {
+  margin-left: auto;
 }
 
 .icon-only {
@@ -430,22 +420,12 @@ ul {
 }
 #confirmation_popup h4,
 #prompt_popup h4 {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-#confirmation_popup sm-button,
-#prompt_popup sm-button {
-  margin: 0;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
 }
 #confirmation_popup .flex,
 #prompt_popup .flex {
-  padding: 0;
   margin-top: 1rem;
-}
-#confirmation_popup .flex sm-button:first-of-type,
-#prompt_popup .flex sm-button:first-of-type {
-  margin-right: 0.6rem;
-  margin-left: auto;
 }
 
 #prompt_message {
@@ -649,16 +629,19 @@ sm-checkbox {
   margin-top: 2rem;
 }
 
-.multi-state-button {
+.loader-button-wrapper {
   display: grid;
   text-align: center;
-  align-items: center;
 }
-.multi-state-button > * {
+.loader-button-wrapper > * {
   grid-area: 1/1/2/2;
 }
-.multi-state-button button {
+.loader-button-wrapper button {
   z-index: 1;
+}
+.loader-button-wrapper sm-spinner {
+  justify-self: center;
+  align-self: center;
 }
 
 #home {
@@ -669,13 +652,26 @@ sm-checkbox {
   align-content: flex-start;
 }
 
-#login_form {
-  width: min(24rem, 100%);
-  margin: 0 auto;
+#login_section {
+  display: flex;
+  width: 100%;
 }
 
 #login_form__priv_key {
   margin-top: 1rem;
+}
+
+#flo_id_warning {
+  padding-bottom: 1.5rem;
+}
+#flo_id_warning .icon {
+  height: 3rem;
+  width: 3rem;
+  padding: 0.8rem;
+  overflow: visible;
+  background-color: #ffc107;
+  border-radius: 3rem;
+  fill: rgba(0, 0, 0, 0.8);
 }
 
 #main_header {
@@ -1368,32 +1364,6 @@ sm-checkbox {
   background-color: rgba(var(--text-color), 0.06);
 }
 
-.stateful-button-wrapper {
-  display: flex;
-  position: relative;
-  justify-content: center;
-  align-items: center;
-}
-.stateful-button-wrapper sm-button,
-.stateful-button-wrapper slide-button {
-  width: 100%;
-  z-index: 1;
-  transition: -webkit-clip-path 0.3s;
-  transition: clip-path 0.3s;
-  transition: clip-path 0.3s, -webkit-clip-path 0.3s;
-  -webkit-clip-path: circle(100%);
-          clip-path: circle(100%);
-}
-.stateful-button-wrapper sm-button.clip,
-.stateful-button-wrapper slide-button.clip {
-  pointer-events: none;
-  -webkit-clip-path: circle(0);
-          clip-path: circle(0);
-}
-.stateful-button-wrapper sm-spinner {
-  position: absolute;
-}
-
 .stateful-result {
   overflow: hidden;
   position: absolute;
@@ -1494,9 +1464,6 @@ sm-checkbox {
   }
 }
 @media screen and (max-width: 40rem) {
-  sm-button {
-    --padding: 0.9rem 1.6rem;
-  }
   .empty-state {
     align-self: center;
   }
@@ -1521,8 +1488,11 @@ sm-checkbox {
     margin: 0;
     padding: 0;
   }
-  #login_form {
+  #login_section {
     padding: 0 1.5rem;
+  }
+  #login_form {
+    margin-top: 3rem;
   }
   #asset_page__header {
     display: flex;
@@ -1627,6 +1597,9 @@ sm-checkbox {
   #pages_container > * {
     margin: 0 1.5rem;
     padding: 2rem;
+  }
+  #login_section {
+    width: 24rem;
   }
   .is-signed-in #exchange {
     display: flex;
