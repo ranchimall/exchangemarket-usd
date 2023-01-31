@@ -177,7 +177,7 @@ function confirmVaultWithdraw() {
                     }).catch(error => console.error(error));
                 else if (r.asset == "BTC")
                     btcOperator.getTx(r.txid).then(tx => {
-                        if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                        if (!tx.block || !tx.confirmations) //Still not confirmed
                             return;
                         DB.query("UPDATE VaultTransactions SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
                             .then(result => console.info("BTC withdrawed:", r.floID, r.amount))
@@ -203,7 +203,7 @@ verifyTx.BTC = function (sender, txid, group) {
                 return reject([true, "Transaction not sent by the sender"]);
             if (vin_sender.length !== tx.inputs.length)
                 return reject([true, "Transaction input containes other floIDs"]);
-            if (!tx.blockhash)
+            if (!tx.block)
                 return reject([false, "Transaction not included in any block yet"]);
             if (!tx.confirmations)
                 return reject([false, "Transaction not confirmed yet"]);
@@ -278,7 +278,7 @@ function confirmConvert() {
         results.forEach(r => {
             if (r.mode == pCode.CONVERT_MODE_GET)
                 btcOperator.getTx(r.out_txid).then(tx => {
-                    if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                    if (!tx.block || !tx.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE DirectConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
                         .then(result => console.info(`${r.floID} converted ${r.amount} to ${r.quantity} BTC`))
@@ -342,7 +342,7 @@ function confirmConvertFundWithdraw() {
         results.forEach(r => {
             if (r.mode == pCode.CONVERT_MODE_GET) { //withdraw coin
                 btcOperator.getTx(r.txid).then(tx => {
-                    if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                    if (!tx.block || !tx.confirmations) //Still not confirmed
                         return;
                     DB.query("UPDATE ConvertFund SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
                         .then(result => console.info(`Withdraw-fund ${r.quantity} ${r.coin} successful`))
@@ -399,7 +399,7 @@ function confirmConvertRefund() {
             if (r.ASSET_TYPE_COIN) {
                 if (r.asset == "BTC") //Convert is only for BTC right now
                     btcOperator.getTx(r.out_txid).then(tx => {
-                        if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                        if (!tx.block || !tx.confirmations) //Still not confirmed
                             return;
                         DB.query("UPDATE RefundConvert SET r_status=? WHERE id=?", [pCode.STATUS_SUCCESS, r.id])
                             .then(result => console.info(`Refunded ${r.amount} ${r.asset} to ${r.floID}`))
@@ -427,7 +427,7 @@ function confirmBondClosing() {
     DB.query("SELECT * FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
             btcOperator.getTx(r.txid).then(tx => {
-                if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                if (!tx.block || !tx.confirmations) //Still not confirmed
                     return;
                 let closeBondString = bond_util.stringify.end(r.bond_id, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(keys.node_id, closeBondString, keys.node_priv, bond_util.config.adminID).then(txid => {
@@ -450,7 +450,7 @@ function confirmFundClosing() {
     DB.query("SELECT * FROM CloseFundTransact WHERE r_status=?", [pCode.STATUS_CONFIRMATION]).then(results => {
         results.forEach(r => {
             btcOperator.getTx(r.txid).then(tx => {
-                if (!tx.blockhash || !tx.confirmations) //Still not confirmed
+                if (!tx.block || !tx.confirmations) //Still not confirmed
                     return;
                 let closeFundString = fund_util.stringify.end(r.fund_id, r.floID, r.end_date, r.btc_net, r.usd_net, r.amount, r.ref_sign, r.txid);
                 floBlockchainAPI.writeData(keys.node_id, closeFundString, keys.node_priv, fund_util.config.adminID).then(txid => {
