@@ -2133,7 +2133,10 @@
             return {
                 chart: {
                     layout: {
-                        backgroundColor: `rgba(${textColor}, 0.01)`,
+                        background: {
+                            type: 'solid',
+                            color: `rgba(${textColor}, 0.01)`
+                        },
                         lineColor: `rgba(${textColor}, 0.1)`,
                         textColor: `rgba(${textColor}, 0.8)`,
                     },
