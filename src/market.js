@@ -219,11 +219,11 @@ function cancelOrder(type, id, floID) {
 
 function getAccountDetails(floID) {
     return new Promise((resolve, reject) => {
-        let select = [];
-        select.push(["token, quantity", "UserBalance"]);
-        select.push(["id, asset, quantity, minPrice, time_placed", "SellOrder"]);
-        select.push(["id, asset, quantity, maxPrice, time_placed", "BuyOrder"]);
-        let promises = select.map(a => DB.query(`SELECT ${a[0]} FROM ${a[1]} WHERE floID=? ${a[2] || ""}`, [floID]));
+        let promises = [
+            DB.query("SELECT token, quantity FROM UserBalance WHERE floID=?", [floID]),
+            DB.query("SELECT id, asset, quantity, minPrice, time_placed FROM SellOrder WHERE floID=?", [floID]),
+            DB.query("SELECT id, asset, quantity, maxPrice, time_placed FROM BuyOrder WHERE floID=?", [floID])
+        ];
         Promise.allSettled(promises).then(results => {
             let response = {
                 floID: floID,

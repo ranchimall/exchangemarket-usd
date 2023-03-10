@@ -48,7 +48,7 @@ function getPastRate(asset, hrs = 24) {
     });
 }
 
-function getHistory(asset, duration) {
+function getHistory(asset, duration = '') {
     return new Promise((resolve, reject) => {
         duration = getHistory.validateDuration(duration);
         let statement = "SELECT " +
@@ -56,7 +56,7 @@ function getHistory(asset, duration) {
             " FROM PriceHistory WHERE asset=?" + (duration ? " AND rec_time >= NOW() - INTERVAL " + duration : "") +
             (!duration || duration.endsWith("month") || duration.endsWith("year") ? " GROUP BY time" : "") +
             " ORDER BY time";
-        DB.query(statement, asset)
+        DB.query(statement, [asset])
             .then(result => resolve(result))
             .catch(error => reject(error))
     });
