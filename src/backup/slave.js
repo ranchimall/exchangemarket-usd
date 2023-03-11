@@ -2,6 +2,7 @@
 
 const keys = require("../keys");
 const DB = require("../database");
+const { getTableHashes } = require("./sync");
 
 const {
     BACKUP_INTERVAL,
@@ -375,17 +376,9 @@ function requestHash(tables) {
 }
 
 function verifyHash(hashes) {
-    const getHash = table => new Promise((res, rej) => {
-        DB.query("SHOW COLUMNS FROM ??", [table]).then(result => {
-            let columns = result.map(r => r["Field"]).sort();
-            DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
-                .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
-                .catch(error => rej(error))
-        }).catch(error => rej(error))
-    });
     const convertIntArray = obj => Object.keys(obj).map(i => parseInt(i));
     const checkHash = (table, hash_ref) => new Promise((res, rej) => {
-        getHash(table).then(hash_cur => {
+        getTableHashes(table).then(hash_cur => {
             for (let i in hash_ref)
                 if (hash_ref[i] === hash_cur[i]) {
                     delete hash_ref[i];

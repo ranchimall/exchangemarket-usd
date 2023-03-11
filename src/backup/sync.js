@@ -119,15 +119,7 @@ function backupSync_checksum(ws) {
 }
 
 function sendTableHash(tables, ws) {
-    const getHash = table => new Promise((res, rej) => {
-        DB.query("SHOW COLUMNS FROM ??", [table]).then(result => {
-            let columns = result.map(r => r["Field"]).sort();
-            DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
-                .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
-                .catch(error => rej(error))
-        }).catch(error => rej(error))
-    });
-    Promise.allSettled(tables.map(t => getHash(t))).then(result => {
+    Promise.allSettled(tables.map(t => getTableHashes(t))).then(result => {
         let hashes = {};
         for (let i in tables)
             if (result[i].status === "fulfilled")
@@ -138,6 +130,28 @@ function sendTableHash(tables, ws) {
             command: "SYNC_HASH",
             hashes: hashes
         }));
+    })
+}
+
+function getTableHashes(table) {
+    return new Promise((resolve, reject) => {
+        DB.query("SHOW COLUMNS FROM ??", [table]).then(result => {
+            //columns
+            let columns = result.map(r => r["Field"]).sort();
+            //select statement
+            let statement = "SELECT CEIL(id/?) as group_id";
+            let query_values = [HASH_N_ROW];
+            //aggregate column values
+            let col_aggregate = columns.map(c => "IFNULL(CRC32(??), 0)").join('+');
+            columns.forEach(c => query_values.push(c));
+            //aggregate rows via group by
+            statement += " SUM(CRC32(MD5(" + col_aggregate + "))) as hash FROM ?? GROUP BY group_id ORDER BY group_id";
+            query_values.push(table);
+            //query
+            DB.query(statement, query_values)
+                .then(result => resolve(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
+                .catch(error => reject(error))
+        }).catch(error => reject(error))
     })
 }
 
@@ -261,6 +275,7 @@ function tableSync_checksum(tables, ws) {
 }
 
 module.exports = {
+    getTableHashes,
     sendBackupData,
     sendTableHash,
     sendTableData
