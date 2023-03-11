@@ -315,7 +315,7 @@ function deleteTableData(data) {
         data.forEach(r => r.t_name in delete_needed ? delete_needed[r.t_name].push(r.id) : delete_needed[r.t_name] = [r.id]);
         let queries = [];
         for (let table in delete_needed)
-            queries.push(`DELETE FROM ${table} WHERE id IN (${delete_needed[table]})`);
+            queries.push("DELETE FROM ?? WHERE id IN (?)", [table, delete_needed[table]]);
         DB.transaction(queries).then(_ => resolve(true)).catch(error => reject(error));
     })
 }
@@ -326,9 +326,10 @@ function updateTableData(table, data) {
             return resolve(null);
         let cols = Object.keys(data[0]);
         let values = data.map(r => cols.map(c => validateValue(r[c])));
-        let statement = `INSERT INTO ${table} (${cols}) VALUES ?` +
-            " ON DUPLICATE KEY UPDATE " + cols.map(c => `${c}=VALUES(${c})`).join();
-        DB.query(statement, [values]).then(_ => resolve(true)).catch(error => reject(error));
+        let statement = "INSERT INTO ?? (??) VALUES ? ON DUPLICATE KEY UPDATE " + Array(cols.length).fill("??=VALUES(??)").join();
+        let query_values = [table, cols, values];
+        cols.forEach(c => query_values.push(c, c));
+        DB.query(statement, query_values).then(_ => resolve(true)).catch(error => reject(error));
     })
 }
 
@@ -336,7 +337,7 @@ const validateValue = val => (typeof val === "string" && /\.\d{3}Z$/.test(val)) 
 
 function verifyChecksum(checksum_ref) {
     return new Promise((resolve, reject) => {
-        DB.query("CHECKSUM TABLE " + Object.keys(checksum_ref).join()).then(result => {
+        DB.query("CHECKSUM TABLE ??", [Object.keys(checksum_ref)]).then(result => {
             let checksum = Object.fromEntries(result.map(r => [r.Table.split(".").pop(), r.Checksum]));
             let mismatch = [];
             for (let table in checksum)
@@ -375,7 +376,7 @@ function requestHash(tables) {
 
 function verifyHash(hashes) {
     const getHash = table => new Promise((res, rej) => {
-        DB.query("SHOW COLUMNS FROM " + table).then(result => {
+        DB.query("SHOW COLUMNS FROM ??", [table]).then(result => {
             let columns = result.map(r => r["Field"]).sort();
             DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
                 .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
@@ -403,8 +404,8 @@ function verifyHash(hashes) {
                     //Data to be deleted (incorrect data will be added by resync)
                     let id_end = result[t].value[1].map(i => i * HASH_N_ROW); //eg if i=2 AND H_R_C = 5 then id_end = 2 * 5 = 10 (ie, range 6-10)
                     Promise.allSettled(id_end.map(i =>
-                        DB.query(`DELETE FROM ${tables[t]} WHERE id BETWEEN ${i - HASH_N_ROW + 1} AND ${i}`))) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
-                        .then(_ => null);
+                        DB.query("DELETE FROM ?? WHERE id BETWEEN ? AND ?", [tables[t], i - HASH_N_ROW + 1, i]) //eg, i - HASH_N_ROW + 1 = 10 - 5 + 1 = 6
+                    )).then(_ => null);
                 } else
                     console.error(result[t].reason);
             //console.debug("Hash-mismatch", mismatch);

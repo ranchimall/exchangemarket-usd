@@ -202,14 +202,14 @@ function cancelOrder(type, id, floID) {
             tableName = "SellOrder";
         else
             return reject(INVALID(eCode.INVALID_TYPE, "Invalid Order type! Order type must be buy (or) sell"));
-        DB.query(`SELECT floID, asset FROM ${tableName} WHERE id=?`, [id]).then(result => {
+        DB.query("SELECT floID, asset FROM ?? WHERE id=?", [tableName, id]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(eCode.NOT_FOUND, "Order not found!"));
             else if (result[0].floID !== floID)
                 return reject(INVALID(eCode.NOT_OWNER, "Order doesnt belong to the current user"));
             let asset = result[0].asset;
             //Delete the order 
-            DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id]).then(result => {
+            DB.query("DELETE FROM ?? WHERE id=?", [tableName, id]).then(result => {
                 resolve(tableName + "#" + id + " cancelled successfully");
                 coupling.initiate(asset);
             }).catch(error => reject(error));
@@ -272,7 +272,7 @@ function getTransactionDetails(txid) {
             type = 'trade';
         } else
             return reject(INVALID(eCode.INVALID_TX_ID, "Invalid TransactionID"));
-        DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
+        DB.query("SELECT * FROM ?? WHERE txid=?", [tableName, txid]).then(result => {
             if (result.length) {
                 let details = result[0];
                 details.type = type;
