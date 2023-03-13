@@ -3,8 +3,10 @@
 const keys = require('./keys');
 const blockchain = require('./blockchain');
 const conversion_rates = require('./services/conversion').getRate;
+/*
 const bond_util = require('./services/bonds').util;
 const fund_util = require('./services/bobs-fund').util;
+*/
 const pCode = require('../docs/scripts/floExchangeAPI').processCode;
 const DB = require("./database");
 const coupling = require('./coupling');
@@ -417,6 +419,7 @@ function confirmConvertRefund() {
     }).catch(error => console.error(error))
 }
 
+/*
 function retryBondClosing() {
     DB.query("SELECT id, floID, amount, btc_net, usd_net FROM CloseBondTransact WHERE r_status=?", [pCode.STATUS_PENDING]).then(results => {
         results.forEach(r => blockchain.bondTransact.retry(r.floID, r.amount, r.btc_net, r.usd_net, r.id))
@@ -462,6 +465,7 @@ function confirmFundClosing() {
         })
     }).catch(error => console.error(error))
 }
+*/
 
 //Periodic Process
 
@@ -485,6 +489,7 @@ function processAll() {
         retryConvertRefund();
         confirmConvertRefund();
     }
+    /*
     //blockchain-bond service
     if (keys.sink_chest.list(keys.sink_groups.BLOCKCHAIN_BONDS).length) {
         retryBondClosing();
@@ -495,6 +500,7 @@ function processAll() {
         retryFundClosing();
         confirmFundClosing();
     }
+    */
 }
 
 var lastSyncBlockHeight = 0;

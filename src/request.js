@@ -3,8 +3,10 @@ const DB = require("./database");
 
 const market = require("./market");
 const conversion = require('./services/conversion');
+/*
 const blockchain_bonds = require("./services/bonds");
 const bobs_fund = require("./services/bobs-fund");
+*/
 const background = require("./background");
 const sink = require("./backup/head").sink;
 const keys = require("./keys");
@@ -428,6 +430,7 @@ function WithdrawConvertCurrencyFund(req, res) {
     }, () => conversion.withdrawFund.currency(data.floID, data.coin, data.amount));
 }
 
+/*
 function CloseBlockchainBond(req, res) {
     let data = req.body;
     if (!data.pubKey)
@@ -473,6 +476,7 @@ function CheckBobsFundBalance(req, res) {
         timestamp: data.timestamp
     }, () => bobs_fund.checkFundBalance(data.prior_time), false);
 }
+*/
 
 /* Public Requests */
 
@@ -715,10 +719,12 @@ module.exports = {
     DepositConvertCurrencyFund,
     WithdrawConvertCoinFund,
     WithdrawConvertCurrencyFund,
+    /*
     CloseBlockchainBond,
     CloseBobsFund,
     CheckBlockchainBondBalance,
     CheckBobsFundBalance,
+    */
     set trustedIDs(ids) {
         trustedIDs = ids;
     },
@@ -729,8 +735,10 @@ module.exports = {
         secret = s;
     },
     refreshData(nodeList) {
+        /*
         blockchain_bonds.refresh(nodeList);
         bobs_fund.refresh(nodeList);
+        */
     },
     pause() {
         serving = false;

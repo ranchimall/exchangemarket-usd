@@ -102,6 +102,7 @@ module.exports = function App(secret) {
     app.post('/withdraw-convert-coin-fund', Request.WithdrawConvertCoinFund);
     app.post('/withdraw-convert-currency-fund', Request.WithdrawConvertCurrencyFund);
 
+    /*
     //close blockchain-bond and bobs-fund-investment
     app.post('/close-blockchain-bonds', Request.CloseBlockchainBond);
     app.post('/close-bobs-fund-investment', Request.CloseBobsFund);
@@ -109,6 +110,7 @@ module.exports = function App(secret) {
     //check balance for blockchain-bond and bobs-fund (trusted IDs only)
     app.post('/check-blockchain-bond', Request.CheckBlockchainBondBalance);
     app.post('/check-bobs-fund', Request.CheckBobsFundBalance);
+    */
 
     //Manage user tags (trusted IDs only)
     app.post('/add-tag', Request.AddUserTag);
