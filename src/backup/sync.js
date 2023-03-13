@@ -54,7 +54,7 @@ function backupSync_delete(last_time, ws) {
 
 function backupSync_data(last_time, ws) {
     const sendTable = (table, id_list) => new Promise((res, rej) => {
-        DB.query(`SELECT * FROM ${table} WHERE id IN (${id_list})`)
+        DB.query("SELECT * FROM ?? WHERE id IN (?)", [table, id_list])
             .then(data => {
                 ws.send(JSON.stringify({
                     table,
@@ -99,7 +99,7 @@ function backupSync_checksum(ws) {
             let tableList = result.map(r => r['t_name']);
             if (!tableList.length)
                 return resolve("checksum");
-            DB.query("CHECKSUM TABLE " + tableList.join()).then(result => {
+            DB.query("CHECKSUM TABLE ??", [tableList]).then(result => {
                 let checksum = Object.fromEntries(result.map(r => [r.Table.split(".").pop(), r.Checksum]));
                 ws.send(JSON.stringify({
                     command: "SYNC_CHECKSUM",
@@ -119,15 +119,7 @@ function backupSync_checksum(ws) {
 }
 
 function sendTableHash(tables, ws) {
-    const getHash = table => new Promise((res, rej) => {
-        DB.query("SHOW COLUMNS FROM " + table).then(result => {
-            let columns = result.map(r => r["Field"]).sort();
-            DB.query(`SELECT CEIL(id/${HASH_N_ROW}) as group_id, MD5(GROUP_CONCAT(${columns.map(c => `IFNULL(${c}, "NULL")`).join()})) as hash FROM ${table} GROUP BY group_id ORDER BY group_id`)
-                .then(result => res(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
-                .catch(error => rej(error))
-        }).catch(error => rej(error))
-    });
-    Promise.allSettled(tables.map(t => getHash(t))).then(result => {
+    Promise.allSettled(tables.map(t => getTableHashes(t))).then(result => {
         let hashes = {};
         for (let i in tables)
             if (result[i].status === "fulfilled")
@@ -138,6 +130,28 @@ function sendTableHash(tables, ws) {
             command: "SYNC_HASH",
             hashes: hashes
         }));
+    })
+}
+
+function getTableHashes(table) {
+    return new Promise((resolve, reject) => {
+        DB.query("SHOW COLUMNS FROM ??", [table]).then(result => {
+            //columns
+            let columns = result.map(r => r["Field"]).sort();
+            //select statement
+            let statement = "SELECT CEIL(id/?) as group_id";
+            let query_values = [HASH_N_ROW];
+            //aggregate column values
+            let col_aggregate = columns.map(c => "IFNULL(CRC32(??), 0)").join('+');
+            columns.forEach(c => query_values.push(c));
+            //aggregate rows via group by
+            statement += " SUM(CRC32(MD5(" + col_aggregate + "))) as hash FROM ?? GROUP BY group_id ORDER BY group_id";
+            query_values.push(table);
+            //query
+            DB.query(statement, query_values)
+                .then(result => resolve(Object.fromEntries(result.map(r => [r.group_id, r.hash]))))
+                .catch(error => reject(error))
+        }).catch(error => reject(error))
     })
 }
 
@@ -196,7 +210,7 @@ function tableSync_data(tables, ws) {
     const sendTable = (table, group_id) => new Promise((res, rej) => {
         let id_end = group_id * HASH_N_ROW,
             id_start = id_end - HASH_N_ROW + 1;
-        DB.query(`SELECT * FROM ${table} WHERE id BETWEEN ? AND ?`, [id_start, id_end]).then(data => {
+        DB.query("SELECT * FROM ?? WHERE id BETWEEN ? AND ?", [table, id_start, id_end]).then(data => {
             ws.send(JSON.stringify({
                 table,
                 command: "SYNC_UPDATE",
@@ -245,7 +259,7 @@ function tableSync_data(tables, ws) {
 
 function tableSync_checksum(tables, ws) {
     return new Promise((resolve, reject) => {
-        DB.query("CHECKSUM TABLE " + tables.join()).then(result => {
+        DB.query("CHECKSUM TABLE ??", [tables]).then(result => {
             let checksum = Object.fromEntries(result.map(r => [r.Table.split(".").pop(), r.Checksum]));
             ws.send(JSON.stringify({
                 command: "SYNC_CHECKSUM",
@@ -261,6 +275,7 @@ function tableSync_checksum(tables, ws) {
 }
 
 module.exports = {
+    getTableHashes,
     sendBackupData,
     sendTableHash,
     sendTableData

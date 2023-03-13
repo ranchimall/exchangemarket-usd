@@ -221,7 +221,9 @@ function refreshBlockchainData(nodeList = []) {
                             let values = [fund_id, fund.start_date, fund.BTC_base, fund.USD_base, fund.fee, fund.duration];
                             if (fund.tapoutInterval)
                                 values.push(fund.topoutWindow, fund.tapoutInterval.join(','));
-                            txQueries.push([`INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration ${fund.tapoutInterval ? ", tapout_window, tapout_interval" : ""}) VALUE (?) ON DUPLICATE KEY UPDATE fund_id=fund_id`, [values]])
+                            else 
+                                values.push(null, null);
+                            txQueries.push(["INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration, tapout_window, tapout_interval) VALUE (?) ON DUPLICATE KEY UPDATE fund_id=fund_id", [values]])
                         } else
                             fund_id = fund_id.pop().match(/[a-z0-9]{64}/).pop();
                         let investments = Object.entries(fund.investments).map(a => [fund_id, a[0], a[1].amount]);

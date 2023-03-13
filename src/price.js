@@ -48,42 +48,46 @@ function getPastRate(asset, hrs = 24) {
     });
 }
 
-function getHistory(asset, duration) {
+function getHistory(asset, duration = '') {
     return new Promise((resolve, reject) => {
-        duration = getHistory.validateDuration(duration);
-        let statement = "SELECT " +
-            (!duration || duration.endsWith("month") || duration.endsWith("year") ? "DATE(rec_time) AS time, AVG(rate) as rate" : "rec_time AS time, rate") +
-            " FROM PriceHistory WHERE asset=?" + (duration ? " AND rec_time >= NOW() - INTERVAL " + duration : "") +
-            (!duration || duration.endsWith("month") || duration.endsWith("year") ? " GROUP BY time" : "") +
-            " ORDER BY time";
-        DB.query(statement, asset)
+        let { statement, values } = getHistory.getRateStatement(asset, duration);
+        DB.query(statement, values)
             .then(result => resolve(result))
             .catch(error => reject(error))
     });
 }
 
-getHistory.validateDuration = duration => {
+getHistory.statement = {
+    'all-time': "SELECT DATE(rec_time) AS time, AVG(rate) as rate FROM PriceHistory WHERE asset=? GROUP BY time ORDER BY time",
+    'year': "SELECT DATE(rec_time) AS time, AVG(rate) as rate FROM PriceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? year GROUP BY time ORDER BY time",
+    'month': "SELECT DATE(rec_time) AS time, AVG(rate) as rate FROM PriceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? month GROUP BY time ORDER BY time",
+    'week': "SELECT rec_time AS time, rate FROM PriceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? week ORDER BY time",
+    'day': "SELECT rec_time AS time, rate FROM PriceHistory WHERE asset=? AND rec_time >= NOW() - INTERVAL ? day ORDER BY time"
+}
+
+getHistory.getRateStatement = (asset, duration) => {
     let n = duration.match(/\d+/g),
         d = duration.match(/\D+/g);
     n = n ? n[0] || 1 : 1;
     d = d ? d[0].replace(/[-\s]/g, '') : "";
+
     switch (d.toLowerCase()) {
         case "day":
         case "days":
-            return n + " day";
+            return { statement: getHistory.statement['day'], values: [asset, n] };
         case "week":
         case "weeks":
-            return n + " week";
+            return { statement: getHistory.statement['week'], values: [asset, n] };
         case "month":
         case "months":
-            return n + " month";
+            return { statement: getHistory.statement['month'], values: [asset, n] };
         case "year":
         case "years":
-            return n + " year";
+            return { statement: getHistory.statement['year'], values: [asset, n] };
         case "alltime":
-            return null;
+            return { statement: getHistory.statement['all-time'], values: [asset] };
         default:
-            return '1 day';
+            return { statement: getHistory.statement['day'], values: [asset, 1] };
     }
 }
 

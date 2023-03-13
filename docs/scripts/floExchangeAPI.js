@@ -1,6 +1,6 @@
 'use strict';
 
-(function (EXPORTS) { //floExchangeAPI v1.1.3
+(function (EXPORTS) { //floExchangeAPI v1.2.0
     const exchangeAPI = EXPORTS;
 
     const DEFAULT = {
@@ -1718,18 +1718,20 @@
 
     }
 
+    const _l = key => DEFAULT.marketApp + '-' + key;
+
     exchangeAPI.init = function refreshDataFromBlockchain() {
         return new Promise((resolve, reject) => {
             let nodes, trusted = new Set(), assets, tags, lastTx;
             try {
-                nodes = JSON.parse(localStorage.getItem('exchange-nodes'));
-                trusted = new Set((localStorage.getItem('exchange-trusted') || "").split(','));
-                assets = new Set((localStorage.getItem('exchange-assets') || "").split(','));
-                tags = new Set((localStorage.getItem('exchange-tags') || "").split(','));
+                nodes = JSON.parse(localStorage.getItem(_l('nodes')));
+                trusted = new Set((localStorage.getItem(_l('trusted')) || "").split(','));
+                assets = new Set((localStorage.getItem(_l('assets')) || "").split(','));
+                tags = new Set((localStorage.getItem(_l('tags')) || "").split(','));
                 if (typeof nodes !== 'object' || nodes === null)
                     throw Error('nodes must be an object')
                 else
-                    lastTx = parseInt(localStorage.getItem('exchange-lastTx')) || 0;
+                    lastTx = parseInt(localStorage.getItem(_l('lastTx'))) || 0;
             } catch (error) {
                 nodes = {};
                 trusted = new Set();
@@ -1780,11 +1782,11 @@
                                 tags.add(t);
                     }
                 });
-                localStorage.setItem('exchange-lastTx', result.totalTxs);
-                localStorage.setItem('exchange-nodes', JSON.stringify(nodes));
-                localStorage.setItem('exchange-trusted', Array.from(trusted).join(","));
-                localStorage.setItem('exchange-assets', Array.from(assets).join(","));
-                localStorage.setItem('exchange-tags', Array.from(tags).join(","));
+                localStorage.setItem(_l('lastTx'), result.totalTxs);
+                localStorage.setItem(_l('nodes'), JSON.stringify(nodes));
+                localStorage.setItem(_l('trusted'), Array.from(trusted).join(","));
+                localStorage.setItem(_l('assets'), Array.from(assets).join(","));
+                localStorage.setItem(_l('tags'), Array.from(tags).join(","));
                 nodeURL = nodes;
                 nodeKBucket = new K_Bucket(DEFAULT.marketID, Object.keys(nodeURL));
                 nodeList = nodeKBucket.order;
@@ -1795,25 +1797,117 @@
 
     const config = exchangeAPI.config = {
         get trustedList() {
-            return new Set((localStorage.getItem('exchange-trusted') || "").split(','));
+            return new Set((localStorage.getItem(_l('trusted')) || "").split(','));
         },
         get assetList() {
-            return new Set((localStorage.getItem('exchange-assets') || "").split(','));
+            return new Set((localStorage.getItem(_l('assets')) || "").split(','));
         },
         get tagList() {
-            return new Set((localStorage.getItem('exchange-tags') || "").split(','));
+            return new Set((localStorage.getItem(_l('tags')) || "").split(','));
         }
     }
 
     exchangeAPI.clearAllLocalData = function () {
-        localStorage.removeItem('exchange-nodes');
-        localStorage.removeItem('exchange-trusted');
-        localStorage.removeItem('exchange-assets');
-        localStorage.removeItem('exchange-tags');
-        localStorage.removeItem('exchange-lastTx');
-        localStorage.removeItem('exchange-proxy_secret');
-        localStorage.removeItem('exchange-user_ID');
+        localStorage.removeItem(_l('nodes'));
+        localStorage.removeItem(_l('trusted'));
+        localStorage.removeItem(_l('assets'));
+        localStorage.removeItem(_l('tags'));
+        localStorage.removeItem(_l('lastTx'));
+        localStorage.removeItem(_l('proxy_secret'));
+        localStorage.removeItem(_l('user_ID'));
         location.reload();
+    }
+
+    //container for user ID and proxy private-key
+    const proxy = exchangeAPI.proxy = {
+        user: null,
+        private: null,
+        public: null,
+        async lock() {
+            if (!this.private)
+                return notify("No proxy key found!", 'error');
+            getPromptInput("Add password", 'This password applies to this browser only!', {
+                isPassword: true,
+                confirmText: "Add password"
+            }).then(pwd => {
+                if (!pwd)
+                    notify("Password cannot be empty", 'error');
+                else if (pwd.length < 4)
+                    notify("Password minimum length is 4", 'error');
+                else {
+                    let tmp = Crypto.AES.encrypt(this.private, pwd);
+                    localStorage.setItem(_l('proxy_secret'), "?" + tmp);
+                    notify("Successfully locked with Password", 'success');
+                }
+            }).catch(_ => null);
+        },
+        clear() {
+            localStorage.removeItem(_l('proxy_secret'));
+            localStorage.removeItem(_l('user_ID'));
+            this.user = null;
+            this.private = null;
+            this.public = null;
+        },
+        get sinkID() {
+            return getRef("sink_id").value;
+        },
+        set userID(id) {
+            localStorage.setItem(_l('user_ID'), id);
+            this.user = id;
+        },
+        get userID() {
+            if (this.user)
+                return this.user;
+            else {
+                let id = localStorage.getItem(_l('user_ID'));
+                return id ? this.user = id : undefined;
+            }
+        },
+        set secret(key) {
+            localStorage.setItem(_l('proxy_secret'), key);
+            this.private = key;
+            this.public = floCrypto.getPubKeyHex(key);
+        },
+        get secret() {
+            const self = this;
+            return new Promise((resolve, reject) => {
+                if (self.private)
+                    return resolve(self.private);
+
+                const Reject = reason => {
+                    notify(reason, 'error');
+                    reject(reason);
+                }
+                const setValues = priv => {
+                    try {
+                        self.private = priv;
+                        self.public = floCrypto.getPubKeyHex(priv);
+                        resolve(self.private);
+                    } catch (error) {
+                        Reject("Unable to fetch Proxy secret");
+                    }
+                };
+                let tmp = localStorage.getItem(_l('proxy_secret'));
+                if (typeof tmp !== "string")
+                    Reject("Unable to fetch Proxy secret");
+                else if (tmp.startsWith("?")) {
+                    getPromptInput("Enter password", '', {
+                        isPassword: true
+                    }).then(pwd => {
+                        if (!pwd)
+                            return Reject("Password Required for making transactions");
+                        try {
+                            tmp = Crypto.AES.decrypt(tmp.substring(1), pwd);
+                            setValues(tmp);
+                        } catch (error) {
+                            Reject("Incorrect Password! Password Required for making transactions");
+
+                        }
+                    }).catch(_ => Reject("Password Required for making transactions"));
+                } else
+                    setValues(tmp);
+            })
+        }
     }
 
 })('object' === typeof module ? module.exports : window.floExchangeAPI = {});

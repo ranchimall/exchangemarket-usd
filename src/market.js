@@ -202,14 +202,14 @@ function cancelOrder(type, id, floID) {
             tableName = "SellOrder";
         else
             return reject(INVALID(eCode.INVALID_TYPE, "Invalid Order type! Order type must be buy (or) sell"));
-        DB.query(`SELECT floID, asset FROM ${tableName} WHERE id=?`, [id]).then(result => {
+        DB.query("SELECT floID, asset FROM ?? WHERE id=?", [tableName, id]).then(result => {
             if (result.length < 1)
                 return reject(INVALID(eCode.NOT_FOUND, "Order not found!"));
             else if (result[0].floID !== floID)
                 return reject(INVALID(eCode.NOT_OWNER, "Order doesnt belong to the current user"));
             let asset = result[0].asset;
             //Delete the order 
-            DB.query(`DELETE FROM ${tableName} WHERE id=?`, [id]).then(result => {
+            DB.query("DELETE FROM ?? WHERE id=?", [tableName, id]).then(result => {
                 resolve(tableName + "#" + id + " cancelled successfully");
                 coupling.initiate(asset);
             }).catch(error => reject(error));
@@ -219,11 +219,11 @@ function cancelOrder(type, id, floID) {
 
 function getAccountDetails(floID) {
     return new Promise((resolve, reject) => {
-        let select = [];
-        select.push(["token, quantity", "UserBalance"]);
-        select.push(["id, asset, quantity, minPrice, time_placed", "SellOrder"]);
-        select.push(["id, asset, quantity, maxPrice, time_placed", "BuyOrder"]);
-        let promises = select.map(a => DB.query(`SELECT ${a[0]} FROM ${a[1]} WHERE floID=? ${a[2] || ""}`, [floID]));
+        let promises = [
+            DB.query("SELECT token, quantity FROM UserBalance WHERE floID=?", [floID]),
+            DB.query("SELECT id, asset, quantity, minPrice, time_placed FROM SellOrder WHERE floID=?", [floID]),
+            DB.query("SELECT id, asset, quantity, maxPrice, time_placed FROM BuyOrder WHERE floID=?", [floID])
+        ];
         Promise.allSettled(promises).then(results => {
             let response = {
                 floID: floID,
@@ -272,7 +272,7 @@ function getTransactionDetails(txid) {
             type = 'trade';
         } else
             return reject(INVALID(eCode.INVALID_TX_ID, "Invalid TransactionID"));
-        DB.query(`SELECT * FROM ${tableName} WHERE txid=?`, [txid]).then(result => {
+        DB.query("SELECT * FROM ?? WHERE txid=?", [tableName, txid]).then(result => {
             if (result.length) {
                 let details = result[0];
                 details.type = type;

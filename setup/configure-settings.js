@@ -51,13 +51,13 @@ function configureSQL() {
         flaggedYesOrNo('Do you want to re-configure mySQL connection').then(value => {
             if (value) {
                 console.log('Enter mySQL connection values: ')
-                getInput.Text('Host', config['sql_host']).then(host => {
+                getInput.Text('MySQL Host', config['sql_host']).then(host => {
                     config['sql_host'] = host;
                     getInput.Text('Database name', config['sql_db']).then(dbname => {
                         config['sql_db'] = dbname;
                         getInput.Text('MySQL username', config['sql_user']).then(sql_user => {
                             config['sql_user'] = sql_user;
-                            getInput.Text('Mysql password', config['sql_pwd']).then(sql_pwd => {
+                            getInput.Text('MySQL password', config['sql_pwd']).then(sql_pwd => {
                                 config['sql_pwd'] = sql_pwd;
                                 resolve(true);
                             })
@@ -98,6 +98,7 @@ function configure() {
                             return reject(false);
                         }
                         console.log('Configuration successful!');
+                        /*
                         if (sql_result) {
                             getInput.YesOrNo('Do you want to create schema in the database').then(value => {
                                 if (value) {
@@ -113,7 +114,8 @@ function configure() {
                                 }
                             });
                         } else
-                            resolve(true);
+                        */
+                        resolve(true);
                     })
                 })
             })
