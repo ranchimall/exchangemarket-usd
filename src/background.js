@@ -236,7 +236,7 @@ function verifyConvert() {
                     verifyTx.token(r.floID, r.in_txid, keys.sink_groups.CONVERT, true).then(({ amount }) => {
                         if (r.amount !== amount)
                             throw ([true, "Transaction amount mismatched in blockchain"]);
-                        conversion_rates.BTC_INR().then(rate => {
+                        conversion_rates.BTC_USD().then(rate => {
                             blockchain.convertToCoin.init(r.floID, "BTC", amount, rate, r.id)
                         }).catch(error => console.error(error))
                     }).catch(error => {
@@ -249,7 +249,7 @@ function verifyConvert() {
                     verifyTx.BTC(r.floID, r.in_txid, keys.sink_groups.CONVERT).then(quantity => {
                         if (r.quantity !== quantity)
                             throw ([true, "Transaction quantity mismatched in blockchain"]);
-                        conversion_rates.BTC_INR().then(rate => {
+                        conversion_rates.BTC_USD().then(rate => {
                             blockchain.convertFromCoin.init(r.floID, quantity, rate, r.id)
                         }).catch(error => console.error(error))
                     }).catch(error => {

@@ -70,7 +70,7 @@ function getPoolAvailability(coin) {
                     coin_net += r.coin_val;
                     cash_net -= r.cash_val;
                 }
-            BTC_INR().then(rate => {
+            BTC_USD().then(rate => {
                 coin_net = coin_net * rate;
                 let cash_availability = cash_net - coin_net * MIN_FUND,
                     coin_availability = (coin_net - cash_net * MIN_FUND) / rate;
