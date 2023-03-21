@@ -26,9 +26,9 @@ function listTables() {
 
 function checksumTable(table) {
     return new Promise((resolve, reject) => {
-        DB.query("CHECKSUM TABLE " + table).then(result => {
+        DB.query("CHECKSUM TABLE ??", [table]).then(result => {
             let checksum = result[0].Checksum;
-            DB.query("SELECT COUNT(*) AS rec_count FROM " + table)
+            DB.query("SELECT COUNT(*) AS rec_count FROM ??", [table])
                 .then(result => resolve({ table, rec_count: result[0].rec_count, checksum }))
                 .catch(error => reject(error))
         }).catch(error => reject(error))
