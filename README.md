@@ -10,7 +10,7 @@
 ### Download
 Download the repository using git:
 ```
-git clone https://github.com/ranchimall/exchange-market.git
+git clone https://github.com/ranchimall/exchangemarket-usd.git
 ```
 
 ### Install
