@@ -139,7 +139,7 @@ function getTableHashes(table) {
             //columns
             let columns = result.map(r => r["Field"]).sort();
             //select statement
-            let statement = "SELECT CEIL(id/?) as group_id";
+            let statement = "SELECT CEIL(id/?) as group_id,";
             let query_values = [HASH_N_ROW];
             //aggregate column values
             let col_aggregate = columns.map(c => "IFNULL(CRC32(??), 0)").join('+');
