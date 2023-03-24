@@ -116,7 +116,7 @@ function getConvertValues() {
                 }
             } else result[pCode.CONVERT_MODE_GET] = null;
             if (avail.cash > 0) {
-                let cash_availability = global.toStandardDecimal(avail.cash / avail.rate); //convert to coin value
+                let cash_availability = global.toStandardDecimal(avail.cash); //availability in currency value
                 if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length)
                     result[pCode.CONVERT_MODE_PUT] = FROM_FIXED_VALUES.filter(a => a < cash_availability);
                 else if (!FROM_MIN_VALUE || FROM_MIN_VALUE <= cash_availability) {
@@ -135,26 +135,28 @@ function convertToCoin(floID, txid, coin, amount) {
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
         else if (typeof amount !== "number" || amount <= 0)
             return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
-        else if (Array.isArray(TO_FIXED_VALUES) && TO_FIXED_VALUES.length) {
-            if (!TO_FIXED_VALUES.includes(amount))
+        BTC_USD().then(rate => {
+            if (Array.isArray(TO_FIXED_VALUES) && TO_FIXED_VALUES.length) {
+                if (!TO_FIXED_VALUES.includes(amount))
+                    return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
+            } else if (TO_MIN_VALUE && TO_MIN_VALUE > amount || TO_MAX_VALUE && TO_MAX_VALUE < amount)
                 return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
-        } else if (TO_MIN_VALUE && TO_MIN_VALUE > amount || TO_MAX_VALUE && TO_MAX_VALUE < amount)
-            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid amount (${amount})`));
-        DB.query("SELECT r_status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, pCode.CONVERT_MODE_GET]).then(result => {
-            if (result.length)
-                return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-            checkPoolBalance(coin, amount, pCode.CONVERT_MODE_GET).then(result => {
-                DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, pCode.STATUS_PENDING]])
-                    .then(result => resolve("Conversion request in process"))
-                    .catch(error => reject(error));
-            }).catch(error => {
-                if (error instanceof INVALID && error.ecode === eCode.INSUFFICIENT_FUND)
-                    DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, pCode.STATUS_REJECTED]]).then(result => {
-                        DB.query("INSERT INTO RefundConvert(floID, in_txid, asset_type, asset, r_status) VALUES (?)", [[floID, txid, pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING]])
-                            .then(_ => null).catch(error => console.error(error));
-                    }).catch(error => console.error(error))
-                reject(error);
-            })
+            DB.query("SELECT r_status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, pCode.CONVERT_MODE_GET]).then(result => {
+                if (result.length)
+                    return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
+                checkPoolBalance(coin, amount, pCode.CONVERT_MODE_GET).then(result => {
+                    DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, rate, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, rate, pCode.STATUS_PENDING]])
+                        .then(result => resolve("Conversion request in process"))
+                        .catch(error => reject(error));
+                }).catch(error => {
+                    if (error instanceof INVALID && error.ecode === eCode.INSUFFICIENT_FUND)
+                        DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, amount, r_status) VALUES (?)", [[floID, txid, pCode.CONVERT_MODE_GET, coin, amount, pCode.STATUS_REJECTED]]).then(result => {
+                            DB.query("INSERT INTO RefundConvert(floID, in_txid, asset_type, asset, r_status) VALUES (?)", [[floID, txid, pCode.ASSET_TYPE_TOKEN, floGlobals.currency, pCode.STATUS_PENDING]])
+                                .then(_ => null).catch(error => console.error(error));
+                        }).catch(error => console.error(error))
+                    reject(error);
+                })
+            }).catch(error => reject(error))
         }).catch(error => reject(error))
     });
 }
@@ -165,29 +167,32 @@ function convertFromCoin(floID, txid, tx_hex, coin, quantity) {
             return reject(INVALID(eCode.INVALID_TOKEN_NAME, `Invalid coin (${coin})`));
         else if (typeof quantity !== "number" || quantity <= 0)
             return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
-        else if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length) {
-            if (!FROM_FIXED_VALUES.includes(quantity))
+        BTC_USD().then(rate => {
+            let currency_amount = global.toStandardDecimal(quantity * rate);
+            if (Array.isArray(FROM_FIXED_VALUES) && FROM_FIXED_VALUES.length) {
+                if (!FROM_FIXED_VALUES.includes(currency_amount))
+                    return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
+            } else if (FROM_MIN_VALUE && FROM_MIN_VALUE > currency_amount || FROM_MAX_VALUE && FROM_MAX_VALUE < currency_amount)
                 return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
-        } else if (FROM_MIN_VALUE && FROM_MIN_VALUE > quantity || FROM_MAX_VALUE && FROM_MAX_VALUE < quantity)
-            return reject(INVALID(eCode.INVALID_NUMBER, `Invalid quantity (${quantity})`));
-        else if (btcOperator.transactionID(tx_hex) !== txid)
-            return reject(INVALID(eCode.INVALID_TX_ID, `txid ${txid} doesnt match the tx-hex`));
-        DB.query("SELECT r_status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, pCode.CONVERT_MODE_PUT]).then(result => {
-            if (result.length)
-                return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
-            checkPoolBalance(coin, quantity, pCode.CONVERT_MODE_PUT).then(result => {
-                btcOperator.broadcastTx(tx_hex).then(b_txid => {
-                    if (b_txid !== txid)
-                        console.warn("broadcast TX-ID is not same as calculated TX-ID");
-                    DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, quantity, r_status) VALUES (?)", [[floID, b_txid, pCode.CONVERT_MODE_PUT, coin, quantity, pCode.STATUS_PENDING]])
-                        .then(result => resolve("Conversion request in process"))
-                        .catch(error => reject(error));
-                }).catch(error => {
-                    if (error === null)
-                        reject(INVALID(eCode.INVALID_TX_ID, `Invalid transaction hex`));
-                    else
-                        reject(error);
-                })
+            else if (btcOperator.transactionID(tx_hex) !== txid)
+                return reject(INVALID(eCode.INVALID_TX_ID, `txid ${txid} doesnt match the tx-hex`));
+            DB.query("SELECT r_status FROM DirectConvert WHERE in_txid=? AND floID=? AND mode=?", [txid, floID, pCode.CONVERT_MODE_PUT]).then(result => {
+                if (result.length)
+                    return reject(INVALID(eCode.DUPLICATE_ENTRY, "Transaction already in process"));
+                checkPoolBalance(coin, quantity, pCode.CONVERT_MODE_PUT).then(result => {
+                    btcOperator.broadcastTx(tx_hex).then(b_txid => {
+                        if (b_txid !== txid)
+                            console.warn("broadcast TX-ID is not same as calculated TX-ID");
+                        DB.query("INSERT INTO DirectConvert(floID, in_txid, mode, coin, quantity, rate, r_status) VALUES (?)", [[floID, b_txid, pCode.CONVERT_MODE_PUT, coin, quantity, rate, pCode.STATUS_PENDING]])
+                            .then(result => resolve("Conversion request in process"))
+                            .catch(error => reject(error));
+                    }).catch(error => {
+                        if (error === null)
+                            reject(INVALID(eCode.INVALID_TX_ID, `Invalid transaction hex`));
+                        else
+                            reject(error);
+                    })
+                }).catch(error => reject(error))
             }).catch(error => reject(error))
         }).catch(error => reject(error))
     })

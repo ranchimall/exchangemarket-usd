@@ -2,7 +2,7 @@
 
 const keys = require('./keys');
 const blockchain = require('./blockchain');
-const conversion_rates = require('./services/conversion').getRate;
+//const conversion_rates = require('./services/conversion').getRate;
 /*
 const bond_util = require('./services/bonds').util;
 const fund_util = require('./services/bobs-fund').util;
@@ -230,15 +230,13 @@ function verifyConvert() {
     txQueries.push([to_refund_sql, [pCode.ASSET_TYPE_COIN, "BTC", pCode.STATUS_PENDING, req_timeout, pCode.CONVERT_MODE_PUT]]);
     txQueries.push(["UPDATE DirectConvert SET r_status=? WHERE r_status=? AND locktime<?", [pCode.STATUS_REJECTED, pCode.STATUS_PENDING, req_timeout]]);
     DB.transaction(txQueries).then(result => {
-        DB.query("SELECT id, floID, mode, in_txid, amount, quantity FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
+        DB.query("SELECT id, floID, mode, in_txid, amount, quantity, rate FROM DirectConvert WHERE r_status=? AND coin=?", [pCode.STATUS_PENDING, "BTC"]).then(results => {
             results.forEach(r => {
                 if (r.mode == pCode.CONVERT_MODE_GET) {
                     verifyTx.token(r.floID, r.in_txid, keys.sink_groups.CONVERT, true).then(({ amount }) => {
                         if (r.amount !== amount)
                             throw ([true, "Transaction amount mismatched in blockchain"]);
-                        conversion_rates.BTC_USD().then(rate => {
-                            blockchain.convertToCoin.init(r.floID, "BTC", amount, rate, r.id)
-                        }).catch(error => console.error(error))
+                        blockchain.convertToCoin.init(r.floID, "BTC", r.amount, r.rate, r.id)
                     }).catch(error => {
                         console.error(error);
                         if (error[0])
@@ -249,9 +247,7 @@ function verifyConvert() {
                     verifyTx.BTC(r.floID, r.in_txid, keys.sink_groups.CONVERT).then(quantity => {
                         if (r.quantity !== quantity)
                             throw ([true, "Transaction quantity mismatched in blockchain"]);
-                        conversion_rates.BTC_USD().then(rate => {
-                            blockchain.convertFromCoin.init(r.floID, quantity, rate, r.id)
-                        }).catch(error => console.error(error))
+                        blockchain.convertFromCoin.init(r.floID, r.quantity, r.rate, r.id)
                     }).catch(error => {
                         console.error(error);
                         if (error[0])
