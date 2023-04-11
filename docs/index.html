@@ -1808,7 +1808,7 @@
             return listedAssets.hasOwnProperty(asset) ? listedAssets[asset].icon : listedAssets.default.icon;
         }
 
-        function formatAmount(amount, shorten = false) {
+        function formatAmount(amount = 0, shorten = false) {
             return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: shorten ? 2 : 8 })
         }
         // Convert milliseconds to time left in HH:MM:SS format
@@ -1976,8 +1976,10 @@
                     new ResizeObserver(entries => {
                         chartDimensions.height = entries[0].contentRect.height - 10;
                         chartDimensions.width = entries[0].contentRect.width;
-                        if (chart)
+                        if (chart) {
+                            if (chartDimensions.width <= 0 || chartDimensions.height <= 0) return;
                             chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
+                        }
                     }).observe(getRef('price_chart_wrapper'));
                 })
             },
@@ -2118,6 +2120,7 @@
         const chartObserver = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && chart) {
                 const { width, height } = entries[0].target.getBoundingClientRect()
+                if (width <= 0 || height <= 0 || chartDimensions.height === height - 10 && chartDimensions.width === width) return
                 chartDimensions.height = height - 10;
                 chartDimensions.width = width;
                 chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
