@@ -1703,7 +1703,7 @@
                 // code if page is hidden 
             } else {
                 if (floGlobals.exchangeApiLoaded)
-                    updateRate();
+                    updateRate().catch(err => console.log(err))
             }
         }
 
@@ -1884,7 +1884,7 @@
                     clone.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
-                    updateRate()
+                    updateRate().catch(console.error)
                     delete floGlobals.countDowns.timeouts[asset]
                 }, countDown - Date.now());
                 return clone
@@ -2796,7 +2796,7 @@
                     if (refreshButton)
                         buttonLoader('portfolio_balance_refresh_button', false);
                 }
-            })
+            }).catch(error => console.error(error))
         }
 
         let accountDetails = {}
