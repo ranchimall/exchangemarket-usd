@@ -1301,11 +1301,11 @@ sm-checkbox {
   box-shadow: 0 0.3rem 0.5rem rgba(0, 0, 0, 0.16);
 }
 
-#personal_rupee_balance span:first-of-type,
+#personal_usd_balance span:first-of-type,
 #personal_flo_balance span:first-of-type {
   font-size: 1.5rem;
 }
-#personal_rupee_balance span:last-of-type,
+#personal_usd_balance span:last-of-type,
 #personal_flo_balance span:last-of-type {
   font-size: 0.9rem;
 }
