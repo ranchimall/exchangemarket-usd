@@ -2,7 +2,7 @@
 
 CREATE TABLE LastTx(
     floID CHAR(34) NOT NULL,
-    num INT,
+    txid VARCHAR(128),
     PRIMARY KEY(floID)
 );
 

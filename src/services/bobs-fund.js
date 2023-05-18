@@ -203,16 +203,21 @@ bobsFund.config = {
 
 function refreshBlockchainData(nodeList = []) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT num FROM LastTx WHERE floID=?", [bobsFund.config.adminID]).then(result => {
-            let lastTx = result.length ? result[0].num : 0;
-            floBlockchainAPI.readData(bobsFund.config.adminID, {
-                ignoreOld: lastTx,
-                senders: nodeList.concat(bobsFund.config.adminID), //sentOnly: true,
-                tx: true,
-                filter: d => d.startsWith(bobsFund.productStr)
-            }).then(result => {
+        DB.query("SELECT txid FROM LastTx WHERE floID=?", [bobsFund.config.adminID]).then(result => {
+
+            var query_options = {
+                senders: nodeList.concat(bobsFund.config.adminID),
+                tx: true, filter: d => d.startsWith(bobsFund.productStr)
+            };
+            let lastTx = result.length ? result[0].txid : undefined;
+            if (typeof lastTx == 'string' && /^[0-9a-f]{64}/i.test(lastTx))//lastTx is txid of last tx
+                query_options.after = lastTx;
+            else if (!isNaN(lastTx))//lastTx is tx count (*backward support)
+                query_options.ignoreOld = parseInt(lastTx);
+
+            floBlockchainAPI.readData(bobsFund.config.adminID, query_options).then(result => {
                 let txQueries = [];
-                result.data.reverse().forEach(d => {
+                result.items.reverse().forEach(d => {
                     let fund = bobsFund.parse(d.data);
                     if (d.senders.has(bobsFund.config.adminID) && !/close:/.test(d.data)) {
                         let fund_id = d.data.match(/continue: [a-z0-9]{64}\|/);
@@ -221,7 +226,7 @@ function refreshBlockchainData(nodeList = []) {
                             let values = [fund_id, fund.start_date, fund.BTC_base, fund.USD_base, fund.fee, fund.duration];
                             if (fund.tapoutInterval)
                                 values.push(fund.topoutWindow, fund.tapoutInterval.join(','));
-                            else 
+                            else
                                 values.push(null, null);
                             txQueries.push(["INSERT INTO BobsFund(fund_id, begin_date, btc_base, usd_base, fee, duration, tapout_window, tapout_interval) VALUE (?) ON DUPLICATE KEY UPDATE fund_id=fund_id", [values]])
                         } else
@@ -240,10 +245,10 @@ function refreshBlockchainData(nodeList = []) {
                         }
                     }
                 });
-                txQueries.push(["INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?",
-                    [[bobsFund.config.adminID, result.totalTxs], result.totalTxs]])
+                txQueries.push(["INSERT INTO LastTx (floID, txid) VALUE (?) ON DUPLICATE KEY UPDATE txid=?",
+                    [[bobsFund.config.adminID, result.lastItem], result.lastItem]])
                 DB.transaction(txQueries)
-                    .then(_ => resolve(result.totalTxs))
+                    .then(_ => resolve(result.lastItem))
                     .catch(error => reject(["Bobs-Fund refresh data failed!", error]));
             }).catch(error => reject(error))
         }).catch(error => reject(error))
