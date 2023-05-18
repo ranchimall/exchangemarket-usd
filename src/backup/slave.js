@@ -316,7 +316,7 @@ function deleteTableData(data) {
         data.forEach(r => r.t_name in delete_needed ? delete_needed[r.t_name].push(r.id) : delete_needed[r.t_name] = [r.id]);
         let queries = [];
         for (let table in delete_needed)
-            queries.push("DELETE FROM ?? WHERE id IN (?)", [table, delete_needed[table]]);
+            queries.push(["DELETE FROM ?? WHERE id IN (?)", [table, delete_needed[table]]]);
         DB.transaction(queries).then(_ => resolve(true)).catch(error => reject(error));
     })
 }

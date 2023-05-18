@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RanchiMall exchange</title>
+    <title>RanchiMall Exchange</title>
     <meta name="description" content="Trade FLO and FLO based RanchiMall tokens.">
     <meta name="theme-color" content="#516beb" />
     <script src="scripts/components.js" defer></script>
@@ -1703,7 +1703,7 @@
                 // code if page is hidden 
             } else {
                 if (floGlobals.exchangeApiLoaded)
-                    updateRate();
+                    updateRate().catch(err => console.log(err))
             }
         }
 
@@ -1808,7 +1808,7 @@
             return listedAssets.hasOwnProperty(asset) ? listedAssets[asset].icon : listedAssets.default.icon;
         }
 
-        function formatAmount(amount, shorten = false) {
+        function formatAmount(amount = 0, shorten = false) {
             return amount.toLocaleString(`en-IN`, { style: 'currency', currency: 'INR', maximumFractionDigits: shorten ? 2 : 8 })
         }
         // Convert milliseconds to time left in HH:MM:SS format
@@ -1821,9 +1821,14 @@
 
         // remove digitals after specified decimal places without rounding
         function toFixed(num, fixed = 8) {
-            var re = new RegExp('^-?\\d+(?:\.\\d{0,' + (fixed || -1) + '})?');
-            return parseFloat(num.toString().match(re)[0]);
+            const re = new RegExp(`^-?\\d+(?:\\.\\d{0,${fixed}})?`);
+            const match = num.toString().match(re);
+            if (!match) {
+                return NaN;
+            }
+            return parseFloat(match[0]);
         }
+
 
         function getSuggestedPrice(asset = pagesData.params.asset || 'FLO') {
             return toFixed(parseFloat(floGlobals.exchangeRates[asset]) * deviation[tradeType])
@@ -1884,7 +1889,7 @@
                     clone.querySelector('.listed-asset__countdown').style.setProperty('--path-length', pathLength)
                 }, 1000);
                 floGlobals.countDowns.timeouts[asset] = setTimeout(() => {
-                    updateRate()
+                    updateRate().catch(console.error)
                     delete floGlobals.countDowns.timeouts[asset]
                 }, countDown - Date.now());
                 return clone
@@ -1976,8 +1981,10 @@
                     new ResizeObserver(entries => {
                         chartDimensions.height = entries[0].contentRect.height - 10;
                         chartDimensions.width = entries[0].contentRect.width;
-                        if (chart)
+                        if (chart) {
+                            if (chartDimensions.width <= 0 || chartDimensions.height <= 0) return;
                             chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
+                        }
                     }).observe(getRef('price_chart_wrapper'));
                 })
             },
@@ -2118,6 +2125,7 @@
         const chartObserver = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && chart) {
                 const { width, height } = entries[0].target.getBoundingClientRect()
+                if (width <= 0 || height <= 0 || chartDimensions.height === height - 10 && chartDimensions.width === width) return
                 chartDimensions.height = height - 10;
                 chartDimensions.width = width;
                 chart.applyOptions({ width: chartDimensions.width, height: chartDimensions.height });
@@ -2726,10 +2734,10 @@
                             getRef('market_asset_rates').append(createElement('li', {
                                 className: 'listed-asset grid align-center',
                                 innerHTML: `
-                                    <div class="listed-asset__icon">${getIcon(asset)}</div>
-                                    <h4 class="listed-asset__name">${asset}</h4>
-                                    <b class="listed-asset__rate">${formatAmount(rate)}</b>
-                                `
+                                        <div class="listed-asset__icon">${getIcon(asset)}</div>
+                                        <h4 class="listed-asset__name">${asset}</h4>
+                                        <b class="listed-asset__rate">${formatAmount(rate)}</b>
+                                    `
                             }))
                         })
                         resolve();
@@ -2763,6 +2771,7 @@
                     showSuggestedPrice()
                 }).catch(error => {
                     notify(error.message, 'error');
+                    reject(error)
                 })
             }).catch(error => console.error(error))
         }
@@ -2793,7 +2802,7 @@
                     if (refreshButton)
                         buttonLoader('portfolio_balance_refresh_button', false);
                 }
-            })
+            }).catch(error => console.error(error))
         }
 
         let accountDetails = {}

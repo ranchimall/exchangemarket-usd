@@ -186,16 +186,21 @@ blockchainBond.config = {
 
 function refreshBlockchainData(nodeList = []) {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT num FROM LastTx WHERE floID=?", [blockchainBond.config.adminID]).then(result => {
-            let lastTx = result.length ? result[0].num : 0;
-            floBlockchainAPI.readData(blockchainBond.config.adminID, {
-                ignoreOld: lastTx,
-                senders: nodeList.concat(blockchainBond.config.adminID), //sentOnly: true,
-                tx: true,
-                filter: d => d.startsWith(blockchainBond.productStr)
-            }).then(result => {
+        DB.query("SELECT txid FROM LastTx WHERE floID=?", [blockchainBond.config.adminID]).then(result => {
+
+            var query_options = {
+                senders: nodeList.concat(blockchainBond.config.adminID),
+                tx: true, filter: d => d.startsWith(blockchainBond.productStr)
+            };
+            let lastTx = result.length ? result[0].txid : undefined;
+            if (typeof lastTx == 'string' && /^[0-9a-f]{64}/i.test(lastTx))//lastTx is txid of last tx
+                query_options.after = lastTx;
+            else if (!isNaN(lastTx))//lastTx is tx count (*backward support)
+                query_options.ignoreOld = parseInt(lastTx);
+
+            floBlockchainAPI.readData(blockchainBond.config.adminID, query_options).then(result => {
                 let txQueries = [];
-                result.data.reverse().forEach(d => {
+                result.items.reverse().forEach(d => {
                     let bond = d.senders.has(blockchainBond.config.adminID) ? blockchainBond.parse.main(d.data) : null;
                     if (bond && bond.amount)
                         txQueries.push(["INSERT INTO BlockchainBonds(bond_id, floID, amount_in, begin_date, btc_base, usd_base, gain_cut, min_ipa, max_period, lockin_period) VALUE (?) ON DUPLICATE KEY UPDATE bond_id=bond_id",
@@ -207,10 +212,10 @@ function refreshBlockchainData(nodeList = []) {
                                 [d.txid, details.amountFinal, details.bondID]]);
                     }
                 });
-                txQueries.push(["INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?",
-                    [[blockchainBond.config.adminID, result.totalTxs], result.totalTxs]])
+                txQueries.push(["INSERT INTO LastTx (floID, txid) VALUE (?) ON DUPLICATE KEY UPDATE txid=?",
+                    [[blockchainBond.config.adminID, result.lastItem], result.lastItem]])
                 DB.transaction(txQueries)
-                    .then(_ => resolve(result.totalTxs))
+                    .then(_ => resolve(result.lastItem))
                     .catch(error => reject(["Blockchain-bonds refresh data failed!", error]));
             }).catch(error => reject(error))
         }).catch(error => reject(error))

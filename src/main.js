@@ -40,13 +40,16 @@ function refreshData(startup = false) {
 
 function refreshDataFromBlockchain() {
     return new Promise((resolve, reject) => {
-        DB.query("SELECT num FROM LastTx WHERE floID=?", [floGlobals.adminID]).then(result => {
-            let lastTx = result.length ? result[0].num : 0;
-            floBlockchainAPI.readData(floGlobals.adminID, {
-                ignoreOld: lastTx,
-                sentOnly: true,
-                pattern: floGlobals.application
-            }).then(result => {
+        DB.query("SELECT txid FROM LastTx WHERE floID=?", [floGlobals.adminID]).then(result => {
+            var query_options = { sentOnly: true, pattern: floGlobals.application };
+
+            let lastTx = result.length ? result[0].txid : undefined;
+            if (typeof lastTx == 'string' && /^[0-9a-f]{64}/i.test(lastTx))//lastTx is txid of last tx
+                query_options.after = lastTx;
+            else if (!isNaN(lastTx))//lastTx is tx count (*backward support)
+                query_options.ignoreOld = parseInt(lastTx);
+
+            floBlockchainAPI.readData(floGlobals.adminID, query_options).then(result => {
                 let promises = [],
                     nodes_change = false,
                     assets_change = false,
@@ -96,7 +99,7 @@ function refreshDataFromBlockchain() {
                                     promises.push(`UPDATE TagList WHERE tag=? SET ${a}=?`, [t, content.Tag.update[t][a]]);
                     }
                 });
-                promises.push(DB.query("INSERT INTO LastTx (floID, num) VALUE (?) ON DUPLICATE KEY UPDATE num=?", [[floGlobals.adminID, result.totalTxs], result.totalTxs]));
+                promises.push(DB.query("INSERT INTO LastTx (floID, txid) VALUE (?) ON DUPLICATE KEY UPDATE txid=?", [[floGlobals.adminID, result.lastItem], result.lastItem]));
                 //Check if all save process were successful
                 Promise.allSettled(promises).then(results => {
                     //console.debug(results.filter(r => r.status === "rejected"));

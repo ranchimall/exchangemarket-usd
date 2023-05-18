@@ -1,4 +1,4 @@
-(function (EXPORTS) { //btcOperator v1.1.1
+(function (EXPORTS) { //btcOperator v1.1.2a
     /* BTC Crypto and API Operator */
     const btcOperator = EXPORTS;
 
@@ -130,50 +130,84 @@
             return coinjs.pubkeys2MultisigAddress(pubKeys, minRequired);
     }
 
+    btcOperator.decodeRedeemScript = function (redeemScript, bech32 = true) {
+        let script = coinjs.script();
+        let decoded = (bech32) ?
+            script.decodeRedeemScriptBech32(redeemScript) :
+            script.decodeRedeemScript(redeemScript);
+        if (!decoded)
+            return null;
+        return {
+            address: decoded.address,
+            pubKeys: decoded.pubkeys,
+            redeemScript: decoded.redeemscript,
+            required: decoded.signaturesRequired
+        }
+
+    }
+
     //convert from one blockchain to another blockchain (target version)
     btcOperator.convert = {};
 
     btcOperator.convert.wif = function (source_wif, target_version = coinjs.priv) {
-        let keyHex = decodeLegacy(source_wif).hex;
+        let keyHex = util.decodeLegacy(source_wif).hex;
         if (!keyHex || keyHex.length < 66 || !/01$/.test(keyHex))
             return null;
         else
-            return encodeLegacy(keyHex, target_version);
+            return util.encodeLegacy(keyHex, target_version);
     }
 
     btcOperator.convert.legacy2legacy = function (source_addr, target_version = coinjs.pub) {
-        let rawHex = decodeLegacy(source_addr).hex;
+        let rawHex = util.decodeLegacy(source_addr).hex;
         if (!rawHex)
             return null;
         else
-            return encodeLegacy(rawHex, target_version);
+            return util.encodeLegacy(rawHex, target_version);
     }
 
     btcOperator.convert.legacy2bech = function (source_addr, target_version = coinjs.bech32.version, target_hrp = coinjs.bech32.hrp) {
-        let rawHex = decodeLegacy(source_addr).hex;
+        let rawHex = util.decodeLegacy(source_addr).hex;
         if (!rawHex)
             return null;
         else
-            return encodeBech32(rawHex, target_version, target_hrp);
+            return util.encodeBech32(rawHex, target_version, target_hrp);
     }
 
     btcOperator.convert.bech2bech = function (source_addr, target_version = coinjs.bech32.version, target_hrp = coinjs.bech32.hrp) {
-        let rawHex = decodeBech32(source_addr).hex;
+        let rawHex = util.decodeBech32(source_addr).hex;
         if (!rawHex)
             return null;
         else
-            return encodeBech32(rawHex, target_version, target_hrp);
+            return util.encodeBech32(rawHex, target_version, target_hrp);
     }
 
     btcOperator.convert.bech2legacy = function (source_addr, target_version = coinjs.pub) {
-        let rawHex = decodeBech32(source_addr).hex;
+        let rawHex = util.decodeBech32(source_addr).hex;
         if (!rawHex)
             return null;
         else
-            return encodeLegacy(rawHex, target_version);
+            return util.encodeLegacy(rawHex, target_version);
     }
 
-    function decodeLegacy(source) {
+    btcOperator.convert.multisig2multisig = function (source_addr, target_version = coinjs.multisig) {
+        let rawHex = util.decodeLegacy(source_addr).hex;
+        if (!rawHex)
+            return null;
+        else
+            return util.encodeLegacy(rawHex, target_version);
+    }
+
+    btcOperator.convert.bech2multisig = function (source_addr, target_version = coinjs.multisig) {
+        let rawHex = util.decodeBech32(source_addr).hex;
+        if (!rawHex)
+            return null;
+        else {
+            rawHex = Crypto.util.bytesToHex(ripemd160(Crypto.util.hexToBytes(rawHex), { asBytes: true }));
+            return util.encodeLegacy(rawHex, target_version);
+        }
+    }
+
+    util.decodeLegacy = function (source) {
         var decode = coinjs.base58decode(source);
         var raw = decode.slice(0, decode.length - 4),
             checksum = decode.slice(decode.length - 4);
@@ -183,7 +217,7 @@
             asBytes: true
         });
         if (hash[0] != checksum[0] || hash[1] != checksum[1] || hash[2] != checksum[2] || hash[3] != checksum[3])
-            return null;
+            return false;
         let version = raw.shift();
         return {
             version: version,
@@ -191,7 +225,7 @@
         }
     }
 
-    function encodeLegacy(hex, version) {
+    util.encodeLegacy = function (hex, version) {
         var bytes = Crypto.util.hexToBytes(hex);
         bytes.unshift(version);
         var hash = Crypto.SHA256(Crypto.SHA256(bytes, {
@@ -203,10 +237,10 @@
         return coinjs.base58encode(bytes.concat(checksum));
     }
 
-    function decodeBech32(source) {
+    util.decodeBech32 = function (source) {
         let decode = coinjs.bech32_decode(source);
         if (!decode)
-            return null;
+            return false;
         var raw = decode.data;
         let version = raw.shift();
         raw = coinjs.bech32_convert(raw, 5, 8, false);
@@ -217,7 +251,7 @@
         }
     }
 
-    function encodeBech32(hex, version, hrp) {
+    util.encodeBech32 = function (hex, version, hrp) {
         var bytes = Crypto.util.hexToBytes(hex);
         bytes = coinjs.bech32_convert(bytes, 8, 5, true);
         bytes.unshift(version)
@@ -669,12 +703,15 @@
     btcOperator.checkIfSameTx = function (tx1, tx2) {
         tx1 = deserializeTx(tx1);
         tx2 = deserializeTx(tx2);
+        //compare input and output length
         if (tx1.ins.length !== tx2.ins.length || tx1.outs.length !== tx2.outs.length)
             return false;
+        //compare inputs
         for (let i = 0; i < tx1.ins.length; i++)
             if (tx1.ins[i].outpoint.hash !== tx2.ins[i].outpoint.hash || tx1.ins[i].outpoint.index !== tx2.ins[i].outpoint.index)
                 return false;
-        for (let i = 0; i < tx2.ins.length; i++)
+        //compare outputs
+        for (let i = 0; i < tx1.outs.length; i++)
             if (tx1.outs[i].value !== tx2.outs[i].value || Crypto.util.bytesToHex(tx1.outs[i].script.buffer) !== Crypto.util.bytesToHex(tx2.outs[i].script.buffer))
                 return false;
         return true;
@@ -706,13 +743,13 @@
                     var address;
                     switch (out.script.chunks[0]) {
                         case 0: //bech32, multisig-bech32
-                            address = encodeBech32(Crypto.util.bytesToHex(out.script.chunks[1]), coinjs.bech32.version, coinjs.bech32.hrp);
+                            address = util.encodeBech32(Crypto.util.bytesToHex(out.script.chunks[1]), coinjs.bech32.version, coinjs.bech32.hrp);
                             break;
                         case 169: //segwit, multisig-segwit
-                            address = encodeLegacy(Crypto.util.bytesToHex(out.script.chunks[1]), coinjs.multisig);
+                            address = util.encodeLegacy(Crypto.util.bytesToHex(out.script.chunks[1]), coinjs.multisig);
                             break;
                         case 118: //legacy
-                            address = encodeLegacy(Crypto.util.bytesToHex(out.script.chunks[2]), coinjs.pub);
+                            address = util.encodeLegacy(Crypto.util.bytesToHex(out.script.chunks[2]), coinjs.pub);
                     }
                     return {
                         address,

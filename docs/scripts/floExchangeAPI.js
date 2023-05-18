@@ -1737,13 +1737,15 @@
                 trusted = new Set();
                 assets = new Set();
                 tags = new Set();
-                lastTx = 0;
+                lastTx = undefined;
             }
-            floBlockchainAPI.readData(DEFAULT.marketID, {
-                ignoreOld: lastTx,
-                sentOnly: true,
-                pattern: DEFAULT.marketApp
-            }).then(result => {
+
+            var query_options = { sentOnly: true, pattern: DEFAULT.marketApp };
+            if (typeof lastTx == 'string' && /^[0-9a-f]{64}/i.test(lastTx))//lastTx is txid of last tx
+                query_options.after = lastTx;
+            else if (!isNaN(lastTx))//lastTx is tx count (*backward support)
+                query_options.ignoreOld = parseInt(lastTx);
+            floBlockchainAPI.readData(DEFAULT.marketID, query_options).then(result => {
                 result.data.reverse().forEach(data => {
                     var content = JSON.parse(data)[DEFAULT.marketApp];
                     //Node List
