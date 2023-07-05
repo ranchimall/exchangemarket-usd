@@ -1,6 +1,6 @@
 'use strict';
 
-(function (EXPORTS) { //floExchangeAPI v1.2.0
+(function (EXPORTS) { //floExchangeAPI v1.2.0a
     const exchangeAPI = EXPORTS;
 
     const DEFAULT = {
@@ -1731,13 +1731,12 @@
                 if (typeof nodes !== 'object' || nodes === null)
                     throw Error('nodes must be an object')
                 else
-                    lastTx = parseInt(localStorage.getItem(_l('lastTx'))) || 0;
+                    lastTx = localStorage.getItem(_l('lastTx'));
             } catch (error) {
                 nodes = {};
                 trusted = new Set();
                 assets = new Set();
                 tags = new Set();
-                lastTx = undefined;
             }
 
             var query_options = { sentOnly: true, pattern: DEFAULT.marketApp };
@@ -1784,7 +1783,7 @@
                                 tags.add(t);
                     }
                 });
-                localStorage.setItem(_l('lastTx'), result.totalTxs);
+                localStorage.setItem(_l('lastTx'), result.lastItem);
                 localStorage.setItem(_l('nodes'), JSON.stringify(nodes));
                 localStorage.setItem(_l('trusted'), Array.from(trusted).join(","));
                 localStorage.setItem(_l('assets'), Array.from(assets).join(","));
