@@ -500,9 +500,10 @@ function processAll() {
 var lastSyncBlockHeight = 0;
 
 function periodicProcess() {
-    floBlockchainAPI.promisedAPI('api/blocks?limit=1').then(result => {
-        if (lastSyncBlockHeight < result.blocks[0].height) {
-            lastSyncBlockHeight = result.blocks[0].height;
+    floBlockchainAPI.promisedAPI('api/status').then(result => {
+        let blockbook_height = result.blockbook.bestHeight;
+        if (lastSyncBlockHeight < blockbook_height) {
+            lastSyncBlockHeight = blockbook_height;
             processAll();
             console.log("Last Block :", lastSyncBlockHeight);
         }
