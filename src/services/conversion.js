@@ -124,6 +124,7 @@ function getConvertValues() {
                     result[pCode.CONVERT_MODE_PUT].max = (!FROM_MAX_VALUE || FROM_MAX_VALUE >= cash_availability) ? cash_availability : FROM_MAX_VALUE;
                 }
             } else result[pCode.CONVERT_MODE_PUT] = null;
+            result.rate = avail.rate;
             resolve(result)
         }).catch(error => reject(error))
     })
