@@ -1,4 +1,4 @@
-(function (EXPORTS) { //floCrypto v2.3.3e
+(function (EXPORTS) { //floCrypto v2.3.6a
     /* FLO Crypto Operators */
     'use strict';
     const floCrypto = EXPORTS;
@@ -152,6 +152,19 @@
         newID: {
             get: () => generateNewID()
         },
+        hashID: {
+            value: (str) => {
+                let bytes = ripemd160(Crypto.SHA256(str, { asBytes: true }), { asBytes: true });
+                bytes.unshift(bitjs.pub);
+                var hash = Crypto.SHA256(Crypto.SHA256(bytes, {
+                    asBytes: true
+                }), {
+                    asBytes: true
+                });
+                var checksum = hash.slice(0, 4);
+                return bitjs.Base58.encode(bytes.concat(checksum));
+            }
+        },
         tmpID: {
             get: () => {
                 let bytes = Crypto.util.randomBytes(20);
@@ -222,7 +235,7 @@
             key.setCompressed(true);
             if (isfloID && pubKey_floID == key.getBitcoinAddress())
                 return true;
-            else if (!isfloID && pubKey_floID == key.getPubKeyHex())
+            else if (!isfloID && pubKey_floID.toUpperCase() == key.getPubKeyHex().toUpperCase())
                 return true;
             else
                 return false;
@@ -231,12 +244,36 @@
         }
     }
 
+    floCrypto.getMultisigAddress = function (publicKeyList, requiredSignatures) {
+        if (!Array.isArray(publicKeyList) || !publicKeyList.length)
+            return null;
+        if (!Number.isInteger(requiredSignatures) || requiredSignatures < 1 || requiredSignatures > publicKeyList.length)
+            return null;
+        try {
+            var multisig = bitjs.pubkeys2multisig(publicKeyList, requiredSignatures);
+            return multisig;
+        } catch {
+            return null;
+        }
+    }
+
+    floCrypto.decodeRedeemScript = function (redeemScript) {
+        try {
+            var decoded = bitjs.transaction().decodeRedeemScript(redeemScript);
+            return decoded;
+        } catch {
+            return null;
+        }
+    }
+
     //Check if the given flo-id is valid or not
-    floCrypto.validateFloID = function (floID) {
+    floCrypto.validateFloID = function (floID, regularOnly = false) {
         if (!floID)
             return false;
         try {
             let addr = new Bitcoin.Address(floID);
+            if (regularOnly && addr.version != Bitcoin.Address.standardVersion)
+                return false;
             return true;
         } catch {
             return false;
@@ -266,13 +303,15 @@
             return false;
     }
 
-    //Check the public-key for the address (any blockchain)
+    //Check the public-key (or redeem-script) for the address (any blockchain)
     floCrypto.verifyPubKey = function (pubKeyHex, address) {
-        let raw = decodeAddress(address),
-            pub_hash = Crypto.util.bytesToHex(ripemd160(Crypto.SHA256(Crypto.util.hexToBytes(pubKeyHex), {
-                asBytes: true
-            })));
-        return raw ? pub_hash === raw.hex : false;
+        let raw = decodeAddress(address);
+        if (!raw)
+            return;
+        let pub_hash = Crypto.util.bytesToHex(ripemd160(Crypto.SHA256(Crypto.util.hexToBytes(pubKeyHex), { asBytes: true })));
+        if (typeof raw.bech_version !== 'undefined' && raw.bytes.length == 32) //bech32-multisig
+            raw.hex = Crypto.util.bytesToHex(ripemd160(raw.bytes, { asBytes: true }));
+        return pub_hash === raw.hex;
     }
 
     //Convert the given address (any blockchain) to equivalent floID
@@ -282,13 +321,57 @@
         let raw = decodeAddress(address);
         if (!raw)
             return;
-        else if (options) {
+        else if (options) { //if (optional) version check is passed
             if (typeof raw.version !== 'undefined' && (!options.std || !options.std.includes(raw.version)))
                 return;
             if (typeof raw.bech_version !== 'undefined' && (!options.bech || !options.bech.includes(raw.bech_version)))
                 return;
         }
         raw.bytes.unshift(bitjs.pub);
+        let hash = Crypto.SHA256(Crypto.SHA256(raw.bytes, {
+            asBytes: true
+        }), {
+            asBytes: true
+        });
+        return bitjs.Base58.encode(raw.bytes.concat(hash.slice(0, 4)));
+    }
+
+    //Convert raw address bytes to floID
+    floCrypto.rawToFloID = function (raw_bytes) {
+        if (typeof raw_bytes === 'string')
+            raw_bytes = Crypto.util.hexToBytes(raw_bytes);
+        if (raw_bytes.length != 20)
+            return null;
+        raw_bytes.unshift(bitjs.pub);
+        let hash = Crypto.SHA256(Crypto.SHA256(raw_bytes, {
+            asBytes: true
+        }), {
+            asBytes: true
+        });
+        return bitjs.Base58.encode(raw_bytes.concat(hash.slice(0, 4)));
+    }
+
+    //Convert the given multisig address (any blockchain) to equivalent multisig floID
+    floCrypto.toMultisigFloID = function (address, options = null) {
+        if (!address)
+            return;
+        let raw = decodeAddress(address);
+        if (!raw)
+            return;
+        else if (options) { //if (optional) version check is passed
+            if (typeof raw.version !== 'undefined' && (!options.std || !options.std.includes(raw.version)))
+                return;
+            if (typeof raw.bech_version !== 'undefined' && (!options.bech || !options.bech.includes(raw.bech_version)))
+                return;
+        }
+        if (typeof raw.bech_version !== 'undefined') {
+            if (raw.bytes.length != 32) return; //multisig bech address have 32 bytes
+            //multisig-bech:hash=SHA256 whereas multisig:hash=r160(SHA265), thus ripemd160 the bytes from multisig-bech
+            raw.bytes = ripemd160(raw.bytes, {
+                asBytes: true
+            });
+        }
+        raw.bytes.unshift(bitjs.multisig);
         let hash = Crypto.SHA256(Crypto.SHA256(raw.bytes, {
             asBytes: true
         }), {
@@ -305,8 +388,13 @@
             raw2 = decodeAddress(addr2);
         if (!raw1 || !raw2)
             return false;
-        else
+        else {
+            if (typeof raw1.bech_version !== 'undefined' && raw1.bytes.length == 32) //bech32-multisig
+                raw1.hex = Crypto.util.bytesToHex(ripemd160(raw1.bytes, { asBytes: true }));
+            if (typeof raw2.bech_version !== 'undefined' && raw2.bytes.length == 32) //bech32-multisig
+                raw2.hex = Crypto.util.bytesToHex(ripemd160(raw2.bytes, { asBytes: true }));
             return raw1.hex === raw2.hex;
+        }
     }
 
     const decodeAddress = floCrypto.decodeAddr = function (address) {
@@ -326,7 +414,7 @@
                 hex: Crypto.util.bytesToHex(bytes),
                 bytes
             }
-        } else if (address.length == 42) { //bech encoding
+        } else if (address.length == 42 || address.length == 62) { //bech encoding
             let decode = coinjs.bech32_decode(address);
             if (decode) {
                 let bytes = decode.data;
