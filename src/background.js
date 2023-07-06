@@ -48,7 +48,7 @@ function confirmDepositFLO() {
 verifyTx.FLO = function (sender, txid, group) {
     return new Promise((resolve, reject) => {
         floBlockchainAPI.getTx(txid).then(tx => {
-            let vin_sender = tx.vin.filter(v => v.addr === sender)
+            let vin_sender = tx.vin.filter(v => v.addresses[0] === sender)
             if (!vin_sender.length)
                 return reject([true, "Transaction not sent by the sender"]);
             if (vin_sender.length !== tx.vin.length)
