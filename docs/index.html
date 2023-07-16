@@ -788,8 +788,12 @@
         </header>
         <section class="grid gap-2">
             <div class="grid gap-0-5">
-                <div class="label">My FLO ID</div>
-                <sm-copy id="user_id"></sm-copy>
+                <h5>My FLO address</h5>
+                <sm-copy class="my-flo-address"></sm-copy>
+            </div>
+            <div class="grid gap-0-5">
+                <h5>My Bitcoin address</h5>
+                <sm-copy class="my-btc-address"></sm-copy>
             </div>
             <div class="grid gap-1">
                 <div class="grid gap-0-5">
@@ -2819,7 +2823,6 @@
                         isShowingFloID = false
                     }
                 }, 1000 * 60);
-                getRef("user_id").value = floGlobals.myFloID;
                 getRef("sink_id").value = acc.sinkID;
                 if (acc.subAdmin)
                     console.info("logged in as subAdmin");
