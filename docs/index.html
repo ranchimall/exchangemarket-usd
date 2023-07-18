@@ -414,7 +414,7 @@
                                 </div>
                                 <p>Deposit USD from your FLO ID to exchange to purchase assets.</p>
                                 <div class="grid gap-1">
-                                    <div id="exchange_rupee_balance"></div>
+                                    <div id="exchange_usd_balance"></div>
                                     <div class="grid">
                                         <div class="flex align-center space-between">
                                             <span class="label">Tradable assets</span>
@@ -2088,7 +2088,7 @@
                 entry.querySelector('.history-entry__token-action').textContent = `${type} ${asset}`
                 entry.querySelector('.history-entry__amount').textContent = amount
                 entry.querySelector('.history-entry__time').textContent = getFormattedTime(locktime)
-                entry.querySelector('.history-entry__txid').href = `https://flosight.duckdns.org/tx/${txid}`
+                entry.querySelector('.history-entry__txid').href = `https://blockbook.ranchimall.net/tx/${txid}`
                 return entry;
             }
         }
@@ -2219,13 +2219,11 @@
                 updateRate().catch(console.error)
                 getRef('get_quantity').value = 0
                 getRef('get_total').value = 0
+                buttonLoader('trade_button', false)
+                getRef('trade_button').disabled = true
                 setTimeout(() => {
-                    buttonLoader('trade_button', false)
-                    getRef('trade_button').disabled = true
-                    setTimeout(() => {
-                        getRef('trade_button').querySelector('.stateful-result').remove()
-                    }, 100);
-                }, 4000);
+                    getRef('trade_button').querySelector('.stateful-result').remove()
+                }, 100);
             }
         }
         getRef('quantity_selector').addEventListener('click', e => {
@@ -2377,26 +2375,26 @@
             }
         })
         getRef('portfolio_popup__cta').addEventListener('click', async e => {
-            const asset = pagesData.params.asset
+            const asset = pagesData.params.asset.toLowerCase()
             const type = e.target.getAttribute('value')
             const quantity = parseFloat(getRef('get_user_amount').value)
             try {
                 buttonLoader('portfolio_popup__cta', true)
-                const proxySecret = await proxy.secret;
+                const [proxySecret, sinkID] = await Promise.all([proxy.secret, floExchangeAPI.getSink()])
                 let response
                 switch (type) {
                     case 'deposit':
                         const privKey = getRef('get_private_key').value;
-                        if (asset === 'FLO') {
-                            response = await floExchangeAPI.depositFLO(quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                        if (asset === 'flo') {
+                            response = await floExchangeAPI.depositFLO(quantity, proxy.userID, sinkID, privKey, proxySecret)
                         } else {
-                            response = await floExchangeAPI.depositToken(asset, quantity, proxy.userID, proxy.sinkID, privKey, proxySecret)
+                            response = await floExchangeAPI.depositToken(asset, quantity, proxy.userID, sinkID, privKey, proxySecret)
                         }
                         console.log(response)
                         showWalletResult('success', `Sent ${asset} deposit request`, 'This may take upto 30 mins to reflect in your portfolio.')
                         break;
                     case 'withdraw':
-                        if (asset === 'FLO') {
+                        if (asset === 'flo') {
                             response = await floExchangeAPI.withdrawFLO(quantity, proxy.userID, proxySecret)
                         } else {
                             response = await floExchangeAPI.withdrawToken(asset, quantity, proxy.userID, proxySecret)
@@ -2768,6 +2766,7 @@
             } else
                 console.info("refresh");
             render.marketOrders();
+            fetchOnChainBalances();
             updateRate(init).then(async () => {
                 if (proxy.userID) {
                     await account();
@@ -2863,8 +2862,8 @@
                         frag.append(render.assetBalanceCard(asset))
                     }
                     else {
-                        getRef('exchange_rupee_balance').innerHTML = ``
-                        getRef('exchange_rupee_balance').append(render.assetBalanceCard(asset))
+                        getRef('exchange_usd_balance').innerHTML = ``
+                        getRef('exchange_usd_balance').append(render.assetBalanceCard(asset))
                     }
                 })
                 getRef('my_assets').innerHTML = ''
@@ -2873,15 +2872,7 @@
                 //My orders
                 render.userOrders();
 
-                // show personal assets
-                floBlockchainAPI.getBalance(floGlobals.myFloID).then(balance => {
-                    const [beforeDecimal, afterDecimal = '00'] = String(balance).split('.')
-                    getRef('personal_flo_balance').innerHTML = `<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`
-                })
-                floTokenAPI.getBalance(accountDetails.floID, 'USD').then(balance => {
-                    const [beforeDecimal, afterDecimal] = formatAmount(balance, true).split('$')[1].split('.')
-                    getRef('personal_usd_balance').innerHTML = `<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`
-                })
+                fetchOnChainBalances()
                 proxy.secret.then(_ => null).catch(_ => null);
                 routeTo(window.location.hash);
             }).catch(error => {
@@ -2900,6 +2891,25 @@
                     getRef('home').classList.remove('hidden')
                 })
         };
+
+        async function fetchOnChainBalances() {
+            try {
+                getRef('personal_flo_balance').innerHTML = `<sm-spinner></sm-spinner>`
+                getRef('personal_usd_balance').innerHTML = `<sm-spinner></sm-spinner>`
+                const [floBalance, usdBalance] = await Promise.all([
+                    floBlockchainAPI.getBalance(floGlobals.myFloID),
+                    floTokenAPI.getBalance(accountDetails.floID, 'usd')
+                ])
+                // show personal assets
+                const [beforeDecimal, afterDecimal = '00'] = String(floBalance).split('.')
+                getRef('personal_flo_balance').innerHTML = `<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`
+                const [beforeDecimal1, afterDecimal1] = formatAmount(usdBalance, true).split('$')[1].split('.')
+                getRef('personal_usd_balance').innerHTML = `<span><b>${beforeDecimal1}</b></span>.<span>${afterDecimal1}</span>`
+            } catch (e) {
+                console.error(e)
+            }
+
+        }
 
         const UI_evt = {
             logout() {
