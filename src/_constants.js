@@ -35,10 +35,10 @@ module.exports = {
     },
     convert: {
         MIN_FUND: 0.3, // 30%
-        TO_FIXED_VALUES: [0],   //conversion to BTC turned off 
+        TO_FIXED_VALUES: [100, 200, 500, 1000],   //conversion to BTC turned off (Fixed values in USD)
         TO_MIN_VALUE: null,
         TO_MAX_VALUE: null,
-        FROM_FIXED_VALUES: [100],   //conversion from BTC to USD. Fixed amount of 100 USD
+        FROM_FIXED_VALUES: [100, 200, 500, 1000],   //conversion from BTC to USD. (Fixed values in USD)
         FROM_MIN_VALUE: null,
         FROM_MAX_VALUE: null,
     },
