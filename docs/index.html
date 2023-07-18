@@ -1399,11 +1399,11 @@
                                 if (getRef('listed_assets').querySelector('.listed-asset--active'))
                                     getRef('listed_assets').querySelector('.listed-asset--active').classList.remove('listed-asset--active')
                                 getRef('listed_assets').querySelector(`[href="#/exchange?asset=${params.asset}"]`).classList.add('listed-asset--active')
-                                getRef('chart_asset').textContent = `${params.asset}/USD`
+                                getRef('chart_asset').textContent = `${params.asset}/${floGlobals.currency}`
                                 showSuggestedPrice(params.asset)
                                 getRef('traded_asset').textContent = `Trade ${params.asset}`
                                 getRef('trade_button').textContent = `${tradeType} ${params.asset}`
-                                getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.USD.net, true) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
+                                getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens[floGlobals.currency].net, true) : `${parseFloat(allTokens[params.asset].net.toFixed(4))} ${params.asset}`
                                 updateTooltip(params.asset, tradeType)
                             }
                             const animOptions = {
@@ -1480,7 +1480,7 @@
                         if (params.asset) {
                             getRef('portfolio_asset__name').textContent = params.asset
                             const { net, locked } = allTokens[params.asset]
-                            const lockedBalance = params.asset === 'USD' ? formatAmount(locked, true) : toFixed(locked)
+                            const lockedBalance = params.asset === floGlobals.currency ? formatAmount(locked, true) : toFixed(locked)
                             showChildElement('portfolio', 1, {
                                 entry: slideInLeft,
                                 exit: slideOutLeft,
@@ -1488,8 +1488,8 @@
                             renderElem(getRef('portfolio_asset__balance'), html`
                                 <div class="grid">
                                     <span class="label">Available</span>
-                                    <b style="font-size:2rem">${params.asset === 'USD' ? formatAmount(net, true) : toFixed(net)}</b>
-                                    ${params.asset !== 'USD' ? html`<span style="font-size: 1rem; opacity:0.8">$${toFixed(net * floGlobals.exchangeRates[params.asset], 2)}</span>` : ''}
+                                    <b style="font-size:2rem">${params.asset === floGlobals.currency ? formatAmount(net, true) : toFixed(net)}</b>
+                                    ${params.asset !== floGlobals.currency ? html`<span style="font-size: 1rem; opacity:0.8">$${toFixed(net * floGlobals.exchangeRates[params.asset], 2)}</span>` : ''}
                                 </div>
                                 ${locked ? html`
                                     <div class="grid">
@@ -1780,7 +1780,7 @@
         }
 
         function formatAmount(amount = 0, shorten = false) {
-            return amount.toLocaleString(`en-US`, { style: 'currency', currency: 'USD', maximumFractionDigits: shorten ? 2 : 8 })
+            return amount.toLocaleString(`en-US`, { style: 'currency', currency: floGlobals.currency, maximumFractionDigits: shorten ? 2 : 8 })
         }
         // Convert milliseconds to time left in HH:MM:SS format
         function getTimeLeft(milliseconds) {
@@ -1913,7 +1913,7 @@
                 const card = getRef('market_transaction_template').content.cloneNode(true).firstElementChild
                 card.querySelector('.completed-trade__quantity').textContent = `${quantity} ${asset}`
                 card.querySelector('.completed-trade__time').textContent = getFormattedTime(time)
-                card.querySelector('.completed-trade__price').textContent = `$${unitValue}`
+                card.querySelector('.completed-trade__price').textContent = formatAmount(unitValue)
                 card.querySelector('.completed-trade__total').textContent = formatAmount(parseFloat(unitValue * quantity), true)
                 card.querySelector('.more-info').dataset.buyer = buyer
                 card.querySelector('.more-info').dataset.seller = seller
@@ -1928,8 +1928,8 @@
                 card.querySelector('.balance-card__icon').innerHTML = getIcon(asset)
                 const templateToClone = locked ? 'locked_balance_template' : 'net_balance_template';
                 const assetBalance = getRef(templateToClone).content.cloneNode(true)
-                const availableBalance = asset === 'USD' ? formatAmount(net, true) : `${toFixed(net)} | <span style="font-size: 0.8rem">${formatAmount(toFixed(net * (floGlobals.exchangeRates[asset] || 1), 2))}</span>`
-                const lockedBalance = asset === 'USD' ? formatAmount(locked, true) : toFixed(locked)
+                const availableBalance = asset === floGlobals.currency ? formatAmount(net, true) : `${toFixed(net)} | <span style="font-size: 0.8rem">${formatAmount(toFixed(net * (floGlobals.exchangeRates[asset] || 1), 2))}</span>`
+                const lockedBalance = asset === floGlobals.currency ? formatAmount(locked, true) : toFixed(locked)
                 assetBalance.querySelector('.available-balance').innerHTML = availableBalance
                 if (locked) {
                     assetBalance.querySelector('.locked-balance').textContent = lockedBalance
@@ -2152,7 +2152,7 @@
         function updateTooltip(asset, tradeType) {
             getRef('quantity_selector').querySelectorAll('.button').forEach(button => {
                 if (tradeType === 'buy') {
-                    button.title = `Buy ${asset} worth ${button.textContent} of total USD`
+                    button.title = `Buy ${asset} worth ${button.textContent} of total ${floGlobals.currency}`
                 } else {
                     button.title = `Sell ${button.textContent} of total ${asset}`
                 }
@@ -2178,7 +2178,7 @@
             showSuggestedPrice()
             getRef('get_total').setAttribute('placeholder', tradeType === 'buy' ? `Locked amount ($)` : `Min amount received ($)`)
             getRef('trade_button').textContent = `${tradeType} ${selectedAsset}`
-            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens.USD.net, true) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
+            getRef('quantity_type').textContent = tradeType === 'buy' ? formatAmount(allTokens[floGlobals.currency].net, true) : `${parseFloat(allTokens[selectedAsset].net.toFixed(4))} ${selectedAsset}`
             updateTooltip(selectedAsset, tradeType)
         })
         getRef('price_duration_selector').addEventListener('change', e => {
@@ -2209,8 +2209,8 @@
             }
             catch (err) {
                 getRef('trade_button').append(getRef('failure_template').content.cloneNode(true))
-                if (err.message === 'Insufficient USD') {
-                    notify(`Insufficient balance to ${tradeType} ${asset}. Please deposit USD to portfolio first.`, 'error', { pinned: true })
+                if (err.message === `Insufficient ${floGlobals.currency}`) {
+                    notify(`Insufficient balance to ${tradeType} ${asset}. Please deposit ${floGlobals.currency} to portfolio first.`, 'error', { pinned: true })
                 } else {
                     notify(err.message, 'error')
                 }
@@ -2235,13 +2235,14 @@
                 const unitValue = getSuggestedPrice()
                 const fraction = parseFloat(target.value)
                 if (tradeType === 'buy') {
-                    getRef('get_total').value = toFixed(fraction * allTokens['USD'].net)
-                    getRef('get_quantity').value = toFixed((allTokens['USD'].net * fraction) / getSuggestedPrice())
+                    getRef('get_total').value = toFixed(fraction * allTokens[floGlobals.currency].net)
+                    getRef('get_quantity').value = toFixed((allTokens[floGlobals.currency].net * fraction) / getSuggestedPrice())
                 } else {
                     getRef('get_total').value = toFixed(fraction * allTokens[selectedAsset].net * getSuggestedPrice())
                     getRef('get_quantity').value = toFixed(allTokens[selectedAsset].net * fraction)
 
                 }
+                getRef('trade_form')._checkValidity()
             }
         })
         getRef('get_quantity').addEventListener('focusin', e => {
@@ -2281,7 +2282,7 @@
                 const type = target.value
                 const asset = pagesData.params.asset
 
-                getRef('portfolio_quantity_type').textContent = getRef('quantity_type').textContent = asset === 'USD' ? formatAmount(allTokens.USD.net, true) : `${toFixed(allTokens[asset].net)} ${asset}`
+                getRef('portfolio_quantity_type').textContent = getRef('quantity_type').textContent = asset === floGlobals.currency ? formatAmount(allTokens[floGlobals.currency].net, true) : `${toFixed(allTokens[asset].net)} ${asset}`
                 getRef('portfolio_popup__cta').textContent = `${type} ${asset}`
                 getRef('portfolio_popup__cta').setAttribute('value', type)
                 getRef('portfolio_popup__title').textContent = `${type} ${asset}`
@@ -2415,7 +2416,7 @@
                 }
             }
             catch (err) {
-                if ((err.message || err) === 'Insufficient USD balance') {
+                if ((err.message || err) === `Insufficient ${floGlobals.currency} balance`) {
                     showWalletResult('error', `Failed`, err.message || err, 'open-upi')
                 } else {
                     showWalletResult('error', `Failed`, err.message || err)
@@ -2851,7 +2852,7 @@
                 console.debug("FLO", allTokens['FLO']);
                 console.log(await floExchangeAPI.getBalance(floGlobals.myFloID))
 
-                console.debug("RUPEE", allTokens['USD']);
+                console.debug("RUPEE", allTokens[floGlobals.currency]);
 
                 // render all assets in portfolio
                 const frag = document.createDocumentFragment();
