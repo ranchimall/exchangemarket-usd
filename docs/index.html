@@ -2646,8 +2646,11 @@
                     const price = toFixed(getSuggestedPrice());
                     const total = formatAmount(parseFloat(getRef('get_total').value))
                     const minTotal = formatAmount(toFixed(currentPrice * quantity))
-                    getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`
-                    getRef('confirm_trade__details').innerHTML = `
+                    getRef('confirm_trade__title').textContent = `${tradeType} ${asset}`;
+                    renderElem(getRef('confirm_trade__details'), html`
+                        ${tradeType === 'buy' ? html`
+                            <strong class="warning">You won't be able to sell the bought asset below it's purchasing price.</strong>
+                        `: ''}
                         <div class="grid">
                             <p>Quantity</p>
                             <b>${quantity} ${asset}</b>
@@ -2665,9 +2668,9 @@
                             </div>
                         </div>
                         <p>
-                            <strong>All trades will be executed at current price.</strong>
+                            <strong>*All trades will be executed at current price.</strong>
                         </p>
-                    `;
+                    `);
                     break;
             }
         })
@@ -2894,17 +2897,17 @@
 
         async function fetchOnChainBalances() {
             try {
-                getRef('personal_flo_balance').innerHTML = `<sm-spinner></sm-spinner>`
-                getRef('personal_usd_balance').innerHTML = `<sm-spinner></sm-spinner>`
+                renderElem(getRef('personal_flo_balance'), html`<sm-spinner></sm-spinner>`)
+                renderElem(getRef('personal_usd_balance'), html`<sm-spinner></sm-spinner>`)
                 const [floBalance, usdBalance] = await Promise.all([
                     floBlockchainAPI.getBalance(floGlobals.myFloID),
                     floTokenAPI.getBalance(accountDetails.floID, 'usd')
                 ])
                 // show personal assets
                 const [beforeDecimal, afterDecimal = '00'] = String(floBalance).split('.')
-                getRef('personal_flo_balance').innerHTML = `<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`
+                renderElem(getRef('personal_flo_balance'), html`<span><b>${beforeDecimal}</b></span>.<span>${afterDecimal}</span>`)
                 const [beforeDecimal1, afterDecimal1] = formatAmount(usdBalance, true).split('$')[1].split('.')
-                getRef('personal_usd_balance').innerHTML = `<span><b>${beforeDecimal1}</b></span>.<span>${afterDecimal1}</span>`
+                renderElem(getRef('personal_usd_balance'), html`<span><b>${beforeDecimal1}</b></span>.<span>${afterDecimal1}</span>`)
             } catch (e) {
                 console.error(e)
             }
